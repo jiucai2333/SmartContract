@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="0;url=/html/login.html">
+    <title>智能合同管理</title>
+    <script>
+        const user = localStorage.getItem('user');
+        if (user) {
+            location.replace('/html/dashboard.html');
+        } else {
+            location.replace('/html/login.html');
+        }
+    </script>
+</head>
+<body>
+<p>正在跳转… <a href="/html/login.html">点击这里</a></p>
+</body>
+</html>
