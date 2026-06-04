@@ -1,7 +1,10 @@
-package cupk.smartcontract.domain;
+package cupk.smartcontract.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
-import lombok.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -13,7 +16,5 @@ public class UserInfo extends BaseAuditEntity {
     private Long roleId;
     private String username;
     private String password;
-    private String mobile;
-    private String email;
     private Integer status;
 }
