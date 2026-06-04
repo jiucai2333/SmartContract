@@ -1,5 +1,6 @@
 package cupk.smartcontract.config;
 
+import cupk.smartcontract.security.AuthInterceptor;
 import cupk.smartcontract.service.TokenService;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -30,6 +31,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
         registry.addViewController("/").setViewName("forward:/html/index.html");
+        registry.addViewController("/draft").setViewName("forward:/html/draft.html");
+        registry.addViewController("/draft/edit").setViewName("forward:/html/edit.html");
+        registry.addViewController("/templates").setViewName("forward:/html/templates.html");
+        registry.addViewController("/ledger").setViewName("forward:/html/ledger.html");
     }
 
     @Override
