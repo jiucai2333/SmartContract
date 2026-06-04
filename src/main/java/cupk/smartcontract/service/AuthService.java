@@ -2,7 +2,7 @@ package cupk.smartcontract.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import cupk.smartcontract.common.RoleEnum;
-import cupk.smartcontract.domain.UserInfo;
+import cupk.smartcontract.entity.UserInfo;
 import cupk.smartcontract.dto.AuthUserVO;
 import cupk.smartcontract.dto.RoleVO;
 import cupk.smartcontract.mapper.UserInfoMapper;
@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class AuthService {
@@ -55,12 +54,11 @@ public class AuthService {
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
         user.setStatus(1);
-        user.setCreatedBy(createdBy);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         user.setDeleted(0);
-        user.setVersion(1);
 
+        // 设置唯一角色
         String normalizedRole = roleCode.trim().toUpperCase();
         Long roleId = userMapper.selectRoleIdByCode(normalizedRole);
         user.setRoleId(roleId);
@@ -93,8 +91,8 @@ public class AuthService {
                 user.getDeptId(), roleCode, dataScope);
     }
 
-    public List<AuthUserVO> listUsers() {
-        List<UserInfo> users = userMapper.selectList(
+    public java.util.List<AuthUserVO> listUsers() {
+        java.util.List<UserInfo> users = userMapper.selectList(
                 new LambdaQueryWrapper<UserInfo>().orderByAsc(UserInfo::getUserId));
         return users.stream().map(this::toAuthUser).toList();
     }
@@ -109,7 +107,12 @@ public class AuthService {
         if (roleId == null) throw new IllegalArgumentException("无效的角色编码: " + roleCode);
 
         userMapper.updateUserRole(userId, roleId);
+        // 同步更新内存中的 role_id 以便 toAuthUser 能读到
         user.setRoleId(roleId);
         return toAuthUser(user);
+    }
+
+    public java.util.List<RoleVO> listRoles() {
+        return userMapper.selectAllRoles();
     }
 }

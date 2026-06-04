@@ -1,4 +1,4 @@
-package cupk.smartcontract.web;
+package cupk.smartcontract.controller;
 
 import cupk.smartcontract.common.Result;
 import cupk.smartcontract.dto.AuthUserVO;
@@ -8,7 +8,11 @@ import cupk.smartcontract.service.AuthService;
 import cupk.smartcontract.service.TokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/user")
@@ -47,11 +51,7 @@ public class UserController {
         if (!StringUtils.hasText(request.password())) {
             return Result.error(400, "密码不能为空");
         }
-        try {
-            return Result.success(tokenService.issue(authService.register(request.username().trim(), request.password())));
-        } catch (RuntimeException ex) {
-            return Result.error(400, ex.getMessage());
-        }
+        return Result.success(tokenService.issue(authService.register(request.username().trim(), request.password())));
     }
 
     @PostMapping("/logout")

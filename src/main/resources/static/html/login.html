@@ -12,19 +12,18 @@
 <div class="auth-card">
     <div class="brand auth-brand">
         <span class="brand-mark">合</span>
-        <div><strong>智能合同管理</strong><small>SmartContract</small></div>
+        <div><strong>智能合同管理</strong></div>
     </div>
     <h1>登录</h1>
-    <p class="auth-subtitle">使用账号登录后进入合同编制审批工作台</p>
+    <p class="auth-subtitle">使用账号登录后进入工作台</p>
     <form id="loginForm" class="auth-form" action="javascript:void(0)">
         <label>用户名<input name="username" value="admin" required autocomplete="username"></label>
         <label>密码<input name="password" type="password" value="Admin@123" required autocomplete="current-password"></label>
         <button type="button" id="loginBtn">登录</button>
     </form>
-    <p class="auth-footer">还没有账号？<a href="register.html">立即注册</a></p>
-    <p class="auth-hint">管理员账号：admin / Admin@123</p>
+    <p class="auth-footer">还没有账号？<a href="/html/register.html">立即注册</a></p>
+    <p class="auth-hint">演示账号密码均为 Demo@123（admin / legal / user / dept_leader / finance / executive）</p>
 </div>
-<div id="toast" class="toast"></div>
 <script src="../js/common.js"></script>
 <script src="../js/auth.js"></script>
 <script>initLoginPage();</script>
