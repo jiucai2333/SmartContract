@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>合同模板 - 智能合同管理</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/templates.css">
+</head>
+<body>
+<script src="../js/common.js"></script>
+<script>
+    document.write(appShellHtml('templates'));
+</script>
+
+<div class="section template-filter-row">
+    <section class="panel template-filter-panel">
+        <div class="filters">
+            <div class="search-field">
+                <i data-lucide="search"></i>
+                <input id="templateKeyword" placeholder="按模板名称、描述搜索">
+            </div>
+            <select id="filterType">
+                <option value="">全部类型</option>
+            </select>
+            <button id="refreshBtn" class="secondary" type="button">
+                <i data-lucide="refresh-cw"></i>
+                重置
+            </button>
+        </div>
+    </section>
+    <button id="newTemplateBtn" class="page-action-btn" type="button">
+        <i data-lucide="upload"></i>
+        上传模板
+    </button>
+</div>
+
+<section class="section panel template-table-panel">
+    <div class="table-wrap">
+        <table>
+            <thead>
+            <tr>
+                <th>模板名称</th>
+                <th>类型</th>
+                <th>文件</th>
+                <th>更新时间</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody id="templateTbody"></tbody>
+        </table>
+    </div>
+</section>
+
+<div id="templateModal" class="modal" hidden>
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3 id="templateModalTitle">上传模板</h3>
+            <button type="button" id="closeTemplateModal" class="secondary">关闭</button>
+        </div>
+        <form id="templateForm" class="form-grid">
+            <input type="hidden" id="templateId">
+            <label>
+                模板类型
+                <select id="templateType" required>
+                    <option value="CONFIDENTIAL">保密合同</option>
+                    <option value="LABOR">劳务合同</option>
+                    <option value="PURCHASE">采购合同</option>
+                    <option value="SALES">销售合同</option>
+                    <option value="TECH">技术合同</option>
+                    <option value="LOGISTICS">物流合同</option>
+                    <option value="ENTERPRISE_SERVICE">企业服务合同</option>
+                    <option value="INTELLECTUAL_PROPERTY">知识产权合同</option>
+                </select>
+            </label>
+            <label>
+                模板名称
+                <input id="templateName" required placeholder="如：采购合同标准模板">
+            </label>
+            <label class="wide">
+                模板描述
+                <textarea id="templateDesc" rows="2" placeholder="可选，说明适用场景"></textarea>
+            </label>
+            <label class="wide upload-zone">
+                <i data-lucide="upload-cloud"></i>
+                <strong>模板文件（PDF / DOC / DOCX）</strong>
+                <input id="templateFileInput" type="file" accept=".pdf,.doc,.docx" hidden>
+                <div class="upload-actions">
+                    <button type="button" id="pickTemplateFile" class="secondary">选择文件</button>
+                    <span id="templateFileName">未选择文件</span>
+                </div>
+            </label>
+            <div class="button-row wide">
+                <button type="submit">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.write(closeAppShell());
+</script>
+<script src="../js/templates.js"></script>
+</body>
+</html>
