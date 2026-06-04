@@ -1,9 +1,8 @@
-package cupk.smartcontract.web;
+package cupk.smartcontract.controller;
 
-import cupk.smartcontract.common.RequireRole;
+import cupk.smartcontract.security.RequireRole;
 import cupk.smartcontract.dto.AuthUserVO;
 import cupk.smartcontract.dto.RoleVO;
-import cupk.smartcontract.mapper.UserInfoMapper;
 import cupk.smartcontract.service.AuthService;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,11 +15,9 @@ import java.util.Map;
 public class AdminController {
 
     private final AuthService authService;
-    private final UserInfoMapper userInfoMapper;
 
-    public AdminController(AuthService authService, UserInfoMapper userInfoMapper) {
+    public AdminController(AuthService authService) {
         this.authService = authService;
-        this.userInfoMapper = userInfoMapper;
     }
 
     @GetMapping("/users")
@@ -28,6 +25,10 @@ public class AdminController {
         return authService.listUsers();
     }
 
+    /**
+     * 设置用户的唯一角色（单角色体系）。
+     * Body: { "roleCode": "LEGAL" }
+     */
     @PutMapping("/users/{userId}/role")
     public AuthUserVO updateRole(@PathVariable Long userId,
                                   @RequestBody Map<String, String> body) {
@@ -37,6 +38,6 @@ public class AdminController {
 
     @GetMapping("/roles")
     public List<RoleVO> listRoles() {
-        return userInfoMapper.selectAllRoles();
+        return authService.listRoles();
     }
 }
