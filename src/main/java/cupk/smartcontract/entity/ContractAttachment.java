@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -15,7 +16,6 @@ public class ContractAttachment extends BaseAuditEntity {
     private Long attachmentId;
     private Long contractId;
     private Long fileId;
-    @TableField(exist = false)
     private String attachType;
     private String ocrStatus;
     private String ocrText;
@@ -23,8 +23,8 @@ public class ContractAttachment extends BaseAuditEntity {
     private String ocrResult;
     private String ocrError;
     private Integer pageCount;
-    @TableField(exist = false)
     private String createdBy;
-    @TableField(exist = false)
+    private String updatedBy;
+    @Version
     private Integer version;
 }

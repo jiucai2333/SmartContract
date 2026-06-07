@@ -161,6 +161,17 @@ a svg,
 .brand strong { font-size: 16px; letter-spacing: .01em; }
 .brand small { display: block; color: var(--sidebar-muted); font-size: 11px; margin-top: 3px; font-weight: 500; }
 
+.security-note {
+    margin-top: auto;
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: var(--radius);
+    font-size: 11px;
+    color: #b9d9d5;
+    line-height: 1.6;
+}
+.security-note strong { display: block; color: var(--sidebar-muted); margin-bottom: 5px; font-size: 12px; }
+
 nav {
     display: flex;
     flex-direction: column;
@@ -223,6 +234,7 @@ nav a.active::before {
     border-radius: var(--radius);
     transition: all var(--transition);
     user-select: none;
+    position: relative;
 }
 
 .nav-parent::before {
@@ -253,6 +265,20 @@ nav a.active::before {
     transform: rotate(90deg);
 }
 
+/* 子菜单折叠容器（SmartContract 旧版） */
+.nav-group {
+    overflow: hidden;
+    transition: max-height 220ms ease;
+}
+
+/* 合同业务二级菜单（SmartContract 旧版） */
+nav a.nav-child {
+    margin-left: 22px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #b9d9d5;
+}
+
 /* 子菜单有激活项时，父菜单继承激活样式 */
 .nav-parent.has-active {
     background: var(--sidebar-active);
@@ -263,20 +289,6 @@ nav a.active::before {
 .nav-parent.has-active::before {
     background: var(--accent-light);
     box-shadow: 0 0 8px rgba(20,184,166,.5);
-}
-
-/* 子菜单折叠容器 */
-.nav-group {
-    overflow: hidden;
-    transition: max-height 220ms ease;
-}
-
-/* 合同业务二级菜单 */
-nav a.nav-child {
-    margin-left: 22px;
-    padding: 8px 14px;
-    font-size: 13px;
-    color: #b9d9d5;
 }
 
 /* ============================================================
@@ -694,6 +706,15 @@ textarea { resize: vertical; min-height: 80px; }
 .tag.MEDIUM { color: var(--warn); background: var(--warn-bg); }
 .tag.LOW   { color: var(--success); background: var(--success-bg); }
 
+.tag-gray      { color: #475569; background: #f1f5f9; }
+.tag-blue      { color: #1d4ed8; background: #dbeafe; }
+.tag-purple    { color: #7c3aed; background: #ede9fe; }
+.tag-orange    { color: #c2410c; background: #fff7ed; }
+.tag-green     { color: #15803d; background: #dcfce7; }
+.tag-cyan      { color: #0e7490; background: #ecfeff; }
+.tag-darkgreen { color: #166534; background: #dcfce7; }
+.tag-red       { color: #dc2626; background: #fef2f2; }
+
 /* ============================================================
    Tables (global defaults)
    ============================================================ */
@@ -813,7 +834,29 @@ tbody tr:last-child td:last-child { border-radius: 0 0 var(--radius) 0; }
 /* ============================================================
    Toast
    ============================================================ */
-/* Toast container */
+/* Toast - 简单版（taiz 页面使用） */
+.toast {
+    position: fixed;
+    right: 24px;
+    bottom: 28px;
+    min-width: 280px;
+    transform: translateY(140px);
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
+    padding: 14px 20px;
+    color: #fff;
+    background: #1e293b;
+    border-radius: var(--radius);
+    font-weight: 500;
+    font-size: 13.5px;
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.toast.show { transform: translateY(0); }
+
+/* Toast container（SmartContract 旧版） */
 .toast-container {
     position: fixed;
     right: 24px;
