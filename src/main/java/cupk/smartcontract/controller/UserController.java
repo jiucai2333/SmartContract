@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/users")
 public class UserController {
     private final AuthService authService;
     private final TokenService tokenService;
@@ -26,7 +26,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public Result login(@RequestBody LoginRequest request) {
+    public Result userLogin(@RequestBody LoginRequest request) {
         if (request == null || !StringUtils.hasText(request.username())) {
             return Result.error(400, "用户名不能为空");
         }
@@ -44,7 +44,7 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public Result register(@RequestBody RegisterRequest request) {
+    public Result userRegister(@RequestBody RegisterRequest request) {
         if (request == null || !StringUtils.hasText(request.username())) {
             return Result.error(400, "用户名不能为空");
         }
@@ -55,7 +55,7 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public Result logout() {
+    public Result userLogout() {
         return Result.success("退出成功");
     }
 
@@ -75,6 +75,6 @@ public class UserController {
 
     @GetMapping("/noPermission")
     public Result noPermission() {
-        return Result.error(403, "无权限访问");
+        return Result.error(403, "无权限访问…");
     }
 }

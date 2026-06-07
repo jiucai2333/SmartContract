@@ -21,10 +21,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(new AuthInterceptor(tokenService))
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
-                        "/api/user/login",
-                        "/api/user/register",
-                        "/api/user/notLogin",
-                        "/api/user/noPermission"
+                        "/api/users/login",
+                        "/api/users/register",
+                        "/api/users/notLogin",
+                        "/api/users/noPermission"
                 );
     }
 

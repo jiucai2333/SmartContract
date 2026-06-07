@@ -1,5 +1,5 @@
 /* ============================================================
-   认证页面样式 — 登录 / 注册
+   认证页面样式 …登录 / 注册
    ============================================================ */
 
 .auth-page {
@@ -189,5 +189,5 @@
     .auth-page { padding: 16px; }
     .auth-card { padding: 28px 22px; }
     .auth-brand { margin-bottom: 24px; }
-    .login-card { grid-template-columns: 1fr; min-width: 0; }
+    .login-card { grid-template-columns: 1fr; min-width: 0; gap: 6px; }
 }
