@@ -90,10 +90,33 @@ const state = {
     lastDraft: localStorage.getItem('lastDraft') || ''
 };
 
-// ==================== 导航菜单 ====================
+const statusText = {
+    DRAFT: '草稿', APPROVING: '审批中', APPROVED: '已审批',
+    SIGNING: '已签章', ARCHIVED: '已归档',
+    EXECUTING: '履约中', COMPLETED: '已完成',
+    EXPIRED: '已到期', TERMINATED: '已终止'
+};
+const statusTagClass = {
+    DRAFT: 'tag-gray', APPROVING: 'tag-blue', APPROVED: 'tag-purple',
+    SIGNING: 'tag-orange', ARCHIVED: 'tag-green',
+    EXECUTING: 'tag-cyan', COMPLETED: 'tag-darkgreen',
+    EXPIRED: 'tag-red', TERMINATED: 'tag-red'
+};
+const riskText = {LOW: '低', MEDIUM: '中', HIGH: '高'};
+
+// ==================== 导航菜单（支持 children 子菜单） ====================
 const NAV_ITEMS = [
-    {id: 'dashboard', href: '/html/dashboard.html', label: '工作台',   menu: 'ALL'},
-    {id: 'users',     href: '/html/users.html',     label: '用户管理', menu: 'ADMIN'}
+    {id: 'dashboard',   href: '/html/dashboard.html',   label: '工作台',   menu: 'ALL'},
+    {id: 'draft',       href: '/html/draft.html',       label: '合同编制', menu: 'USER,DEPT_LEADER,LEGAL,ADMIN'},
+    {id: 'risk',        href: '/html/risk.html',        label: '风险审查', menu: 'ALL'},
+    {id: 'approval',    href: '/html/approval.html',    label: '审批中心', menu: 'DEPT_LEADER,LEGAL,EXECUTIVE,ADMIN'},
+    {id: 'ledger',      href: '/html/ledger.html',      label: '合同台账', menu: 'ALL', children: [
+        {id: 'seal',    href: '/html/seal.html',        label: '签章登记', menu: 'LEGAL,DEPT_LEADER,ADMIN'},
+        {id: 'archive', href: '/html/archive.html',     label: '归档确认', menu: 'LEGAL,DEPT_LEADER,ADMIN'},
+    ]},
+    {id: 'fulfillment', href: '/html/fulfillment.html', label: '履约预警', menu: 'ALL'},
+    {id: 'templates',   href: '/html/templates.html',   label: '模板库',   menu: 'LEGAL,ADMIN'},
+    {id: 'users',       href: '/html/users.html',       label: '用户管理', menu: 'ADMIN'}
 ];
 
 function escapeHtml(value) {
@@ -169,6 +192,22 @@ async function api(url, options = {}) {
     if (response.status === 401) { logout('/html/login.html'); throw new Error('请先登录'); }
     if (response.status === 403) { toast('权限不足，请联系管理员'); throw new Error('权限不足'); }
     if (!response.ok) { throw new Error(res.message || res.msg || `请求失败：${response.status}`); }
+    return res;
+}
+
+async function uploadApi(url, formData) {
+    const response = await fetch(url, { method: 'POST', headers: state.accessToken ? { Authorization: `Bearer ${state.accessToken}` } : {}, body: formData });
+    let res;
+    try { res = await response.json(); } catch { throw new Error(`上传失败：${response.status}`); }
+    if (typeof res === 'string') res = JSON.parse(res);
+    if (res && typeof res.code === 'number') {
+        if (res.code === 401) { logout('/html/login.html'); } if (res.code === 403) { toast('权限不足'); throw new Error('权限不足'); }
+        if (res.code !== 200) throw new Error(res.msg || '上传失败');
+        return res.data;
+    }
+    if (response.status === 401) { logout('/html/login.html'); throw new Error('请先登录'); }
+    if (response.status === 403) { toast('权限不足'); throw new Error('权限不足'); }
+    if (!response.ok) throw new Error(res.message || `上传失败：${response.status}`);
     return res;
 }
 
@@ -255,6 +294,7 @@ function hasMenuPermission(item) {
     const allowed = item.menu.split(',').map(r => r.trim().toUpperCase());
     return allowed.includes('ALL') || allowed.includes(state.roleCode);
 }
+function canOperateSealArchive() { return ['LEGAL', 'DEPT_LEADER', 'ADMIN'].includes(state.roleCode); }
 
 function applyIdentity() {
     renderWatermark();
@@ -286,22 +326,46 @@ function renderWatermark() {
     }, 1000);
 }
 
+function buildNavLinks(activeId, items) {
+    if (!items) items = NAV_ITEMS;
+    const visibleItems = items.filter(hasMenuPermission);
+    return visibleItems.map(item => {
+        const hasChildren = item.children && item.children.length > 0;
+        const visibleChildren = hasChildren ? item.children.filter(hasMenuPermission) : [];
+        const childActive = visibleChildren.some(c => c.id === activeId);
+        const selfActive = item.id === activeId || childActive;
+        const parentClass = selfActive ? 'active' : '';
+        let html = '';
+        if (item.href && !hasChildren) {
+            html += `<a href="${item.href}" class="${parentClass}">${item.label}</a>`;
+        } else if (hasChildren && visibleChildren.length > 0) {
+            html += `<a href="${item.href}" class="nav-parent ${parentClass}${childActive ? ' expanded' : ''}">${item.label}<span class="nav-toggle"></span></a>`;
+            html += `<div class="nav-sub"${childActive ? '' : ' hidden'}>`;
+            visibleChildren.forEach(child => { html += `<a href="${child.href}" class="${child.id === activeId ? 'active' : ''}">${child.label}</a>`; });
+            html += `</div>`;
+        } else if (item.href) { html += `<a href="${item.href}" class="${parentClass}">${item.label}</a>`; }
+        return html;
+    }).join('');
+}
+
 function renderSidebar(activeId) {
     const nav = $('#mainNav');
     if (!nav) return;
-    const visibleItems = NAV_ITEMS.filter(hasMenuPermission);
-    nav.innerHTML = visibleItems.map(item =>
-        `<a href="${item.href}" class="${item.id === activeId ? 'active' : ''}">${item.label}</a>`
-    ).join('');
+    nav.innerHTML = buildNavLinks(activeId);
     applyIdentity();
 }
 
-function renderNavInShell(activeId) {
-    const visibleItems = NAV_ITEMS.filter(hasMenuPermission);
-    return visibleItems.map(item =>
-        `<a href="${item.href}" class="${item.id === activeId ? 'active' : ''}">${item.label}</a>`
-    ).join('');
-}
+function renderNavInShell(activeId) { return buildNavLinks(activeId); }
+
+// 子菜单展开/收起（事件委托）
+document.addEventListener('click', function(event) {
+    const toggle = event.target.closest('.nav-toggle');
+    if (!toggle) return;
+    event.preventDefault(); event.stopPropagation();
+    const parent = toggle.closest('.nav-parent');
+    const sub = parent ? parent.nextElementSibling : null;
+    if (sub && sub.classList.contains('nav-sub')) { parent.classList.toggle('expanded'); sub.hidden = !sub.hidden; }
+});
 
 function initAppShell(activeId, title, eyebrow) {
     if (!requireAuth()) return false;
