@@ -116,6 +116,10 @@ public class AiDraftService {
         }
     }
 
+    public String modelName() {
+        return qwenProperties.resolvedModel();
+    }
+
     public List<DraftField> analyzeDraftFields(String markdown) {
         assertQwenReady();
         if (markdown == null || markdown.isBlank()) {
