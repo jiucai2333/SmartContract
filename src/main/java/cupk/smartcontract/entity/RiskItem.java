@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class RiskItem {
     @TableId(value = "risk_id", type = IdType.AUTO)
     private Long riskId;
+    private Long reportId;
     private Long contractId;
     private Long versionId;
     private String clauseRef;

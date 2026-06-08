@@ -35,11 +35,11 @@
             <label>乙方名称
                 <input id="partyB" type="text" placeholder="乙方公司全称">
             </label>
-            <label class="wide">特殊条款（可选）
-                <input id="specialTerms" type="text" placeholder="如：分三期付款、含保密附件等">
+            <label class="wide">特殊条款
+                <input id="specialTerms" type="text" placeholder="如：分三期付款、含保密附件">
             </label>
             <label class="wide">合同正文
-                <textarea id="contractText" rows="10" placeholder="请粘贴合同全文，AI 将自动进行风险审查..."></textarea>
+                <textarea id="contractText" rows="10" placeholder="请粘贴合同全文，AI 将自动进行风险审查"></textarea>
             </label>
         </div>
         <div class="button-row">
@@ -48,17 +48,29 @@
         </div>
     </div>
 </section>
+<section class="section report-layout">
+    <div class="panel">
+        <div class="panel-head"><div><p class="eyebrow">Saved Report</p><h2>本次风险报告</h2></div></div>
+        <div id="reportSummary" class="report-summary empty">完成 AI 审核后，报告会自动存库并显示在这里。</div>
+    </div>
+    <div class="panel">
+        <div class="panel-head"><div><p class="eyebrow">History</p><h2>历史风险报告</h2></div></div>
+        <div id="reportList" class="report-list">
+            <div class="list-item"><span>暂无风险报告</span></div>
+        </div>
+    </div>
+</section>
 <section class="section review-layout">
     <div class="panel contract-preview">
         <div class="panel-head"><div><p class="eyebrow">Review Split View</p><h2>合同正文预览</h2></div></div>
         <article id="contractBody">
-            <p class="hint">提交合同文本后，此处将展示合同条款，点击右侧风险卡片可定位到对应条款。</p>
+            <p class="hint">提交合同文本或打开历史报告后，这里会展示合同条款。点击右侧风险卡片可定位到对应条款。</p>
         </article>
     </div>
     <div class="panel">
-        <div class="panel-head"><div><p class="eyebrow">Risk Audit</p><h2>AI 风险审查</h2></div></div>
+        <div class="panel-head"><div><p class="eyebrow">Risk Audit</p><h2>风险项明细</h2></div></div>
         <div id="riskList" class="list">
-            <div class="list-item"><span>请提交合同文本，AI 将实时进行风险审查</span></div>
+            <div class="list-item"><span>请提交合同文本，AI 将进行风险审查。</span></div>
         </div>
     </div>
 </section>

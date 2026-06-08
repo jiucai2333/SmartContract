@@ -7,19 +7,23 @@ import cupk.smartcontract.entity.ArchiveRecord;
 import cupk.smartcontract.entity.ContractMain;
 import cupk.smartcontract.entity.FulfillmentPlan;
 import cupk.smartcontract.entity.RiskItem;
+import cupk.smartcontract.entity.RiskReport;
 import cupk.smartcontract.entity.SealRecord;
 import cupk.smartcontract.dto.ArchiveCreateRequest;
 import cupk.smartcontract.dto.AiDraftRequest;
 import cupk.smartcontract.dto.AiDraftVO;
+import cupk.smartcontract.dto.AiRiskReviewResult;
 import cupk.smartcontract.dto.AiRiskReviewRequest;
 import cupk.smartcontract.dto.AiRiskVO;
 import cupk.smartcontract.dto.ContractCreateRequest;
 import cupk.smartcontract.dto.DashboardVO;
+import cupk.smartcontract.dto.RiskReportVO;
 import cupk.smartcontract.dto.SealCreateRequest;
 import cupk.smartcontract.mapper.ApprovalInstanceMapper;
 import cupk.smartcontract.mapper.ContractMainMapper;
 import cupk.smartcontract.mapper.FulfillmentPlanMapper;
 import cupk.smartcontract.mapper.RiskItemMapper;
+import cupk.smartcontract.mapper.RiskReportMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -45,6 +49,7 @@ public class ContractManagementService {
 
     private final ContractMainMapper contractMapper;
     private final RiskItemMapper riskMapper;
+    private final RiskReportMapper riskReportMapper;
     private final ApprovalInstanceMapper approvalMapper;
     private final FulfillmentPlanMapper planMapper;
     private final AiDraftService aiDraftService;
@@ -52,12 +57,14 @@ public class ContractManagementService {
 
     public ContractManagementService(ContractMainMapper contractMapper,
                                      RiskItemMapper riskMapper,
+                                     RiskReportMapper riskReportMapper,
                                      ApprovalInstanceMapper approvalMapper,
                                      FulfillmentPlanMapper planMapper,
                                      AiDraftService aiDraftService,
                                      StatusTransitionService statusTransitionService) {
         this.contractMapper = contractMapper;
         this.riskMapper = riskMapper;
+        this.riskReportMapper = riskReportMapper;
         this.approvalMapper = approvalMapper;
         this.planMapper = planMapper;
         this.aiDraftService = aiDraftService;
@@ -279,43 +286,123 @@ public class ContractManagementService {
         return riskMapper.selectList(wrapper);
     }
 
-    public List<AiRiskVO> aiRiskReview(AiRiskReviewRequest request) {
+    public AiRiskReviewResult aiRiskReview(AiRiskReviewRequest request) {
         if (request.contractId() != null) {
             assertCanAccess(request.contractId());
         }
-        List<AiRiskVO> risks = aiDraftService.analyzeRisks(request);
-        if (request.contractId() != null) {
-            persistAiRisks(request.contractId(), request.versionId(), risks);
+        if (looksMojibake(request.contractText())) {
+            throw new IllegalStateException("合同正文疑似编码异常，请使用 UTF-8 提交后重新审核");
         }
-        return risks;
+        List<AiRiskVO> risks = aiDraftService.analyzeRisks(request);
+        RiskReport report = persistRiskReport(request, risks);
+        return new AiRiskReviewResult(report.getReportId(), report.getContractId(), report.getVersionId(),
+                report.getReportNo(), report.getHighestRiskLevel(), report.getRiskCount(), risks);
     }
 
-    private void persistAiRisks(Long contractId, Long versionId, List<AiRiskVO> risks) {
-        Long resolvedVersionId = versionId == null ? 0L : versionId;
-        riskMapper.delete(new LambdaQueryWrapper<RiskItem>()
-                .eq(RiskItem::getContractId, contractId)
-                .eq(RiskItem::getVersionId, resolvedVersionId)
-                .eq(RiskItem::getReviewStatus, "AI_PENDING"));
-
+    private RiskReport persistRiskReport(AiRiskReviewRequest request, List<AiRiskVO> risks) {
         LocalDateTime now = LocalDateTime.now();
+        RiskReport report = new RiskReport();
+        report.setContractId(request.contractId());
+        report.setVersionId(resolveVersionId(request.versionId()));
+        report.setReportNo("RISK-" + now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + "-" + (System.nanoTime() % 10000));
+        report.setContractType(clipNullable(request.contractType(), 80));
+        report.setPartyA(clipNullable(request.partyA(), 200));
+        report.setPartyB(clipNullable(request.partyB(), 200));
+        report.setBusinessScope(clipNullable(request.businessScope(), 255));
+        report.setHighestRiskLevel(highestRiskLevel(risks));
+        report.setRiskCount(risks.size());
+        report.setHighCount(countRiskLevel(risks, "HIGH"));
+        report.setMediumCount(countRiskLevel(risks, "MEDIUM"));
+        report.setLowCount(countRiskLevel(risks, "LOW"));
+        report.setContractText(request.contractText());
+        report.setSummary(buildReportSummary(report));
+        report.setModelName(aiDraftService.modelName());
+        report.setReviewStatus("COMPLETED");
+        report.setCreatedBy(SecurityContext.username());
+        report.setCreatedAt(now);
+        report.setUpdatedAt(now);
+        riskReportMapper.insert(report);
+        persistAiRiskItems(report, risks, now);
+
+        if (request.contractId() != null) {
+            ContractMain contract = findContract(request.contractId());
+            contract.setRiskLevel(report.getHighestRiskLevel());
+            contract.setUpdatedBy(SecurityContext.username());
+            contract.setUpdatedAt(now);
+            contractMapper.updateById(contract);
+        }
+        return report;
+    }
+
+    private void persistAiRiskItems(RiskReport report, List<AiRiskVO> risks, LocalDateTime now) {
         for (AiRiskVO risk : risks) {
             RiskItem item = new RiskItem();
-            item.setContractId(contractId);
-            item.setVersionId(resolvedVersionId);
+            item.setReportId(report.getReportId());
+            item.setContractId(report.getContractId() == null ? 0L : report.getContractId());
+            item.setVersionId(report.getVersionId());
             item.setClauseRef(clip(risk.clause(), 255));
             item.setRiskType("AI_REVIEW");
             item.setRiskLevel(normalizeRiskLevel(risk.level()));
             item.setSuggestion(buildRiskSuggestion(risk));
             item.setReviewStatus("AI_PENDING");
             item.setCreatedAt(now);
+            item.setUpdatedAt(now);
             riskMapper.insert(item);
         }
+    }
 
-        ContractMain contract = findContract(contractId);
-        contract.setRiskLevel(highestRiskLevel(risks));
-        contract.setUpdatedBy(SecurityContext.username());
-        contract.setUpdatedAt(now);
-        contractMapper.updateById(contract);
+    public List<RiskReportVO> listRiskReports(Long contractId) {
+        LambdaQueryWrapper<RiskReport> wrapper = new LambdaQueryWrapper<RiskReport>()
+                .eq(contractId != null, RiskReport::getContractId, contractId)
+                .orderByDesc(RiskReport::getCreatedAt);
+        return riskReportMapper.selectList(wrapper).stream()
+                .filter(report -> report.getContractId() == null || canAccessReport(report))
+                .map(report -> toRiskReportVo(report, false))
+                .toList();
+    }
+
+    public RiskReportVO getRiskReport(Long reportId) {
+        RiskReport report = riskReportMapper.selectById(reportId);
+        if (report == null) {
+            throw new IllegalArgumentException("风险报告不存在");
+        }
+        if (!canAccessReport(report)) {
+            throw new SecurityException("无权访问该风险报告");
+        }
+        return toRiskReportVo(report, true);
+    }
+
+    private boolean canAccessReport(RiskReport report) {
+        return report.getContractId() == null || canAccess(findContract(report.getContractId()));
+    }
+
+    private RiskReportVO toRiskReportVo(RiskReport report, boolean includeDetails) {
+        List<AiRiskVO> risks = includeDetails
+                ? riskMapper.selectList(new LambdaQueryWrapper<RiskItem>()
+                    .eq(RiskItem::getReportId, report.getReportId())
+                    .orderByDesc(RiskItem::getCreatedAt))
+                    .stream()
+                    .map(this::toAiRiskVo)
+                    .toList()
+                : List.of();
+        return new RiskReportVO(report.getReportId(), report.getContractId(), report.getVersionId(),
+                report.getReportNo(), report.getContractType(), report.getPartyA(), report.getPartyB(),
+                report.getBusinessScope(), report.getHighestRiskLevel(), report.getRiskCount(),
+                report.getHighCount(), report.getMediumCount(), report.getLowCount(),
+                includeDetails ? report.getContractText() : null, report.getSummary(), report.getModelName(),
+                report.getReviewStatus(), report.getCreatedBy(), report.getCreatedAt(), risks);
+    }
+
+    private AiRiskVO toAiRiskVo(RiskItem item) {
+        String suggestion = item.getSuggestion();
+        String reason = "";
+        if (StringUtils.hasText(suggestion)) {
+            String[] parts = suggestion.split("\\n", 2);
+            reason = parts[0].replaceFirst("^风险原因：", "").trim();
+            suggestion = parts.length > 1 ? parts[1].replaceFirst("^修改建议：", "").trim() : suggestion;
+        }
+        return new AiRiskVO(item.getRiskLevel(), item.getClauseRef(), reason, suggestion);
     }
 
     public List<Approval> listApprovals() {
@@ -362,6 +449,14 @@ public class ContractManagementService {
         return "LOW";
     }
 
+    private int countRiskLevel(List<AiRiskVO> risks, String level) {
+        return (int) risks.stream().filter(r -> level.equals(normalizeRiskLevel(r.level()))).count();
+    }
+
+    private Long resolveVersionId(Long versionId) {
+        return versionId == null ? 0L : versionId;
+    }
+
     private String normalizeRiskLevel(String level) {
         if (!StringUtils.hasText(level)) return "LOW";
         String normalized = level.trim().toUpperCase();
@@ -377,6 +472,28 @@ public class ContractManagementService {
         if (!StringUtils.hasText(value)) return "AI";
         String trimmed = value.trim();
         return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
+    }
+
+    private String clipNullable(String value, int max) {
+        if (!StringUtils.hasText(value)) return null;
+        String trimmed = value.trim();
+        return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
+    }
+
+    private String buildReportSummary(RiskReport report) {
+        if (report.getRiskCount() == null || report.getRiskCount() == 0) {
+            return "AI 审核完成，未发现明显风险。";
+        }
+        return "AI 审核完成，共发现 " + report.getRiskCount() + " 项风险，其中高风险 "
+                + report.getHighCount() + " 项、中风险 " + report.getMediumCount()
+                + " 项、低风险 " + report.getLowCount() + " 项。";
+    }
+
+    private boolean looksMojibake(String value) {
+        if (!StringUtils.hasText(value)) return false;
+        String trimmed = value.trim();
+        long questionMarks = trimmed.chars().filter(ch -> ch == '?').count();
+        return questionMarks >= 6 && questionMarks * 2 > trimmed.length();
     }
 
     private String buildRiskSuggestion(AiRiskVO risk) {
