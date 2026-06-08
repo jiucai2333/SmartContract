@@ -1,0 +1,54 @@
+/* ============================================================
+   履约付款页面样式
+   ============================================================ */
+
+/* ---- Gantt / Milestone Rows ---- */
+.gantt {
+    display: grid;
+    gap: 14px;
+}
+
+.gantt-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px 16px;
+    align-items: center;
+    padding: 16px 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition), transform var(--transition);
+}
+
+.gantt-row:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateX(3px);
+}
+
+.gantt-row strong {
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.gantt-row span {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.gantt-row .tag { justify-self: end; }
+
+/* ---- Milestone status colors ---- */
+.gantt-row.overdue {
+    border-left: 3px solid var(--danger);
+}
+
+.gantt-row.due-soon {
+    border-left: 3px solid var(--warn);
+}
+
+.gantt-row.completed {
+    border-left: 3px solid var(--success);
+    opacity: .7;
+}
