@@ -13,8 +13,40 @@ const clearBtn = $('#clearBtn');
 const contractTextInput = $('#contractText');
 const contractBody = $('#contractBody');
 const riskListEl = $('#riskList');
-const reportSummaryEl = $('#reportSummary');
-const reportListEl = $('#reportList');
+const reportEls = ensureReportPanels();
+const reportSummaryEl = reportEls.summary;
+const reportListEl = reportEls.list;
+
+function ensureReportPanels() {
+    let summary = $('#reportSummary');
+    let list = $('#reportList');
+    if (summary && list) {
+        return {summary, list};
+    }
+    const reviewLayout = $('.review-layout');
+    const section = document.createElement('section');
+    section.className = 'section report-layout';
+    section.innerHTML = `
+        <div class="panel">
+            <div class="panel-head"><div><p class="eyebrow">Saved Report</p><h2>本次风险报告</h2></div></div>
+            <div id="reportSummary" class="report-summary empty">完成 AI 审核后，报告会自动存库并显示在这里。</div>
+        </div>
+        <div class="panel">
+            <div class="panel-head"><div><p class="eyebrow">History</p><h2>历史风险报告</h2></div></div>
+            <div id="reportList" class="report-list">
+                <div class="list-item"><span>暂无风险报告</span></div>
+            </div>
+        </div>
+    `;
+    if (reviewLayout?.parentElement) {
+        reviewLayout.parentElement.insertBefore(section, reviewLayout);
+    } else {
+        document.querySelector('.app-shell')?.appendChild(section);
+    }
+    summary = $('#reportSummary');
+    list = $('#reportList');
+    return {summary, list};
+}
 
 reviewBtn.addEventListener('click', async () => {
     const contractText = contractTextInput.value.trim();
@@ -39,13 +71,21 @@ reviewBtn.addEventListener('click', async () => {
             specialTerms: $('#specialTerms').value.trim() || undefined
         };
         const result = await api('/api/ai/risk-review', {method: 'POST', body: JSON.stringify(body)});
-        const risks = Array.isArray(result) ? result : (result.risks || []);
-        pageState.currentReportId = result.reportId || null;
+        const reportId = getReportId(result);
+        if (reportId) {
+            pageState.currentReportId = reportId;
+            await openReport(reportId);
+            await loadReports();
+            renderReportsHighlight();
+            toast(`风险报告 ${result.reportNo || `#${reportId}`} 已保存`);
+            return;
+        }
+        const risks = riskItemsOf(result);
         renderContractBody(contractText);
         renderRisks(risks);
         renderReportSummary(result);
         await loadReports();
-        toast(result.reportId ? `风险报告 ${result.reportNo} 已保存` : 'AI 风险审查完成');
+        toast('AI 风险审查完成');
     } catch (e) {
         toast(e.message || '风险审查失败');
         riskListEl.innerHTML = `<div class="list-item"><span>审查失败：${escapeHtml(e.message)}</span></div>`;
@@ -76,33 +116,36 @@ clearBtn.addEventListener('click', () => {
 });
 
 function renderReportSummary(report) {
-    if (!report || !report.reportId) {
+    const reportId = getReportId(report);
+    if (!report || !reportId) {
         reportSummaryEl.className = 'report-summary empty';
         reportSummaryEl.textContent = '本次审查未生成报告。';
         return;
     }
-    const level = (report.highestRiskLevel || 'LOW').toUpperCase();
+    const risks = riskItemsOf(report);
+    const level = normalizeRiskLevel(report.highestRiskLevel || report.riskLevel || highestRiskLevelOf(risks));
+    const riskCount = Number(report.riskCount ?? risks.length ?? 0);
     reportSummaryEl.className = `report-summary ${level}`;
     reportSummaryEl.innerHTML = `
         <div>
-            <strong>${escapeHtml(report.reportNo || `报告 #${report.reportId}`)}</strong>
-            <span>${escapeHtml(formatRiskLevel(level))} · ${Number(report.riskCount || 0)} 项风险</span>
+            <strong>${escapeHtml(report.reportNo || `报告 #${reportId}`)}</strong>
+            <span>${escapeHtml(formatRiskLevel(level))} · ${riskCount} 项风险</span>
         </div>
-        <button class="secondary compact" type="button" data-report-id="${report.reportId}">查看报告</button>
+        <button class="secondary compact" type="button" data-report-id="${reportId}">查看报告</button>
     `;
 }
 
 function renderReportDetails(report) {
-    pageState.currentReportId = report.reportId;
-    pageState.contractId = report.contractId || pageState.contractId;
-    pageState.versionId = report.versionId || pageState.versionId;
+    pageState.currentReportId = getReportId(report);
+    pageState.contractId = positiveId(report.contractId);
+    pageState.versionId = positiveId(report.versionId);
     if (report.contractType) $('#contractType').value = report.contractType;
     if (report.partyA) $('#partyA').value = report.partyA;
     if (report.partyB) $('#partyB').value = report.partyB;
     if (report.businessScope) $('#businessScope').value = report.businessScope;
     contractTextInput.value = report.contractText || '';
     renderContractBody(report.contractText || '');
-    renderRisks(report.risks || []);
+    renderRisks(riskItemsOf(report));
     renderReportSummary(report);
     renderReportsHighlight();
 }
@@ -120,10 +163,11 @@ function renderReports(reports) {
         return;
     }
     reportListEl.innerHTML = reports.map(report => {
-        const level = (report.highestRiskLevel || 'LOW').toUpperCase();
-        return `<button class="report-item ${report.reportId === pageState.currentReportId ? 'active' : ''}" type="button" data-report-id="${report.reportId}">
+        const reportId = getReportId(report);
+        const level = normalizeRiskLevel(report.highestRiskLevel || report.riskLevel);
+        return `<button class="report-item ${reportId === pageState.currentReportId ? 'active' : ''}" type="button" data-report-id="${reportId}">
             <span class="tag ${escapeHtml(level)}">${escapeHtml(formatRiskLevel(level))}</span>
-            <strong>${escapeHtml(report.reportNo || `报告 #${report.reportId}`)}</strong>
+            <strong>${escapeHtml(report.reportNo || `报告 #${reportId}`)}</strong>
             <small>${escapeHtml(report.summary || '')}</small>
             <em>${report.createdAt ? new Date(report.createdAt).toLocaleString('zh-CN') : ''}</em>
         </button>`;
@@ -158,7 +202,7 @@ function buildReportUrl(report) {
     const params = new URLSearchParams();
     if (report.contractId) params.set('contractId', String(report.contractId));
     if (report.versionId) params.set('versionId', String(report.versionId));
-    params.set('reportId', String(report.reportId));
+    params.set('reportId', String(getReportId(report)));
     return `/html/risk.html?${params.toString()}`;
 }
 
@@ -181,18 +225,50 @@ function renderRisks(risks) {
         return;
     }
     riskListEl.innerHTML = risks.map(risk => {
-        const level = (risk.level || 'LOW').toUpperCase();
+        const level = normalizeRiskLevel(risk.level || risk.riskLevel);
         const levelLabel = formatRiskLevel(level);
-        return `<button class="risk-card ${escapeHtml(level)}" data-clause="${escapeHtml(risk.clause || '')}">
-            <strong><span class="tag ${escapeHtml(level)}">${escapeHtml(levelLabel)}</span> ${escapeHtml(risk.clause || '未指明条款')}</strong>
-            <span>${escapeHtml(risk.reason || '')}</span>
+        const clause = risk.clause || risk.clauseRef || '未指明条款';
+        return `<button class="risk-card ${escapeHtml(level)}" data-clause="${escapeHtml(clause)}">
+            <strong><span class="tag ${escapeHtml(level)}">${escapeHtml(levelLabel)}</span> ${escapeHtml(clause)}</strong>
+            <span>${escapeHtml(risk.reason || risk.riskType || '')}</span>
             <small>建议：${escapeHtml(risk.suggestion || '')}</small>
         </button>`;
     }).join('');
 }
 
 function formatRiskLevel(level) {
-    return {LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险'}[level] || RISK_TEXT[level] || level;
+    const normalized = normalizeRiskLevel(level);
+    return {LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险'}[normalized] || RISK_TEXT[normalized] || normalized;
+}
+
+function normalizeRiskLevel(level) {
+    const normalized = String(level || 'LOW').trim().toUpperCase();
+    if (normalized === 'HIGH' || normalized.includes('高')) return 'HIGH';
+    if (normalized === 'MEDIUM' || normalized.includes('中')) return 'MEDIUM';
+    return 'LOW';
+}
+
+function riskItemsOf(value) {
+    if (Array.isArray(value)) return value;
+    if (!value || typeof value !== 'object') return [];
+    return [value.risks, value.riskItems, value.items, value.records]
+        .find(Array.isArray) || [];
+}
+
+function getReportId(report) {
+    const id = Number(report?.reportId ?? report?.id);
+    return Number.isFinite(id) && id > 0 ? id : null;
+}
+
+function positiveId(value) {
+    const id = Number(value);
+    return Number.isFinite(id) && id > 0 ? id : null;
+}
+
+function highestRiskLevelOf(risks) {
+    if (risks.some(risk => normalizeRiskLevel(risk.level || risk.riskLevel) === 'HIGH')) return 'HIGH';
+    if (risks.some(risk => normalizeRiskLevel(risk.level || risk.riskLevel) === 'MEDIUM')) return 'MEDIUM';
+    return 'LOW';
 }
 
 riskListEl.addEventListener('click', event => {
