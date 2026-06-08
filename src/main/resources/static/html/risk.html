@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>风险审查 - 智能合同管理</title>
     <link rel="stylesheet" href="../css/styles.css">
-    <link rel="stylesheet" href="../css/risk.css">
+    <link rel="stylesheet" href="../css/risk.css?v=20260608-8">
 </head>
 <body>
 <script src="../js/common.js"></script>
@@ -39,11 +39,11 @@
                 <input id="specialTerms" type="text" placeholder="如：分三期付款、含保密附件">
             </label>
             <label class="wide">合同正文
-                <textarea id="contractText" rows="10" placeholder="请粘贴合同全文，AI 将自动进行风险审查"></textarea>
+                <textarea id="contractText" rows="10" placeholder="请粘贴合同全文，系统会核对主要风险条款"></textarea>
             </label>
         </div>
         <div class="button-row">
-            <button id="reviewBtn" type="button">AI 风险审查</button>
+            <button id="reviewBtn" type="button">开始风险审查</button>
             <button id="clearBtn" type="button" class="secondary">清空</button>
         </div>
     </div>
@@ -51,7 +51,7 @@
 <section class="section report-layout">
     <div class="panel">
         <div class="panel-head"><div><p class="eyebrow">Saved Report</p><h2>本次风险报告</h2></div></div>
-        <div id="reportSummary" class="report-summary empty">完成 AI 审核后，报告会自动存库并显示在这里。</div>
+        <div id="reportSummary" class="report-summary empty">完成审查后，报告会自动存库并显示在这里。</div>
     </div>
     <div class="panel">
         <div class="panel-head"><div><p class="eyebrow">History</p><h2>历史风险报告</h2></div></div>
@@ -70,11 +70,11 @@
     <div class="panel">
         <div class="panel-head"><div><p class="eyebrow">Risk Audit</p><h2>风险项明细</h2></div></div>
         <div id="riskList" class="list">
-            <div class="list-item"><span>请提交合同文本，AI 将进行风险审查。</span></div>
+            <div class="list-item"><span>请提交合同文本，系统将核对主要风险条款。</span></div>
         </div>
     </div>
 </section>
 <script>document.write(closeAppShell());</script>
-<script src="../js/risk.js?v=20260608-5"></script>
+<script src="../js/risk.js?v=20260608-9"></script>
 </body>
 </html>

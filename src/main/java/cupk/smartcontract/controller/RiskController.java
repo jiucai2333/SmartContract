@@ -4,7 +4,10 @@ import cupk.smartcontract.security.RequireRole;
 import cupk.smartcontract.dto.AiRiskReviewResult;
 import cupk.smartcontract.dto.AiRiskReviewRequest;
 import cupk.smartcontract.service.ContractManagementService;
+import cupk.smartcontract.service.RiskReportExportService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,9 +27,12 @@ import java.util.Map;
 public class RiskController {
 
     private final ContractManagementService contractService;
+    private final RiskReportExportService riskReportExportService;
 
-    public RiskController(ContractManagementService contractService) {
+    public RiskController(ContractManagementService contractService,
+                          RiskReportExportService riskReportExportService) {
         this.contractService = contractService;
+        this.riskReportExportService = riskReportExportService;
     }
 
     @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
@@ -50,6 +56,18 @@ public class RiskController {
     @GetMapping("/risk-reports/{reportId}")
     public Object getRiskReport(@PathVariable Long reportId) {
         return contractService.getRiskReport(reportId);
+    }
+
+    @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
+    @GetMapping("/risk-reports/{reportId}/export")
+    public ResponseEntity<byte[]> exportRiskReport(@PathVariable Long reportId) {
+        RiskReportExportService.ExportFile export = riskReportExportService.exportDocx(reportId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename*=UTF-8''" + export.encodedFilename())
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .body(export.bytes());
     }
 
     /**

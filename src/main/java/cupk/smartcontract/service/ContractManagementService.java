@@ -482,9 +482,9 @@ public class ContractManagementService {
 
     private String buildReportSummary(RiskReport report) {
         if (report.getRiskCount() == null || report.getRiskCount() == 0) {
-            return "AI 审核完成，未发现明显风险。";
+            return "风险审查完成，未发现明显风险。";
         }
-        return "AI 审核完成，共发现 " + report.getRiskCount() + " 项风险，其中高风险 "
+        return "风险审查完成，共发现 " + report.getRiskCount() + " 项风险，其中高风险 "
                 + report.getHighCount() + " 项、中风险 " + report.getMediumCount()
                 + " 项、低风险 " + report.getLowCount() + " 项。";
     }

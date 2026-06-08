@@ -22,7 +22,7 @@ const REVIEW_PROGRESS_STEPS = [
     '识别合同结构',
     '检查关键条款',
     '评估风险等级',
-    '生成风险报告'
+    '整理审查报告'
 ];
 
 function ensureReportPanels() {
@@ -63,10 +63,10 @@ reviewBtn.addEventListener('click', async () => {
         return;
     }
     reviewBtn.disabled = true;
-    reviewBtn.textContent = 'AI 审查中...';
+    reviewBtn.textContent = '正在核对...';
     startReviewProgress();
     reportSummaryEl.className = 'report-summary empty';
-    reportSummaryEl.textContent = 'AI 正在审查合同，完成后会自动保存报告。';
+    reportSummaryEl.textContent = '正在核对合同条款，完成后会自动保存报告。';
     try {
         const body = {
             contractText,
@@ -93,7 +93,7 @@ reviewBtn.addEventListener('click', async () => {
         renderRisks(risks);
         renderReportSummary(result);
         await loadReports();
-        toast('AI 风险审查完成');
+        toast('风险审查完成');
     } catch (e) {
         toast(e.message || '风险审查失败');
         riskListEl.innerHTML = `<div class="list-item"><span>审查失败：${escapeHtml(e.message)}</span></div>`;
@@ -118,9 +118,9 @@ clearBtn.addEventListener('click', () => {
     $('#businessScope').value = '';
     $('#specialTerms').value = '';
     contractBody.innerHTML = '<p class="hint">提交合同文本或打开历史报告后，这里会展示合同条款。点击右侧风险卡片可定位到对应条款。</p>';
-    riskListEl.innerHTML = '<div class="list-item"><span>请提交合同文本，AI 将进行风险审查。</span></div>';
+    riskListEl.innerHTML = '<div class="list-item"><span>请提交合同文本，系统将核对主要风险条款。</span></div>';
     reportSummaryEl.className = 'report-summary empty';
-    reportSummaryEl.textContent = '完成 AI 审核后，报告会自动存库并显示在这里。';
+    reportSummaryEl.textContent = '完成审查后，报告会自动存库并显示在这里。';
     loadReports().catch(error => toast(error.message));
 });
 
@@ -140,7 +140,7 @@ function renderReportSummary(report) {
             <strong>${escapeHtml(report.reportNo || `报告 #${reportId}`)}</strong>
             <span>${escapeHtml(formatRiskLevel(level))} · ${riskCount} 项风险</span>
         </div>
-        <button class="secondary compact" type="button" data-report-id="${reportId}">查看报告</button>
+        <button class="secondary compact" type="button" data-download-report-id="${reportId}">下载报告</button>
     `;
 }
 
@@ -177,7 +177,7 @@ function renderReports(reports) {
         return `<button class="report-item ${reportId === pageState.currentReportId ? 'active' : ''}" type="button" data-report-id="${reportId}">
             <span class="tag ${escapeHtml(level)}">${escapeHtml(formatRiskLevel(level))}</span>
             <strong>${escapeHtml(report.reportNo || `报告 #${reportId}`)}</strong>
-            <small>${escapeHtml(report.summary || '')}</small>
+            <small>${escapeHtml(formatReportSummary(report.summary || ''))}</small>
             <em>${report.createdAt ? new Date(report.createdAt).toLocaleString('zh-CN') : ''}</em>
         </button>`;
     }).join('');
@@ -190,9 +190,14 @@ function renderReportsHighlight() {
 }
 
 reportSummaryEl.addEventListener('click', event => {
-    const button = event.target.closest('[data-report-id]');
-    if (!button) return;
-    openReport(button.dataset.reportId).catch(error => toast(error.message));
+    const downloadButton = event.target.closest('[data-download-report-id]');
+    if (downloadButton) {
+        downloadRiskReport(downloadButton.dataset.downloadReportId).catch(error => toast(error.message));
+        return;
+    }
+    const openButton = event.target.closest('[data-report-id]');
+    if (!openButton) return;
+    openReport(openButton.dataset.reportId).catch(error => toast(error.message));
 });
 
 reportListEl.addEventListener('click', event => {
@@ -205,6 +210,10 @@ async function openReport(reportId) {
     const report = await api(`/api/risk-reports/${reportId}`);
     renderReportDetails(report);
     history.replaceState(null, '', buildReportUrl(report));
+}
+
+async function downloadRiskReport(reportId) {
+    await downloadFile(`/api/risk-reports/${reportId}/export`, `风险报告-${reportId}.docx`);
 }
 
 function buildReportUrl(report) {
@@ -230,7 +239,7 @@ function renderContractBody(text) {
 
 function renderRisks(risks) {
     if (!risks.length) {
-        riskListEl.innerHTML = '<div class="list-item"><span>AI 审查完成，未发现明显风险。</span></div>';
+        riskListEl.innerHTML = '<div class="list-item"><span>本次核对未发现明显风险。</span></div>';
         return;
     }
     riskListEl.innerHTML = risks.map(risk => {
@@ -255,7 +264,7 @@ function startReviewProgress() {
             <div class="review-progress">
                 <div class="progress-orbit" aria-hidden="true"></div>
                 <div class="progress-copy">
-                    <strong>AI 正在审查合同风险</strong>
+                    <strong>正在核对合同条款</strong>
                     <span>${escapeHtml(step)} · 已用时 ${elapsedSeconds} 秒</span>
                 </div>
             </div>
@@ -279,6 +288,10 @@ function stopReviewProgress() {
 function formatRiskLevel(level) {
     const normalized = normalizeRiskLevel(level);
     return {LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险'}[normalized] || RISK_TEXT[normalized] || normalized;
+}
+
+function formatReportSummary(summary) {
+    return String(summary || '').replaceAll('AI 审核完成', '风险审查完成');
 }
 
 function normalizeRiskLevel(level) {
