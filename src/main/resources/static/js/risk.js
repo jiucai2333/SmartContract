@@ -16,6 +16,14 @@ const riskListEl = $('#riskList');
 const reportEls = ensureReportPanels();
 const reportSummaryEl = reportEls.summary;
 const reportListEl = reportEls.list;
+let reviewProgressTimer = null;
+
+const REVIEW_PROGRESS_STEPS = [
+    {title: '正在理解合同结构', detail: 'AI 正在识别合同主体、金额、交付和履约边界。'},
+    {title: '正在思考关键风险', detail: 'AI 正在检查付款、验收、违约责任、知识产权、保密和争议解决条款。'},
+    {title: '正在评估风险等级', detail: 'AI 正在区分高风险、中风险和低风险事项，优先整理会影响审批的内容。'},
+    {title: '正在生成风险报告', detail: 'AI 正在汇总审查结论并写入数据库，请继续等待。'}
+];
 
 function ensureReportPanels() {
     let summary = $('#reportSummary');
@@ -55,10 +63,10 @@ reviewBtn.addEventListener('click', async () => {
         return;
     }
     reviewBtn.disabled = true;
-    reviewBtn.textContent = 'AI 审查中...';
-    riskListEl.innerHTML = '<div class="list-item"><span>正在调用 Qwen 进行风险审查，请稍候...</span></div>';
+    reviewBtn.textContent = 'AI 思考中...';
+    startReviewProgress();
     reportSummaryEl.className = 'report-summary empty';
-    reportSummaryEl.textContent = 'AI 审核中，完成后会自动生成并保存报告。';
+    reportSummaryEl.textContent = 'AI 正在审查合同风险，完成后会自动生成并保存报告。';
     try {
         const body = {
             contractText,
@@ -92,6 +100,7 @@ reviewBtn.addEventListener('click', async () => {
         reportSummaryEl.className = 'report-summary empty';
         reportSummaryEl.textContent = '风险报告生成失败，请检查后端服务、数据库和 AI 配置。';
     } finally {
+        stopReviewProgress();
         reviewBtn.disabled = false;
         reviewBtn.textContent = 'AI 风险审查';
     }
@@ -234,6 +243,43 @@ function renderRisks(risks) {
             <small>建议：${escapeHtml(risk.suggestion || '')}</small>
         </button>`;
     }).join('');
+}
+
+function startReviewProgress() {
+    let stepIndex = 0;
+    const startedAt = Date.now();
+    const render = () => {
+        const step = REVIEW_PROGRESS_STEPS[Math.min(stepIndex, REVIEW_PROGRESS_STEPS.length - 1)];
+        const elapsedSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+        riskListEl.innerHTML = `
+            <div class="review-progress">
+                <div class="progress-orbit" aria-hidden="true"></div>
+                <div class="progress-copy">
+                    <strong>${escapeHtml(step.title)}</strong>
+                    <span>${escapeHtml(step.detail)}</span>
+                    <small>已用时 ${elapsedSeconds} 秒。Qwen 开启思考模式时通常需要几十秒完成审查。</small>
+                </div>
+                <div class="progress-steps">
+                    ${REVIEW_PROGRESS_STEPS.map((item, index) => `
+                        <span class="${index <= stepIndex ? 'active' : ''}">${escapeHtml(item.title)}</span>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    };
+    stopReviewProgress();
+    render();
+    reviewProgressTimer = setInterval(() => {
+        stepIndex = Math.min(stepIndex + 1, REVIEW_PROGRESS_STEPS.length - 1);
+        render();
+    }, 12000);
+}
+
+function stopReviewProgress() {
+    if (reviewProgressTimer) {
+        clearInterval(reviewProgressTimer);
+        reviewProgressTimer = null;
+    }
 }
 
 function formatRiskLevel(level) {

@@ -10,6 +10,10 @@
     align-items: start;
 }
 
+.review-layout > .panel {
+    min-width: 0;
+}
+
 .report-layout {
     display: grid;
     grid-template-columns: minmax(320px, .85fr) minmax(0, 1.15fr);
@@ -163,7 +167,18 @@
 }
 
 /* ---- Risk Cards ---- */
+.review-layout .list {
+    display: grid;
+    gap: 12px;
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+}
+
 .risk-card {
+    width: 100%;
+    min-width: 0;
     display: grid;
     gap: 10px;
     padding: 16px 18px;
@@ -173,11 +188,16 @@
     border-left: 4px solid transparent;
     transition: box-shadow var(--transition), transform var(--transition);
     cursor: pointer;
+    white-space: normal;
+    text-align: left;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.65;
 }
 
 .risk-card:hover {
     box-shadow: var(--shadow-md);
-    transform: translateX(4px);
+    transform: translateX(2px);
 }
 
 .risk-card.HIGH {
@@ -195,18 +215,110 @@
     background: var(--success-bg);
 }
 
-.risk-card strong { font-size: 14px; color: var(--ink); }
+.risk-card strong {
+    min-width: 0;
+    color: var(--ink);
+    font-size: 14px;
+    white-space: normal;
+}
+
+.risk-card span {
+    min-width: 0;
+    color: var(--ink-secondary);
+    white-space: normal;
+}
 
 .risk-card small {
+    min-width: 0;
     color: var(--muted);
     font-size: 12.5px;
     line-height: 1.6;
+    white-space: normal;
 }
 
 .risk-card .suggestion {
     color: var(--ink-secondary);
     font-size: 13px;
     line-height: 1.65;
+}
+
+.review-progress {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px 16px;
+    align-items: center;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, #f8ffff, var(--surface));
+    color: var(--ink-secondary);
+    overflow: hidden;
+}
+
+.progress-orbit {
+    width: 42px;
+    height: 42px;
+    border: 3px solid var(--accent-bg);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: riskSpin 1s linear infinite;
+}
+
+.progress-copy {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.progress-copy strong {
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.progress-copy span,
+.progress-copy small {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.progress-steps {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 8px;
+}
+
+.progress-steps span {
+    position: relative;
+    padding-left: 18px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.progress-steps span::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: .55em;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--line);
+}
+
+.progress-steps span.active {
+    color: var(--ink-secondary);
+    font-weight: 700;
+}
+
+.progress-steps span.active::before {
+    background: var(--accent);
+}
+
+@keyframes riskSpin {
+    to { transform: rotate(360deg); }
 }
 
 /* ---- Review Badge ---- */
