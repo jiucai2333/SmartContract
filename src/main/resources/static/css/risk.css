@@ -89,15 +89,22 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
     background: var(--surface);
+    color: var(--ink-secondary);
     text-align: left;
     cursor: pointer;
     transition: border-color var(--transition), box-shadow var(--transition);
+    white-space: normal;
+    box-shadow: none;
+    transform: none;
 }
 
 .report-item:hover,
 .report-item.active {
     border-color: var(--primary);
+    background: var(--surface-hover);
     box-shadow: var(--shadow-sm);
+    transform: none;
+    filter: none;
 }
 
 .report-item strong,
@@ -243,26 +250,27 @@
 }
 
 .review-progress {
-    display: grid;
+    display: flex;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 14px 16px;
+    gap: 14px;
     align-items: center;
-    padding: 18px;
+    padding: 16px;
     border: 1px solid var(--line);
     border-left: 4px solid var(--accent);
     border-radius: var(--radius);
-    background: linear-gradient(180deg, #f8ffff, var(--surface));
+    background: var(--surface-hover);
     color: var(--ink-secondary);
     overflow: hidden;
 }
 
 .progress-orbit {
-    width: 42px;
-    height: 42px;
+    width: 28px;
+    height: 28px;
     border: 3px solid var(--accent-bg);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: riskSpin 1s linear infinite;
+    flex: 0 0 28px;
 }
 
 .progress-copy {
@@ -276,45 +284,10 @@
     font-size: 14px;
 }
 
-.progress-copy span,
-.progress-copy small {
+.progress-copy span {
     color: var(--muted);
     font-size: 12.5px;
     line-height: 1.55;
-}
-
-.progress-steps {
-    grid-column: 1 / -1;
-    display: grid;
-    gap: 8px;
-}
-
-.progress-steps span {
-    position: relative;
-    padding-left: 18px;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.45;
-}
-
-.progress-steps span::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: .55em;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--line);
-}
-
-.progress-steps span.active {
-    color: var(--ink-secondary);
-    font-weight: 700;
-}
-
-.progress-steps span.active::before {
-    background: var(--accent);
 }
 
 @keyframes riskSpin {

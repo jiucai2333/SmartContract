@@ -22,6 +22,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,13 +41,68 @@ public class AiDraftService {
             1. 合同条款是否符合法律法规和企业审批合规要求。
             2. 是否缺少验收、付款、违约责任、争议解决、保密、知识产权、解除、不可抗力等关键条款。
             3. 是否存在表述模糊、权利义务不对等、单方免责、付款条件不清、履约边界不清等风险。
+            4. 如果合同文本明确写有“未约定、未明确、缺少、缺失、无”等表述，并关联付款、验收、违约责任、知识产权、保密或争议解决等关键事项，必须输出对应风险项，不能返回空数组。
 
             输出要求：
             - 仅返回 JSON，不要包含 Markdown 代码块或解释性文字。
             - JSON 格式为 {"risks":[{"level":"HIGH|MEDIUM|LOW","clause":"条款位置或标题；缺失条款写'缺失：条款名称'","reason":"风险原因","suggestion":"修改建议"}]}。
-            - 如果没有发现明显风险，返回 {"risks":[]}。
+            - 只有在合同文本已清楚覆盖关键条款且没有明显缺失、模糊或不平衡内容时，才可以返回 {"risks":[]}。
             - 最多返回 10 条风险，优先返回高风险和影响审批的事项。
             """;
+
+    private static final List<MissingRiskRule> MISSING_RISK_RULES = List.of(
+            new MissingRiskRule(
+                    "缺失：付款时间",
+                    List.of("付款时间", "付款期限", "付款节点", "付款安排", "支付时间"),
+                    "HIGH",
+                    "合同明确存在付款安排缺失或不清，可能导致收款周期、付款条件和履约对价无法执行。",
+                    "补充付款节点、付款条件、付款期限、开票要求和逾期付款责任。"
+            ),
+            new MissingRiskRule(
+                    "缺失：验收标准",
+                    List.of("验收标准", "验收条件", "验收流程", "验收方式", "交付验收"),
+                    "HIGH",
+                    "合同明确存在验收标准缺失或不清，可能导致交付是否合格无法判断。",
+                    "补充可量化的验收标准、验收流程、验收期限和整改复验机制。"
+            ),
+            new MissingRiskRule(
+                    "缺失：违约责任",
+                    List.of("违约责任", "违约金", "赔偿责任", "违约处理"),
+                    "HIGH",
+                    "合同明确存在违约责任缺失或不清，违约后难以追责并可能影响审批。",
+                    "补充逾期交付、逾期付款、质量不合格、提前解除等场景下的违约责任。"
+            ),
+            new MissingRiskRule(
+                    "缺失：知识产权归属",
+                    List.of("知识产权", "成果归属", "著作权", "专利权", "软件著作权"),
+                    "HIGH",
+                    "合同明确存在知识产权归属缺失或不清，可能导致开发成果、源代码或资料权属争议。",
+                    "明确合同成果、背景知识产权、衍生成果、源代码和使用授权的归属及限制。"
+            ),
+            new MissingRiskRule(
+                    "缺失：保密义务",
+                    List.of("保密义务", "保密条款", "保密责任", "商业秘密", "保密"),
+                    "MEDIUM",
+                    "合同明确存在保密义务缺失或不清，商业秘密、技术资料和客户信息保护不足。",
+                    "补充保密范围、保密期限、例外情形、资料返还销毁和泄密责任。"
+            ),
+            new MissingRiskRule(
+                    "缺失：争议解决方式",
+                    List.of("争议解决", "管辖法院", "仲裁", "诉讼", "适用法律"),
+                    "MEDIUM",
+                    "合同明确存在争议解决方式缺失或不清，发生纠纷时管辖和处理路径不明确。",
+                    "补充适用法律、协商期限、仲裁机构或管辖法院，并保持表述唯一明确。"
+            )
+    );
+
+    private record MissingRiskRule(
+            String clause,
+            List<String> terms,
+            String level,
+            String reason,
+            String suggestion
+    ) {
+    }
 
     private final QwenProperties qwenProperties;
     private final ObjectMapper objectMapper;
@@ -110,7 +166,7 @@ public class AiDraftService {
                     true
             );
             String content = chatCompletion(payload);
-            return parseRiskItems(content);
+            return mergeRuleBasedMissingRisks(contractText, parseRiskItems(content));
         } catch (Exception ex) {
             throw new IllegalStateException("AI 风险审查失败：" + rootMessage(ex), ex);
         }
@@ -182,6 +238,7 @@ public class AiDraftService {
         String contextBlock = sanitizedContext.isBlank() ? "" : "\n业务背景：" + sanitizedContext + "\n";
         return """
                 请审查以下合同文本并返回风险 JSON。
+                注意：如果文本中出现“未约定、未明确、缺少、缺失、无”等缺失提示，并指向付款、验收、违约责任、知识产权、保密或争议解决等事项，必须逐项列为风险。
                 %s
                 合同文本：
                 ---
@@ -220,6 +277,39 @@ public class AiDraftService {
         } catch (Exception ex) {
             throw new IllegalStateException("AI 风险审查结果解析失败：" + ex.getMessage(), ex);
         }
+    }
+
+    List<AiRiskVO> mergeRuleBasedMissingRisks(String contractText, List<AiRiskVO> aiRisks) {
+        List<AiRiskVO> merged = new ArrayList<>(aiRisks == null ? List.of() : aiRisks);
+        for (MissingRiskRule rule : MISSING_RISK_RULES) {
+            if (merged.size() >= 10) {
+                break;
+            }
+            if (mentionsMissingRisk(contractText, rule.terms()) && !hasRelatedRisk(merged, rule.terms())) {
+                merged.add(new AiRiskVO(rule.level(), rule.clause(), rule.reason(), rule.suggestion()));
+            }
+        }
+        return merged;
+    }
+
+    private boolean mentionsMissingRisk(String contractText, List<String> terms) {
+        String text = compact(contractText);
+        if (!containsAny(text, List.of("未约定", "未明确", "缺少", "缺失", "未载明", "未说明", "没有约定", "无约定", "未规定", "不明确"))) {
+            return false;
+        }
+        return containsAny(text, terms);
+    }
+
+    private boolean hasRelatedRisk(List<AiRiskVO> risks, List<String> terms) {
+        return risks.stream().anyMatch(risk -> containsAny(compact(risk.clause() + risk.reason()), terms));
+    }
+
+    private boolean containsAny(String text, List<String> terms) {
+        return terms.stream().anyMatch(text::contains);
+    }
+
+    private String compact(String value) {
+        return Objects.toString(value, "").replaceAll("\\s+", "");
     }
 
     private String chatCompletion(Map<String, Object> payload) throws IOException {

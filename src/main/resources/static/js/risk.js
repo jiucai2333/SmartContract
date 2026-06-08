@@ -19,10 +19,10 @@ const reportListEl = reportEls.list;
 let reviewProgressTimer = null;
 
 const REVIEW_PROGRESS_STEPS = [
-    {title: '正在理解合同结构', detail: 'AI 正在识别合同主体、金额、交付和履约边界。'},
-    {title: '正在思考关键风险', detail: 'AI 正在检查付款、验收、违约责任、知识产权、保密和争议解决条款。'},
-    {title: '正在评估风险等级', detail: 'AI 正在区分高风险、中风险和低风险事项，优先整理会影响审批的内容。'},
-    {title: '正在生成风险报告', detail: 'AI 正在汇总审查结论并写入数据库，请继续等待。'}
+    '识别合同结构',
+    '检查关键条款',
+    '评估风险等级',
+    '生成风险报告'
 ];
 
 function ensureReportPanels() {
@@ -63,10 +63,10 @@ reviewBtn.addEventListener('click', async () => {
         return;
     }
     reviewBtn.disabled = true;
-    reviewBtn.textContent = 'AI 思考中...';
+    reviewBtn.textContent = 'AI 审查中...';
     startReviewProgress();
     reportSummaryEl.className = 'report-summary empty';
-    reportSummaryEl.textContent = 'AI 正在审查合同风险，完成后会自动生成并保存报告。';
+    reportSummaryEl.textContent = 'AI 正在审查合同，完成后会自动保存报告。';
     try {
         const body = {
             contractText,
@@ -255,14 +255,8 @@ function startReviewProgress() {
             <div class="review-progress">
                 <div class="progress-orbit" aria-hidden="true"></div>
                 <div class="progress-copy">
-                    <strong>${escapeHtml(step.title)}</strong>
-                    <span>${escapeHtml(step.detail)}</span>
-                    <small>已用时 ${elapsedSeconds} 秒。Qwen 开启思考模式时通常需要几十秒完成审查。</small>
-                </div>
-                <div class="progress-steps">
-                    ${REVIEW_PROGRESS_STEPS.map((item, index) => `
-                        <span class="${index <= stepIndex ? 'active' : ''}">${escapeHtml(item.title)}</span>
-                    `).join('')}
+                    <strong>AI 正在审查合同风险</strong>
+                    <span>${escapeHtml(step)} · 已用时 ${elapsedSeconds} 秒</span>
                 </div>
             </div>
         `;
