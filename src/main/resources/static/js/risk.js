@@ -237,11 +237,11 @@ function renderRisks(risks) {
         const level = normalizeRiskLevel(risk.level || risk.riskLevel);
         const levelLabel = formatRiskLevel(level);
         const clause = risk.clause || risk.clauseRef || '未指明条款';
-        return `<button class="risk-card ${escapeHtml(level)}" data-clause="${escapeHtml(clause)}">
+        return `<article class="risk-card ${escapeHtml(level)}" data-clause="${escapeHtml(clause)}" tabindex="0">
             <strong><span class="tag ${escapeHtml(level)}">${escapeHtml(levelLabel)}</span> ${escapeHtml(clause)}</strong>
             <span>${escapeHtml(risk.reason || risk.riskType || '')}</span>
             <small>建议：${escapeHtml(risk.suggestion || '')}</small>
-        </button>`;
+        </article>`;
     }).join('');
 }
 
@@ -321,6 +321,14 @@ riskListEl.addEventListener('click', event => {
         target.classList.add('active-clause');
         target.scrollIntoView({behavior: 'smooth', block: 'center'});
     }
+});
+
+riskListEl.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const card = event.target.closest('[data-clause]');
+    if (!card) return;
+    event.preventDefault();
+    card.click();
 });
 
 async function hydrateFromVersion() {

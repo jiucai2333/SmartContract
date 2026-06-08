@@ -8,10 +8,14 @@
     grid-template-columns: minmax(0, 1.15fr) minmax(380px, .85fr);
     gap: 22px;
     align-items: start;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .review-layout > .panel {
     min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .report-layout {
@@ -177,17 +181,26 @@
 .review-layout .list {
     display: grid;
     gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     max-height: 70vh;
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 4px;
+    contain: inline-size;
 }
 
 .risk-card {
+    appearance: none;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     display: grid;
     gap: 10px;
+    justify-items: stretch;
+    justify-content: stretch;
+    align-items: start;
     padding: 16px 18px;
     background: var(--surface);
     border: 1px solid var(--line);
@@ -200,6 +213,10 @@
     overflow-wrap: anywhere;
     word-break: break-word;
     line-height: 1.65;
+    box-shadow: none;
+    filter: none;
+    transform: none;
+    overflow: hidden;
 }
 
 .risk-card:hover {
@@ -224,23 +241,32 @@
 
 .risk-card strong {
     min-width: 0;
+    max-width: 100%;
     color: var(--ink);
     font-size: 14px;
     white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .risk-card span {
     min-width: 0;
+    max-width: 100%;
     color: var(--ink-secondary);
     white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .risk-card small {
     min-width: 0;
+    max-width: 100%;
     color: var(--muted);
     font-size: 12.5px;
     line-height: 1.6;
     white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .risk-card .suggestion {
