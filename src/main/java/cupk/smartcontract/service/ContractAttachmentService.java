@@ -9,7 +9,7 @@ import cupk.smartcontract.entity.FileInfo;
 import cupk.smartcontract.dto.AttachmentVO;
 import cupk.smartcontract.dto.ContractCreateRequest;
 import cupk.smartcontract.dto.CreateContractFromOcrRequest;
-import cupk.smartcontract.dto.OcrExtractResult;
+import cupk.smartcontract.dto.OcrExtractVO;
 import cupk.smartcontract.mapper.ContractAttachmentMapper;
 import cupk.smartcontract.mapper.ContractMainMapper;
 import cupk.smartcontract.mapper.FileInfoMapper;
@@ -59,25 +59,28 @@ public class ContractAttachmentService {
         this.objectMapper = objectMapper;
     }
 
-    public AttachmentVO upload(MultipartFile file, Long contractId, boolean runOcr, String username) throws Exception {
-        validateUpload(file);
+    public AttachmentVO upload(MultipartFile file, Long contractId, boolean runOcr, String attachType, String createdBy) throws Exception {
+        String safeAttachType = normalizeAttachType(attachType);
+        boolean signedFile = "SIGNED_FILE".equals(safeAttachType);
+        boolean shouldRunOcr = signedFile ? false : runOcr;
+        validateUpload(file, signedFile);
         if (contractId != null) {
             contractManagementService.assertCanAccess(contractId);
         }
         FileStorageService.StoredFile stored = fileStorageService.store(file);
-        FileInfo fileInfo = findOrCreateFile(stored, file.getOriginalFilename(), username);
+        FileInfo fileInfo = findOrCreateFile(stored, file.getOriginalFilename());
         ContractAttachment attachment = new ContractAttachment();
         attachment.setContractId(contractId);
         attachment.setFileId(fileInfo.getFileId());
-        attachment.setAttachType("SCAN");
-        attachment.setOcrStatus(runOcr ? "PROCESSING" : "PENDING");
-        attachment.setCreatedBy(username);
+        attachment.setAttachType(safeAttachType);
+        attachment.setOcrStatus(shouldRunOcr ? "PROCESSING" : "PENDING");
+        attachment.setCreatedBy(createdBy);
         attachment.setCreatedAt(LocalDateTime.now());
         attachment.setUpdatedAt(LocalDateTime.now());
         attachment.setDeleted(0);
         attachment.setVersion(1);
         attachmentMapper.insert(attachment);
-        if (runOcr) {
+        if (shouldRunOcr) {
             runOcrInternal(attachment, fileInfo);
         }
         return toVo(attachment, fileInfo, contractId != null ? findContract(contractId) : null);
@@ -128,9 +131,9 @@ public class ContractAttachmentService {
 
     public ContractMain createContractFromOcr(CreateContractFromOcrRequest request) throws Exception {
         AttachmentVO attachment = get(request.attachmentId());
-        OcrExtractResult ocr = attachment.ocrExtract();
+        OcrExtractVO ocr = attachment.ocrExtract();
         if (ocr == null) {
-            throw new IllegalStateException("请先完成 OCR 识别");
+            throw new IllegalStateException("附件尚未完成 OCR 识别");
         }
         String title = StringUtils.hasText(request.title()) ? request.title() : defaultText(ocr.title(), "OCR识别合同");
         String counterparty = StringUtils.hasText(request.counterparty()) ? request.counterparty() : defaultText(ocr.counterparty(), ocr.partyB());
@@ -144,6 +147,7 @@ public class ContractAttachmentService {
                 counterparty,
                 deptId,
                 ownerId,
+                null,
                 LocalDate.now().plusDays(90)
         ));
         link(request.attachmentId(), contract.getContractId());
@@ -203,7 +207,7 @@ public class ContractAttachmentService {
         }
     }
 
-    private FileInfo findOrCreateFile(FileStorageService.StoredFile stored, String originalName, String username) {
+    private FileInfo findOrCreateFile(FileStorageService.StoredFile stored, String originalName) {
         FileInfo existing = fileInfoMapper.selectOne(new LambdaQueryWrapper<FileInfo>()
                 .eq(FileInfo::getSha256, stored.sha256()).last("LIMIT 1"));
         if (existing != null) {
@@ -220,15 +224,17 @@ public class ContractAttachmentService {
         fileInfo.setFileType(stored.fileType());
         fileInfo.setSize(stored.size());
         fileInfo.setSha256(stored.sha256());
+        fileInfo.setCreatedBy(currentCreatedBy());
         fileInfo.setCreatedAt(LocalDateTime.now());
         fileInfo.setUpdatedAt(LocalDateTime.now());
         fileInfo.setDeleted(0);
+        fileInfo.setVersion(1);
         fileInfoMapper.insert(fileInfo);
         return fileInfo;
     }
 
     private AttachmentVO toVo(ContractAttachment attachment, FileInfo fileInfo, ContractMain contract) {
-        OcrExtractResult extract = parseOcrResult(attachment.getOcrResult());
+        OcrExtractVO extract = parseOcrResult(attachment.getOcrResult());
         String fullText = attachment.getOcrText();
         String preview = fullText;
         if (preview != null && preview.length() > 200) {
@@ -256,15 +262,15 @@ public class ContractAttachmentService {
         );
     }
 
-    private OcrExtractResult parseOcrResult(String json) {
+    private OcrExtractVO parseOcrResult(String json) {
         if (!StringUtils.hasText(json)) {
             return null;
         }
         try {
             com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(json);
             if (root.has("extract")) return root.path("extract").isNull()
-                    ? null : objectMapper.treeToValue(root.path("extract"), OcrExtractResult.class);
-            return objectMapper.treeToValue(root, OcrExtractResult.class);
+                    ? null : objectMapper.treeToValue(root.path("extract"), OcrExtractVO.class);
+            return objectMapper.treeToValue(root, OcrExtractVO.class);
         } catch (Exception ex) {
             return null;
         }
@@ -293,8 +299,8 @@ public class ContractAttachmentService {
         if ("ALL".equals(SecurityContext.dataScope())) {
             return true;
         }
-        String username = SecurityContext.username();
-        return username != null && username.equals(attachment.getCreatedBy());
+        String createdBy = currentCreatedBy();
+        return createdBy != null && createdBy.equals(attachment.getCreatedBy());
     }
 
     private FileInfo requireFile(Long fileId) {
@@ -313,17 +319,27 @@ public class ContractAttachmentService {
         return contract;
     }
 
-    private void validateUpload(MultipartFile file) {
+    private void validateUpload(MultipartFile file, boolean signedFile) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("请选择文件");
         }
         String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
-        long maxSize = 200L * 1024 * 1024;
+        boolean pdf = name.endsWith(".pdf");
+        boolean image = name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
+        long maxSize = signedFile && image ? 10L * 1024 * 1024 : 200L * 1024 * 1024;
         if (file.getSize() > maxSize) {
-            throw new IllegalArgumentException("文件不能超过 200MB");
+            throw new IllegalArgumentException(signedFile && image
+                    ? "签章图片不能超过 10MB"
+                    : "文件不能超过 200MB");
         }
-        if (!name.endsWith(".pdf") && !name.endsWith(".doc") && !name.endsWith(".docx")) {
-            throw new IllegalArgumentException("仅支持 PDF、DOC 或 DOCX 格式");
+        if (signedFile) {
+            if (!pdf && !image) {
+                throw new IllegalArgumentException("签章文件仅支持 PDF、JPG、JPEG、PNG");
+            }
+            return;
+        }
+        if (!pdf && !name.endsWith(".doc") && !name.endsWith(".docx")) {
+            throw new IllegalArgumentException("仅支持 PDF、DOC 或 DOCX 文件");
         }
     }
 
@@ -334,7 +350,7 @@ public class ContractAttachmentService {
         if (contractType.contains("采购")) return "PURCHASE";
         if (contractType.contains("销售")) return "SALES";
         if (contractType.contains("劳务")) return "LABOR";
-        if (contractType.contains("保密")) return "TECH";
+        if (contractType.contains("技术")) return "TECH";
         return "TECH";
     }
 
@@ -342,9 +358,23 @@ public class ContractAttachmentService {
         return StringUtils.hasText(primary) ? primary : fallback;
     }
 
+    private String normalizeAttachType(String attachType) {
+        if (!StringUtils.hasText(attachType)) {
+            return "CONTRACT_FILE";
+        }
+        String value = attachType.trim().toUpperCase(Locale.ROOT);
+        if ("SIGNED".equals(value)) {
+            return "SIGNED_FILE";
+        }
+        if ("SIGNED_FILE".equals(value) || "ARCHIVE_FILE".equals(value) || "CONTRACT_FILE".equals(value)) {
+            return value;
+        }
+        return "CONTRACT_FILE";
+    }
+
     private String trimError(String message) {
         if (message == null) {
-            return "OCR 失败";
+            return "OCR 识别失败";
         }
         return message.length() > 480 ? message.substring(0, 480) : message;
     }
@@ -361,5 +391,23 @@ public class ContractAttachmentService {
             return authUser.username();
         }
         return "anonymous";
+    }
+
+    public static Long currentUserId(HttpServletRequest request) {
+        Object user = request.getAttribute("jwtUser");
+        if (user instanceof cupk.smartcontract.dto.AuthUserVO authUser) {
+            return authUser.userId();
+        }
+        return SecurityContext.userId();
+    }
+
+    public static String currentCreatedBy(HttpServletRequest request) {
+        Long userId = currentUserId(request);
+        return userId == null ? currentUsername(request) : String.valueOf(userId);
+    }
+
+    private String currentCreatedBy() {
+        Long userId = SecurityContext.userId();
+        return userId == null ? SecurityContext.username() : String.valueOf(userId);
     }
 }

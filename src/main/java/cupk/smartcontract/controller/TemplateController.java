@@ -24,63 +24,63 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/templates")
 public class TemplateController {
-    private final TemplateService service;
+    private final TemplateService templateService;
 
-    public TemplateController(TemplateService service) {
-        this.service = service;
+    public TemplateController(TemplateService templateService) {
+        this.templateService = templateService;
     }
 
     @GetMapping
-    public List<TemplateVO> list(@RequestParam(required = false) String type,
-                                 @RequestParam(required = false) String keyword) {
-        return service.list(type, keyword).stream().map(service::toVo).toList();
+    public List<TemplateVO> listTemplates(@RequestParam(required = false) String type,
+                                          @RequestParam(required = false) String keyword) {
+        return templateService.list(type, keyword).stream().map(templateService::toVo).toList();
     }
 
     @GetMapping("/{id}")
-    public TemplateVO get(@PathVariable Long id) {
-        ContractTemplate template = service.get(id);
+    public TemplateVO getTemplate(@PathVariable Long id) {
+        ContractTemplate template = templateService.get(id);
         if (template == null) {
             throw new IllegalArgumentException("模板不存在");
         }
-        return service.toVo(template);
+        return templateService.toVo(template);
     }
 
     @PostMapping
     @RequireRole({"LEGAL", "ADMIN"})
-    public TemplateVO create(@RequestParam("file") MultipartFile file,
-                             @RequestParam("templateType") String templateType,
-                             @RequestParam("templateName") String templateName,
-                             @RequestParam(value = "description", required = false) String description,
-                             HttpServletRequest request) throws Exception {
+    public TemplateVO createTemplate(@RequestParam("file") MultipartFile file,
+                                     @RequestParam("templateType") String templateType,
+                                     @RequestParam("templateName") String templateName,
+                                     @RequestParam(value = "description", required = false) String description,
+                                     HttpServletRequest request) throws Exception {
         TemplateCreateRequest req = new TemplateCreateRequest(templateType, templateName, description);
-        return service.toVo(service.create(req, file, ContractAttachmentService.currentUsername(request)));
+        return templateService.toVo(templateService.create(req, file, ContractAttachmentService.currentUsername(request)));
     }
 
     @PutMapping("/{id}")
     @RequireRole({"LEGAL", "ADMIN"})
-    public TemplateVO update(@PathVariable Long id,
-                             @RequestParam(value = "file", required = false) MultipartFile file,
-                             @RequestParam("templateType") String templateType,
-                             @RequestParam("templateName") String templateName,
-                             @RequestParam(value = "description", required = false) String description,
-                             HttpServletRequest request) throws Exception {
+    public TemplateVO updateTemplate(@PathVariable Long id,
+                                     @RequestParam(value = "file", required = false) MultipartFile file,
+                                     @RequestParam("templateType") String templateType,
+                                     @RequestParam("templateName") String templateName,
+                                     @RequestParam(value = "description", required = false) String description,
+                                     HttpServletRequest request) throws Exception {
         TemplateCreateRequest req = new TemplateCreateRequest(templateType, templateName, description);
-        return service.toVo(service.update(id, req, file, ContractAttachmentService.currentUsername(request)));
+        return templateService.toVo(templateService.update(id, req, file, ContractAttachmentService.currentUsername(request)));
     }
 
     @DeleteMapping("/{id}")
     @RequireRole({"LEGAL", "ADMIN"})
-    public void delete(@PathVariable Long id) {
-        service.delete(id);
+    public void deleteTemplate(@PathVariable Long id) {
+        templateService.delete(id);
     }
 
     @GetMapping("/types")
-    public List<String> listTypes() {
-        return service.listTypes();
+    public List<String> listTemplateTypes() {
+        return templateService.listTypes();
     }
 
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> download(@PathVariable Long id) {
-        return service.download(id);
+        return templateService.download(id);
     }
 }

@@ -4,6 +4,8 @@ import jakarta.validation.constraints.*;
 
 public record AiRiskReviewRequest(
         @NotBlank String contractText,
+        Long contractId,
+        Long versionId,
         String contractType,
         String partyA,
         String partyB,

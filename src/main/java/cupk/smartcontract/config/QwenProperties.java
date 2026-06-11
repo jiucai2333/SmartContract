@@ -8,6 +8,8 @@ public record QwenProperties(
         String baseUrl,
         String model,
         String visionModel,
+        Boolean enableThinking,
+        Integer thinkingBudget,
         int timeoutSeconds,
         boolean enabled
 ) {
@@ -25,15 +27,23 @@ public record QwenProperties(
     }
 
     public String resolvedModel() {
-        return model == null || model.isBlank() ? "qwen-plus" : model;
+        return model == null || model.isBlank() ? "qwen3-vl-plus" : model;
     }
 
     public String resolvedVisionModel() {
-        return visionModel == null || visionModel.isBlank() ? "qwen-vl-plus" : visionModel;
+        return visionModel == null || visionModel.isBlank() ? "qwen3-vl-plus" : visionModel;
+    }
+
+    public boolean resolvedEnableThinking() {
+        return enableThinking == null || enableThinking;
+    }
+
+    public int resolvedThinkingBudget() {
+        return thinkingBudget == null || thinkingBudget <= 0 ? 81920 : thinkingBudget;
     }
 
     public int resolvedTimeoutSeconds() {
-        return timeoutSeconds <= 0 ? 120 : timeoutSeconds;
+        return timeoutSeconds <= 0 ? 180 : timeoutSeconds;
     }
 
     public long resolvedSseTimeoutMs() {
