@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>合同台账 - 智能合同管理</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/ledger.css">
+</head>
+<body>
+<script src="../js/common.js"></script>
+<script>document.write(appShellHtml('ledger'));</script>
+<section class="section panel">
+    <div class="panel-head">
+        <div><p class="eyebrow">快速操作</p><h2>创建合同 / 检索筛选</h2></div>
+        <form id="createForm" class="inline-form">
+            <input name="title" placeholder="合同标题" required>
+            <input name="counterparty" placeholder="相对方" required>
+            <input name="amount" type="number" placeholder="金额" required>
+            <select name="type"><option value="PURCHASE">采购</option><option value="SALES">销售</option><option value="TECH">技术</option><option value="LABOR">劳务</option></select>
+            <button type="submit">新增</button>
+        </form>
+    </div>
+    <div class="filters">
+        <input id="keyword" placeholder="按合同编号、标题、相对方检索">
+        <select id="statusFilter"><option value="">全部状态</option><option value="DRAFT">草稿</option><option value="APPROVING">审批中</option><option value="APPROVED">已审批</option><option value="SIGNING">已签章</option><option value="ARCHIVED">已归档</option><option value="EXECUTING">履约中</option><option value="COMPLETED">已完成</option><option value="EXPIRED">已到期</option><option value="TERMINATED">已终止</option></select>
+        <select id="riskFilter"><option value="">全部风险</option><option value="LOW">低</option><option value="MEDIUM">中</option><option value="HIGH">高</option></select>
+    </div>
+    <!-- 知识库搜索 -->
+    <div id="knowledge" class="knowledge-search panel" style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;padding:12px;">
+        <div class="panel-head" style="width:100%;margin-bottom:8px;"><h3>🔍 合同知识库</h3><small>归档时 AI 自动提取关键元数据，支持全文检索</small></div>
+        <input id="ksKeyword" placeholder="🔍 知识库全文搜索（甲方/乙方/关键词）" style="flex:2;min-width:200px;">
+        <input id="ksType" placeholder="合同类型" style="flex:1;min-width:120px;">
+        <button type="button" id="btnKnowledgeSearch" class="primary">搜索知识库</button>
+        <button type="button" id="btnKnowledgeClear" class="secondary">清除</button>
+    </div>
+    <div id="knowledgeResults" style="display:none;margin-bottom:16px;"></div>
+    <!-- 区块链存证：合同行 🔗 按钮直接校验 -->
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>编号</th><th>标题</th><th>相对方</th><th>金额</th><th>状态</th><th>风险</th><th>附件</th><th>到期</th><th>操作</th></tr></thead>
+            <tbody id="contractRows"></tbody>
+        </table>
+    </div>
+</section>
+<div id="attachmentModal" class="modal" hidden>
+    <div class="modal-card"><div class="modal-head"><h3 id="attachmentModalTitle">合同附件</h3><button type="button" id="closeAttachmentModal" class="secondary">关闭</button></div><div id="attachmentModalBody" class="attachment-list"></div></div>
+</div>
+<div id="detailModal" class="modal" hidden>
+    <div class="modal-card"><div class="modal-head"><h3 id="detailModalTitle">合同详情</h3><button type="button" id="closeDetailModal" class="secondary">关闭</button></div><div id="detailModalBody"></div></div>
+</div>
+<script>document.write(closeAppShell());</script>
+<script src="../js/ledger.js"></script>
+</body>
+</html>

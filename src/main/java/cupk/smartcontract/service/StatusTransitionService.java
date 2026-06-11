@@ -1,8 +1,8 @@
 package cupk.smartcontract.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import cupk.smartcontract.security.SecurityContext;
-import cupk.smartcontract.entity.*;
+import cupk.smartcontract.common.SecurityContext;
+import cupk.smartcontract.domain.*;
 import cupk.smartcontract.dto.ArchiveCreateRequest;
 import cupk.smartcontract.dto.SealCreateRequest;
 import cupk.smartcontract.mapper.*;
@@ -13,7 +13,14 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 合同状态流转服务
+ * 统一状态流转服务。
+ * 所有合同状态变更必须通过此服务，禁止直接修改 contract_main.status 字段。
+ *
+ * 状态机：
+ * DRAFT → APPROVING → APPROVED → SIGNING → ARCHIVED → EXECUTING → COMPLETED
+ *                                                     ↘ EXPIRED / TERMINATED
+ *
+ * TODO: 未来对接外部状态机引擎 / 工作流服务时，将 transition() 替换为远程调用。
  */
 @Service
 public class StatusTransitionService {
@@ -53,32 +60,23 @@ public class StatusTransitionService {
         Set<String> allowed = ALLOWED_TRANSITIONS.getOrDefault(current, Set.of());
         if (!allowed.contains(targetStatus)) {
             throw new IllegalStateException(
-                    String.format("状态不允许从 %s 流转到 %s，可选目标：%s", current, targetStatus, String.join(", ", allowed)));
+                    String.format("状态变迁不合法：%s → %s（允许的目标状态：%s）",
+                            current, targetStatus, String.join(", ", allowed)));
         }
+        // TODO: 对接统一状态服务接口，将以下直接更新替换为远程调用
         contract.setStatus(targetStatus);
         contract.setUpdatedAt(LocalDateTime.now());
+        contract.setUpdatedBy(SecurityContext.roleCode() + "_" + SecurityContext.userId());
         contractMapper.updateById(contract);
-    }
-
-    public void transitionToApproving(ContractMain contract) {
-        transition(contract, "APPROVING");
-    }
-
-    public void transitionToApproved(ContractMain contract) {
-        transition(contract, "APPROVED");
-    }
-
-    public void transitionToDraft(ContractMain contract) {
-        transition(contract, "DRAFT");
     }
 
     @Transactional
     public SealRecord seal(SealCreateRequest request) {
         ContractMain contract = contractMapper.selectById(request.contractId());
-        if (contract == null) throw new IllegalArgumentException("版本不属于此合同");
+        if (contract == null) throw new IllegalArgumentException("合同不存在");
         ContractVersion version = versionMapper.selectById(request.versionId());
         if (version == null || !version.getContractId().equals(request.contractId()))
-            throw new IllegalArgumentException("版本不属于此合同");
+            throw new IllegalArgumentException("版本不存在或不属于该合同");
 
         SealRecord record = new SealRecord();
         record.setContractId(request.contractId());
@@ -86,8 +84,7 @@ public class StatusTransitionService {
         record.setFileId(request.fileId());
         record.setFileUrl(request.fileUrl());
         record.setFileName(request.fileName());
-        String sealStatus = request.sealStatus();
-        record.setSealStatus(sealStatus == null || sealStatus.isBlank() ? "ELECTRONIC" : sealStatus);
+        record.setSealStatus(request.sealStatus());
         record.setSealTime(request.sealTime() != null ? request.sealTime() : LocalDateTime.now());
         record.setOperatorId(SecurityContext.userId());
         record.setRemark(request.remark());
@@ -106,10 +103,10 @@ public class StatusTransitionService {
     @Transactional
     public ArchiveRecord archive(ArchiveCreateRequest request) {
         ContractMain contract = contractMapper.selectById(request.contractId());
-        if (contract == null) throw new IllegalArgumentException("版本不属于此合同");
+        if (contract == null) throw new IllegalArgumentException("合同不存在");
         ContractVersion version = versionMapper.selectById(request.versionId());
         if (version == null || !version.getContractId().equals(request.contractId()))
-            throw new IllegalArgumentException("版本不属于此合同");
+            throw new IllegalArgumentException("版本不存在或不属于该合同");
 
         String archiveNo = String.format("AR-%d-%d-%s",
                 LocalDateTime.now().getYear(), request.contractId(),
@@ -172,7 +169,7 @@ public class StatusTransitionService {
         log.setOperation(operation);
         log.setTargetType(targetType);
         log.setTargetId(targetId);
-        log.setIp("127.0.0.1");
+        log.setIp("127.0.0.1"); // TODO: 从 HttpServletRequest 获取真实 IP
         log.setResult(result);
         log.setCreatedAt(LocalDateTime.now());
         operationLogMapper.insert(log);
