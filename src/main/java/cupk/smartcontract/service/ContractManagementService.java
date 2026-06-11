@@ -1,6 +1,7 @@
 package cupk.smartcontract.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import cupk.smartcontract.security.SecurityContext;
 import cupk.smartcontract.entity.Approval;
 import cupk.smartcontract.entity.ArchiveRecord;
@@ -27,12 +28,15 @@ import cupk.smartcontract.mapper.RiskReportMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -221,26 +225,57 @@ public class ContractManagementService {
         return contract;
     }
 
-    public void assertCanAccess(Long contractId) {
-        if (!canAccess(findContract(contractId))) {
-            throw new SecurityException("无权访问该合同");
+    private void validateUpload(MultipartFile file, boolean signedFile) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("请选择文件");
+        }
+        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
+        boolean pdf = name.endsWith(".pdf");
+        boolean image = name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
+        long maxSize = signedFile && image ? 10L * 1024 * 1024 : 200L * 1024 * 1024;
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException(signedFile && image
+                    ? "签章图片不能超过 10MB"
+                    : "文件不能超过 200MB");
+        }
+        if (signedFile) {
+            if (!pdf && !image) {
+                throw new IllegalArgumentException("签章文件仅支持 PDF、JPG、JPEG、PNG");
+            }
+            return;
+        }
+        if (!pdf && !name.endsWith(".doc") && !name.endsWith(".docx")) {
+            throw new IllegalArgumentException("仅支持 PDF、DOC 或 DOCX 文件");
         }
     }
 
-    public boolean canAccess(ContractMain contract) {
-        if (contract == null) {
-            return false;
+    private String mapContractType(String contractType) {
+        if (!StringUtils.hasText(contractType)) {
+            return "TECH";
         }
-        String scope = SecurityContext.dataScope();
-        Long currentUserId = SecurityContext.userId();
-        Long currentDeptId = SecurityContext.deptId();
-        if ("SELF".equals(scope)) {
-            return currentUserId != null && currentUserId.equals(contract.getOwnerId());
+        if (contractType.contains("采购")) return "PURCHASE";
+        if (contractType.contains("销售")) return "SALES";
+        if (contractType.contains("劳务")) return "LABOR";
+        if (contractType.contains("技术")) return "TECH";
+        return "TECH";
+    }
+
+    private String defaultText(String primary, String fallback) {
+        return StringUtils.hasText(primary) ? primary : fallback;
+    }
+
+    private String normalizeAttachType(String attachType) {
+        if (!StringUtils.hasText(attachType)) {
+            return "CONTRACT_FILE";
         }
-        if ("DEPT".equals(scope)) {
-            return currentDeptId != null && currentDeptId.equals(contract.getDeptId());
+        String value = attachType.trim().toUpperCase(Locale.ROOT);
+        if ("SIGNED".equals(value)) {
+            return "SIGNED_FILE";
         }
-        return true;
+        if ("SIGNED_FILE".equals(value) || "ARCHIVE_FILE".equals(value) || "CONTRACT_FILE".equals(value)) {
+            return value;
+        }
+        return "CONTRACT_FILE";
     }
 
     // ==================== 审批 ====================
