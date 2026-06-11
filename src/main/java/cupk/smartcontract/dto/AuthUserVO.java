@@ -1,5 +1,9 @@
 package cupk.smartcontract.dto;
 
+/**
+ * 认证用户视图对象。
+ * 每个用户有且仅有一个角色（roleCode）。
+ */
 public record AuthUserVO(
         Long userId,
         String username,
