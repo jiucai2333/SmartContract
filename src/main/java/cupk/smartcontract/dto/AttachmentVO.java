@@ -14,7 +14,7 @@ public record AttachmentVO(
         String attachType,
         String ocrStatus,
         String ocrError,
-        OcrExtractResult ocrExtract,
+        OcrExtractVO ocrExtract,
         String ocrTextPreview,
         String ocrFullText,
         Integer pageCount,

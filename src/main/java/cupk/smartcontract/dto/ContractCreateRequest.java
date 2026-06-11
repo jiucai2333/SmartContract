@@ -13,6 +13,7 @@ public record ContractCreateRequest(
         @NotBlank String counterparty,
         @NotNull Long deptId,
         @NotNull Long ownerId,
+        LocalDate signDate,
         LocalDate dueDate
 ) {
 }

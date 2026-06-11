@@ -23,10 +23,10 @@ import java.util.List;
 @RequestMapping("/api")
 public class VersionController {
 
-    private final ContractVersionService service;
+    private final ContractVersionService contractVersionService;
 
-    public VersionController(ContractVersionService service) {
-        this.service = service;
+    public VersionController(ContractVersionService contractVersionService) {
+        this.contractVersionService = contractVersionService;
     }
 
     @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
@@ -35,36 +35,36 @@ public class VersionController {
                                  @Valid @RequestBody SaveVersionRequest req,
                                  HttpServletRequest request) {
         String username = ContractAttachmentService.currentUsername(request);
-        ContractVersion version = service.create(contractId, req.content(),
+        ContractVersion version = contractVersionService.create(contractId, req.content(),
                 req.contentHash(), req.saveType(), username);
-        return service.toVo(version);
+        return contractVersionService.toVo(version);
     }
 
     @GetMapping("/contracts/{contractId}/versions")
     public List<VersionVO> listVersions(@PathVariable Long contractId) {
-        return service.listByContract(contractId).stream().map(service::toVo).toList();
+        return contractVersionService.listByContract(contractId).stream().map(contractVersionService::toVo).toList();
     }
 
     @GetMapping("/contracts/{contractId}/versions/latest")
-    public VersionVO latestVersion(@PathVariable Long contractId) {
-        ContractVersion version = service.latest(contractId);
-        return version == null ? null : service.toVo(version);
+    public VersionVO getLatestVersion(@PathVariable Long contractId) {
+        ContractVersion version = contractVersionService.latest(contractId);
+        return version == null ? null : contractVersionService.toVo(version);
     }
 
     @GetMapping("/contracts/{contractId}/versions/{versionId}/download")
     public ResponseEntity<Resource> downloadVersion(@PathVariable Long contractId,
                                                     @PathVariable Long versionId) {
-        return service.download(contractId, versionId);
+        return contractVersionService.download(contractId, versionId);
     }
 
     @GetMapping("/contracts/{contractId}/versions/{versionId}")
     public VersionVO getVersion(@PathVariable Long contractId,
                                 @PathVariable Long versionId) {
-        service.listByContract(contractId);
-        ContractVersion version = service.get(versionId);
-        if (version == null) throw new IllegalArgumentException("版本不存在");
-        if (!contractId.equals(version.getContractId())) throw new IllegalArgumentException("版本不属于此合同");
-        return service.toVo(version);
+        contractVersionService.listByContract(contractId);
+        ContractVersion version = contractVersionService.get(versionId);
+        if (version == null) throw new IllegalArgumentException("版本不存??");
+        if (!contractId.equals(version.getContractId())) throw new IllegalArgumentException("鐗堟湰涓嶅睘浜庢合同");
+        return contractVersionService.toVo(version);
     }
 
     @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
@@ -73,7 +73,7 @@ public class VersionController {
                                     @PathVariable Long versionId,
                                     HttpServletRequest request) {
         String username = ContractAttachmentService.currentUsername(request);
-        ContractVersion restored = service.restore(contractId, versionId, username);
-        return service.toVo(restored);
+        ContractVersion restored = contractVersionService.restore(contractId, versionId, username);
+        return contractVersionService.toVo(restored);
     }
 }

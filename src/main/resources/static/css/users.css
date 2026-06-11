@@ -1,0 +1,37 @@
+.section .panel {
+    overflow: hidden;
+}
+
+.table-wrap table {
+    min-width: 720px;
+}
+
+#userTbody td:last-child {
+    white-space: nowrap;
+}
+
+#roleSelectContainer {
+    display: grid;
+    gap: 10px;
+}
+
+#roleSelectContainer label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff;
+    cursor: pointer;
+}
+
+#roleSelectContainer input {
+    margin: 0;
+}
+
+@media (max-width: 760px) {
+    .modal-card {
+        width: min(92vw, 420px);
+    }
+}

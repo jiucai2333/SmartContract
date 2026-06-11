@@ -16,14 +16,16 @@ async function loadUsers() {
     const users = await api('/api/admin/users');
     const tbody = $('#userTbody');
     if (!users.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">暂无用户</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">暂无用户</td></tr>';
         return;
     }
     tbody.innerHTML = users.map(u => `
         <tr>
             <td>${u.userId}</td>
             <td><strong>${escapeHtml(u.username)}</strong></td>
-            <td><span class="tag LOW">${escapeHtml(u.roleCode || 'USER')}</span></td>
+            <td><span class="tag LOW">${escapeHtml(u.roleName || u.roleCode || 'USER')} (${escapeHtml(u.roleCode || 'USER')})</span></td>
+            <td>${escapeHtml(u.deptName || `部门 #${u.deptId || '-'}`)}</td>
+            <td>${u.status === 1 ? '<span class="tag LOW">启用</span>' : '<span class="tag HIGH">停用</span>'}</td>
             <td><button class="secondary edit-role-btn" data-id="${u.userId}" data-username="${escapeHtml(u.username)}" data-role="${u.roleCode || 'USER'}">编辑角色</button></td>
         </tr>
     `).join('');
