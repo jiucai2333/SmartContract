@@ -1,0 +1,273 @@
+/* ============================================================
+   合同草稿筛选栏：紧凑统一版
+   搜索框 260px × 44px；下拉框 150px × 44px；重置按钮 44px；间距 10px
+   ============================================================ */
+
+.draft-filter-panel {
+    padding: 18px 22px;
+    border-radius: 14px;
+    box-shadow: 0 3px 12px rgba(33, 55, 85, .06);
+}
+
+.draft-filter-panel .filters {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.draft-filter-panel .search-field {
+    position: relative;
+    width: 260px;
+    flex: 0 0 260px;
+}
+
+.draft-filter-panel .search-field input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px 0 40px;
+    border: 1px solid #dce5ef;
+    border-radius: 10px;
+    color: var(--ink);
+    background: #fff;
+    font-size: 13.5px;
+}
+
+.draft-filter-panel .search-field > :is(i, svg) {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    display: block;
+    width: 17px;
+    height: 17px;
+    color: #91a1b8;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.draft-filter-panel .search-field > svg,
+.draft-filter-panel #draftResetBtn svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.draft-filter-panel .search-field > svg {
+    width: 17px;
+    height: 17px;
+}
+
+.draft-filter-panel select {
+    width: 150px;
+    min-width: 150px;
+    height: 44px;
+    padding: 0 34px 0 14px;
+    border: 1px solid #dce5ef;
+    border-radius: 10px;
+    color: var(--ink);
+    background-color: #fff;
+    font-size: 13.5px;
+}
+
+.draft-filter-panel #draftResetBtn {
+    height: 44px;
+    padding: 0 16px;
+    color: #31415a;
+    background: #f4f7fb;
+    border: 1px solid #dce5ef;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.draft-filter-panel #draftResetBtn:hover {
+    background: #edf2f7;
+    border-color: #cbd5e1;
+    color: var(--ink-secondary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+}
+
+@media (max-width: 900px) {
+    .draft-filter-row {
+        flex-wrap: wrap;
+    }
+
+    .draft-filter-row .primary-link {
+        margin-left: 0;
+    }
+
+    .draft-filter-panel .filters {
+        flex-wrap: wrap;
+    }
+
+    .draft-filter-panel .search-field {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .draft-filter-panel select {
+        width: auto;
+        flex: 1 1 150px;
+    }
+
+    .draft-filter-panel #draftResetBtn {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .draft-filter-panel {
+        padding: 14px 16px;
+    }
+
+    .draft-filter-panel .filters {
+        gap: 8px;
+    }
+
+    .draft-filter-panel .search-field,
+    .draft-filter-panel select,
+    .draft-filter-panel #draftResetBtn {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+}
+
+.draft-table-panel {
+    padding: 0;
+    overflow: hidden;
+}
+
+.draft-table-panel .table-wrap {
+    border: 0;
+    border-radius: 0;
+}
+
+.draft-table-panel th {
+    padding: 20px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+}
+
+.draft-table-panel td {
+    padding: 20px;
+    color: #243652;
+    border-bottom: 1px solid var(--line);
+}
+
+.primary-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--accent);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.primary-link:hover {
+    color: #fff;
+    background: #0d6b63;
+}
+
+.primary-link i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+}
+
+.primary-link svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.amount {
+    font-weight: 700;
+    color: #071a38;
+}
+
+.draft-badge {
+    display: inline-flex;
+    padding: 5px 14px;
+    border-radius: 20px;
+    color: #64748b;
+    background: #f1f5f9;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.row-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.row-actions a {
+    font-weight: 600;
+}
+
+.icon-btn {
+    padding: 5px;
+    color: #718096;
+    background: transparent;
+}
+
+.icon-btn:hover {
+    color: var(--accent);
+    background: #f0fdfa;
+    box-shadow: none;
+    transform: none;
+}
+
+.danger-icon:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+.empty-cell svg {
+    display: block;
+    width: 38px;
+    height: 38px;
+    margin: 0 auto 8px;
+    color: #aebccc;
+}
+
+.empty-cell p {
+    margin: 0;
+}
+.draft-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.draft-filter-row .primary-link {
+    margin-left: auto;
+}

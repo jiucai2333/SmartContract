@@ -1,7 +1,11 @@
-package cupk.smartcontract.common;
+package cupk.smartcontract.security;
 
 import cupk.smartcontract.dto.AuthUserVO;
 
+/**
+ * 线程级安全上下文，存储当前请求的用户信息。
+ * 在 AuthInterceptor 中设置，在 Service 层读取。
+ */
 public final class SecurityContext {
 
     private static final ThreadLocal<AuthUserVO> CURRENT_USER = new ThreadLocal<>();
@@ -39,5 +43,10 @@ public final class SecurityContext {
     public static Long deptId() {
         AuthUserVO user = get();
         return user != null ? user.deptId() : null;
+    }
+
+    public static String username() {
+        AuthUserVO user = get();
+        return user != null ? user.username() : null;
     }
 }

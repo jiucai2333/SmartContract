@@ -1,7 +1,5 @@
-package cupk.smartcontract.config;
+package cupk.smartcontract.security;
 
-import cupk.smartcontract.common.RequireRole;
-import cupk.smartcontract.common.SecurityContext;
 import cupk.smartcontract.dto.AuthUserVO;
 import cupk.smartcontract.service.TokenService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -91,8 +89,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (header != null && header.startsWith("Bearer ")) {
             return header.substring(7);
         }
-        String queryToken = request.getParameter("access_token");
-        return queryToken == null || queryToken.isBlank() ? null : queryToken;
+        return null;
     }
 
     private boolean requiresAuth(HttpServletRequest request) {
