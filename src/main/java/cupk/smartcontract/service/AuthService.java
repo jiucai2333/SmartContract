@@ -5,6 +5,7 @@ import cupk.smartcontract.common.RoleEnum;
 import cupk.smartcontract.entity.UserInfo;
 import cupk.smartcontract.dto.AuthUserVO;
 import cupk.smartcontract.dto.RoleVO;
+import cupk.smartcontract.dto.UserAdminVO;
 import cupk.smartcontract.mapper.UserInfoMapper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -57,8 +58,10 @@ public class AuthService {
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         user.setDeleted(0);
+        user.setCreatedBy(createdBy);
+        user.setVersion(1);
 
-        // 设置唯一角色
+        // 璁剧疆鍞竴瑙掕壊
         String normalizedRole = roleCode.trim().toUpperCase();
         Long roleId = userMapper.selectRoleIdByCode(normalizedRole);
         user.setRoleId(roleId);
@@ -91,23 +94,21 @@ public class AuthService {
                 user.getDeptId(), roleCode, dataScope);
     }
 
-    public java.util.List<AuthUserVO> listUsers() {
-        java.util.List<UserInfo> users = userMapper.selectList(
-                new LambdaQueryWrapper<UserInfo>().orderByAsc(UserInfo::getUserId));
-        return users.stream().map(this::toAuthUser).toList();
+    public java.util.List<UserAdminVO> listUsers() {
+        return userMapper.selectAdminUsers();
     }
 
     @Transactional
     public AuthUserVO updateUserRole(Long userId, String roleCode) {
         UserInfo user = userMapper.selectById(userId);
-        if (user == null) throw new IllegalArgumentException("用户不存在");
+        if (user == null) throw new IllegalArgumentException("用户不存在?");
 
         String normalizedRole = roleCode.trim().toUpperCase();
         Long roleId = userMapper.selectRoleIdByCode(normalizedRole);
-        if (roleId == null) throw new IllegalArgumentException("无效的角色编码: " + roleCode);
+        if (roleId == null) throw new IllegalArgumentException("无效的角色编码? " + roleCode);
 
         userMapper.updateUserRole(userId, roleId);
-        // 同步更新内存中的 role_id 以便 toAuthUser 能读到
+        // ??鏇存柊鍐呭瓨涓殑 role_id 浠ヤ究 toAuthUser 鑳借鍒?
         user.setRoleId(roleId);
         return toAuthUser(user);
     }

@@ -67,6 +67,10 @@ public class ContractVersionService {
         version.setContent(null);
         version.setCreatedBy(username);
         version.setCreatedAt(LocalDateTime.now());
+        version.setUpdatedBy(username);
+        version.setUpdatedAt(LocalDateTime.now());
+        version.setIsDeleted(0);
+        version.setVersion(1);
         mapper.insert(version);
         return version;
     }
@@ -85,9 +89,9 @@ public class ContractVersionService {
     public ContractVersion restore(Long contractId, Long versionId, String username) {
         contractManagementService.assertCanAccess(contractId);
         ContractVersion oldVersion = get(versionId);
-        if (oldVersion == null) throw new IllegalArgumentException("版本不存在");
+        if (oldVersion == null) throw new IllegalArgumentException("鐗堟湰涓嶅瓨鍦?");
         if (!oldVersion.getContractId().equals(contractId)) {
-            throw new IllegalArgumentException("版本不属于此合同");
+            throw new IllegalArgumentException("鐗堟湰涓嶅睘浜庢合同");
         }
         return create(contractId, loadHtml(oldVersion), oldVersion.getContentHash(), "SAVE", username);
     }
@@ -104,6 +108,7 @@ public class ContractVersionService {
                 version.getVersionId(), version.getContractId(), version.getVersionNo(),
                 version.getContentHash(), html, preview,
                 version.getCreatedBy(), version.getCreatedAt(), version.getFileId(),
+                version.getIsLocked(),
                 version.getFileId() == null ? null : "/api/contracts/" + version.getContractId()
                         + "/versions/" + version.getVersionId() + "/download"
         );
@@ -118,10 +123,10 @@ public class ContractVersionService {
         contractManagementService.assertCanAccess(contractId);
         ContractVersion version = get(versionId);
         if (version == null || !version.getContractId().equals(contractId) || version.getFileId() == null) {
-            throw new IllegalArgumentException("草稿版本文件不存在");
+            throw new IllegalArgumentException("鑽夌鐗堟湰鏂囦欢涓嶅瓨鍦?");
         }
         FileInfo file = fileInfoMapper.selectById(version.getFileId());
-        if (file == null) throw new IllegalArgumentException("草稿版本文件不存在");
+        if (file == null) throw new IllegalArgumentException("鑽夌鐗堟湰鏂囦欢涓嶅瓨鍦?");
         Resource resource = new FileSystemResource(fileStorageService.resolve(file.getObjectKey()));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(file.getFileName()))
@@ -140,9 +145,11 @@ public class ContractVersionService {
             file.setFileType(stored.fileType());
             file.setSize(stored.size());
             file.setSha256(stored.sha256());
+            file.setCreatedBy(username);
             file.setCreatedAt(LocalDateTime.now());
             file.setUpdatedAt(LocalDateTime.now());
             file.setDeleted(0);
+            file.setVersion(1);
             fileInfoMapper.insert(file);
             return file;
         } catch (Exception ex) {

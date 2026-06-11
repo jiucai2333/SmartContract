@@ -74,6 +74,26 @@ async function saveDraft() {
     showSavedVersion(version);
     updateStatus(`草稿已生成 Word 留档 · ${new Date().toLocaleString('zh-CN')}`);
     toast(`草稿 ${version.versionNo} 已保存`);
+    return version;
+}
+async function launchAiReview() {
+    const content = draftContent();
+    if (!content) return toast('请先上传或编辑合同草稿');
+    $('#aiReviewBtn').disabled = true;
+    $('#aiReviewBtn').textContent = '准备审核...';
+    try {
+        const version = await saveDraft();
+        if (!draftState.contractId || !version?.versionId) return;
+        const params = new URLSearchParams({
+            contractId: String(draftState.contractId),
+            versionId: String(version.versionId),
+            auto: '1'
+        });
+        location.href = `/html/risk.html?${params.toString()}`;
+    } finally {
+        $('#aiReviewBtn').disabled = false;
+        $('#aiReviewBtn').textContent = 'AI 风险审查';
+    }
 }
 function updateOcrPanel(vo) {
     draftState.attachmentId = vo.attachmentId;
@@ -122,6 +142,7 @@ zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
 zone.addEventListener('drop', event => { event.preventDefault(); zone.classList.remove('dragover'); uploadTemplate(event.dataTransfer?.files?.[0]).catch(error => toast(error.message)); });
 $('#retryOcrBtn').addEventListener('click', () => retryOcr().catch(error => toast(error.message)));
 $('#saveDraftBtn').addEventListener('click', () => saveDraft().catch(error => toast(error.message)));
+$('#aiReviewBtn').addEventListener('click', () => launchAiReview().catch(error => toast(error.message)));
 versionBox.addEventListener('click', event => {
     const link = event.target.closest('[data-download-url]');
     if (!link) return;

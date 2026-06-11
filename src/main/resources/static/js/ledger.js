@@ -27,7 +27,10 @@ function renderActionButtons(row) {
     const title = escapeHtml(row.title);
     buttons.push(`<button class="secondary" data-detail="${cid}" data-title="${title}">查看</button>`);
     if (row.status === 'DRAFT' || row.status === 'APPROVING') {
-        buttons.push(`<a class="secondary" href="/html/draft.html?contractId=${cid}">编辑</a>`);
+        buttons.push(`<a class="secondary" href="/html/edit.html?contractId=${cid}">编辑</a>`);
+        if (row._latestVersionId) {
+            buttons.push(`<a class="secondary" href="/html/risk.html?contractId=${cid}&versionId=${row._latestVersionId}">AI 审查</a>`);
+        }
         if (row.status === 'DRAFT') {
             const blocked = row.riskLevel === 'HIGH';
             buttons.push(`<button class="secondary" data-submit="${cid}" ${blocked ? 'disabled' : ''} title="${blocked ? '存在未复核的高风险问题，暂不可提交审批' : '提交审批'}">提交审批</button>`);
@@ -48,9 +51,11 @@ async function loadContracts() {
     if ($('#statusFilter').value) params.set('status', $('#statusFilter').value);
     if ($('#riskFilter').value) params.set('riskLevel', $('#riskFilter').value);
     const rows = await api(`/api/contracts?${params.toString()}`);
-    const counts = await Promise.all(rows.map(r => loadAttachmentCount(r.contractId)));
-    const versionIds = await Promise.all(rows.map(r => getLatestVersionId(r.contractId)));
-    rows.forEach((r, i) => { r._latestVersionId = versionIds[i]; });
+    const [counts, versionIds] = await Promise.all([
+        Promise.all(rows.map(r => loadAttachmentCount(r.contractId))),
+        Promise.all(rows.map(r => getLatestVersionId(r.contractId)))
+    ]);
+    rows.forEach((row, index) => { row._latestVersionId = versionIds[index]; });
     $('#contractRows').innerHTML = rows.map((row, index) => {
         const attachCount = counts[index] || 0;
         const statusLabel = STATUS_TEXT[row.status] || row.status;
@@ -143,9 +148,9 @@ async function openDetailModal(contractId, title) {
         <div class="detail-section"><h4>签章记录</h4>${sealRecords.length === 0 ? '<p class="hint">暂无签章记录</p>' : sealRecords.map(r => `<div class="record-item"><span><strong>${escapeHtml(r.fileName || '签章文件')}</strong></span><span>状态：${escapeHtml(SEAL_STATUS_TEXT[r.sealStatus] || r.sealStatus || '-')}</span><span>时间：${escapeHtml(r.sealTime || '-')}</span>${r.remark ? `<span class="hint">备注：${escapeHtml(r.remark)}</span>` : ''}</div>`).join('')}</div>
         <div class="detail-section"><h4>归档信息</h4>${archiveRecords.length === 0 ? '<p class="hint">暂无归档记录</p>' : archiveRecords.map(r => `<div class="record-item"><span><strong>归档编号：${escapeHtml(r.archiveNo)}</strong></span><span>归档时间：${escapeHtml(r.archiveTime || '-')}</span><span>知识库ID：${escapeHtml(r.knowledgeId || '-')}</span><span>Merkle Root：${escapeHtml(r.merkleRoot || '-')}</span><span>状态：${r.isLocked ? '<span class="tag tag-green">已锁定</span>' : '<span class="tag tag-gray">未锁定</span>'}</span></div>`).join('')}</div>
         <div class="detail-section"><h4>签章文件</h4>${signedFiles.length === 0 ? '<p class="hint">暂无签章文件</p>' : signedFiles.map(a => `<div class="record-item"><strong>${escapeHtml(a.fileName)}</strong>${a.fileSize != null ? `<span>${escapeHtml(a.fileType || '')} · ${(a.fileSize / 1024).toFixed(1)} KB</span>` : ''}${a.downloadUrl ? `<a class="secondary" href="${escapeHtml(a.downloadUrl)}" data-direct-download="${escapeHtml(a.downloadUrl)}">下载</a>` : a.attachmentId ? `<button class="secondary" data-download="${a.attachmentId}">下载</button>` : ''}</div>`).join('')}</div>
-        <div class="detail-section"><h4>历史版本 (${versions.length})</h4>${versions.length === 0 ? '<p class="hint">暂无版本记录</p>' : versions.map(v => `<div class="record-item"><span><strong>${escapeHtml(v.versionNo)}</strong>${lockedIds.has(v.versionId) ? ' <span class="tag tag-green">已锁定</span>' : ''}</span><span>创建时间：${escapeHtml(v.createdAt || '-')}</span><span>创建人：${escapeHtml(v.createdBy || '-')}</span></div>`).join('')}<p class="hint" style="margin-top:8px"><a href="/html/draft.html?contractId=${contractId}">查看或编辑合同正文</a></p></div>
+        <div class="detail-section"><h4>历史版本 (${versions.length})</h4>${versions.length === 0 ? '<p class="hint">暂无版本记录</p>' : versions.map(v => `<div class="record-item"><span><strong>${escapeHtml(v.versionNo)}</strong>${lockedIds.has(v.versionId) ? ' <span class="tag tag-green">已锁定</span>' : ''}</span><span>创建时间：${escapeHtml(v.createdAt || '-')}</span><span>创建人：${escapeHtml(v.createdBy || '-')}</span><a class="secondary" href="/html/risk.html?contractId=${contractId}&versionId=${v.versionId}">AI 审查</a></div>`).join('')}<p class="hint" style="margin-top:8px"><a href="/html/edit.html?contractId=${contractId}">查看或编辑合同正文</a></p></div>
         <div class="detail-section"><h4>审批记录</h4>${contractApprovals.length === 0 ? '<p class="hint">暂无审批记录</p>' : contractApprovals.map(a => `<div class="record-item"><span><strong>流程：${escapeHtml(a.flowType)}</strong></span><span>当前节点：${escapeHtml(a.currentNode || '-')}</span><span>状态：${escapeHtml(a.status)}</span><span>发起时间：${escapeHtml(a.startedAt || '-')}</span></div>`).join('')}</div>
-        <div class="button-row" style="margin-top:16px"><a class="secondary" href="/html/draft.html?contractId=${contractId}">编辑合同</a><button type="button" class="secondary" id="closeDetailFromBody">关闭</button></div>`;
+        <div class="button-row" style="margin-top:16px"><a class="secondary" href="/html/edit.html?contractId=${contractId}">编辑合同</a><button type="button" class="secondary" id="closeDetailFromBody">关闭</button></div>`;
         body.querySelectorAll('[data-download]').forEach(link => {
             link.addEventListener('click', event => {
                 event.preventDefault();

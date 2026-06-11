@@ -100,12 +100,6 @@ const statusTagClass = {
 };
 const RISK_TEXT = {LOW: '低', MEDIUM: '中', HIGH: '高'};
 const APPROVAL_STATUS_TEXT = {RUNNING: '审批中', APPROVED: '已通过', REJECTED: '已驳回'};
-const FLOW_TYPE_TEXT = {NORMAL: '普通合同', MAJOR: '重大合同', SUPER: '超阈值合同'};
-const APPROVAL_NODE_ROLES = {
-    '部门主管审批': ['DEPT_LEADER', 'ADMIN'],
-    '法务专员审批': ['LEGAL', 'ADMIN'],
-    '企业高管审批': ['EXECUTIVE', 'ADMIN']
-};
 const SEAL_STATUS_TEXT = {ELECTRONIC: '电子签章', SEALED: '已签章'};
 const FULFILLMENT_STATUS_TEXT = {
     PENDING: '待履约', PROCESSING: '履约中', FULFILLED: '已完成', OVERDUE: '已逾期'

@@ -1,20 +1,22 @@
 package cupk.smartcontract.controller;
 
 import cupk.smartcontract.security.RequireRole;
-import cupk.smartcontract.dto.AiRiskVO;
+import cupk.smartcontract.dto.AiRiskReviewResult;
 import cupk.smartcontract.dto.AiRiskReviewRequest;
-import cupk.smartcontract.service.AiDraftService;
 import cupk.smartcontract.service.ContractManagementService;
+import cupk.smartcontract.service.RiskReportExportService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -24,24 +26,48 @@ import java.util.Map;
 @RequestMapping("/api")
 public class RiskController {
 
-    private final AiDraftService aiDraftService;
     private final ContractManagementService contractService;
+    private final RiskReportExportService riskReportExportService;
 
-    public RiskController(AiDraftService aiDraftService,
-                          ContractManagementService contractService) {
-        this.aiDraftService = aiDraftService;
+    public RiskController(ContractManagementService contractService,
+                          RiskReportExportService riskReportExportService) {
         this.contractService = contractService;
+        this.riskReportExportService = riskReportExportService;
     }
 
     @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
     @PostMapping("/ai/risk-review")
     public ResponseEntity<?> riskReview(@Valid @RequestBody AiRiskReviewRequest request) {
         try {
-            List<AiRiskVO> risks = aiDraftService.analyzeRisks(request);
-            return ResponseEntity.ok(risks);
+            AiRiskReviewResult result = contractService.aiRiskReview(request);
+            return ResponseEntity.ok(result);
         } catch (IllegalStateException ex) {
             return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
         }
+    }
+
+    @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
+    @GetMapping("/risk-reports")
+    public Object listRiskReports(@RequestParam(required = false) Long contractId) {
+        return contractService.listRiskReports(contractId);
+    }
+
+    @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
+    @GetMapping("/risk-reports/{reportId}")
+    public Object getRiskReport(@PathVariable Long reportId) {
+        return contractService.getRiskReport(reportId);
+    }
+
+    @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
+    @GetMapping("/risk-reports/{reportId}/export")
+    public ResponseEntity<byte[]> exportRiskReport(@PathVariable Long reportId) {
+        RiskReportExportService.ExportFile export = riskReportExportService.exportDocx(reportId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename*=UTF-8''" + export.encodedFilename())
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .body(export.bytes());
     }
 
     /**
