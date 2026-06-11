@@ -1,8 +1,187 @@
 /* ============================================================
-   仪表盘/工作台样式
+   仪表盘 / 工作台样式
    ============================================================ */
 
-/* ---- Welcome Panel ---- */
+/* ---- Metric Cards ---- */
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.metric {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition), transform var(--transition);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.metric::before {
+    content: "";
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 72px;
+    height: 72px;
+    border-radius: 0 0 0 72px;
+    background: var(--line-light);
+    opacity: .6;
+    transition: all var(--transition);
+}
+
+.metric i {
+    position: absolute;
+    right: 10px;
+    bottom: 14px;
+    width: 26px;
+    height: 26px;
+    opacity: .15;
+    transition: opacity var(--transition);
+    pointer-events: none;
+}
+
+.metric:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.metric:hover::before { opacity: .85; }
+.metric:hover i { opacity: .25; }
+
+.metric span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.metric strong {
+    display: block;
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.metric small {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.metric.accent strong  { color: var(--accent); }
+.metric.danger strong  { color: var(--danger); }
+.metric.warn strong    { color: var(--warn); }
+
+/* ---- Role Panels ---- */
+.role-panels {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.role-panel {
+    padding: 16px 20px;
+    border: 1px solid var(--accent-bg);
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--accent-bg), #f0fdfa);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition), box-shadow var(--transition);
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+}
+
+.role-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 60%, rgba(20,184,166,.06));
+    pointer-events: none;
+}
+
+.role-panel:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ---- Quick Links ---- */
+.quick-links { margin-top: 4px; }
+
+.quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.quick-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 24px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    text-decoration: none;
+    color: var(--ink);
+    transition: all var(--transition);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+}
+
+.quick-card i {
+    width: 32px;
+    height: 32px;
+    color: var(--accent);
+    transition: transform var(--transition), color var(--transition);
+}
+
+.quick-card span {
+    font-weight: 700;
+    font-size: 14.5px;
+    color: var(--ink);
+    transition: color var(--transition);
+}
+
+.quick-card small {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.quick-card:hover {
+    border-color: var(--accent-light);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    background: linear-gradient(180deg, #f0fdfa 0%, var(--surface) 60%);
+}
+
+.quick-card:hover i { color: var(--accent-light); transform: scale(1.1); }
+.quick-card:hover span { color: var(--accent); }
+
+/* ---- Welcome Panel (legacy fallback) ---- */
 .welcome-panel {
     text-align: center;
     padding: 48px 28px;
@@ -17,4 +196,17 @@
 .welcome-text strong {
     color: var(--accent);
     font-weight: 700;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1200px) {
+    .metric-grid { grid-template-columns: repeat(2, 1fr); }
+    .role-panels { grid-template-columns: repeat(2, 1fr); }
+    .quick-grid  { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+    .metric-grid, .role-panels, .quick-grid { grid-template-columns: 1fr; }
+    .metric { padding: 18px 20px; }
+    .metric strong { font-size: 32px; }
 }

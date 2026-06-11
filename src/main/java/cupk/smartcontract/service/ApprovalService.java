@@ -45,29 +45,6 @@ public class ApprovalService {
         if (!"RUNNING".equals(approval.getStatus())) {
             throw new IllegalStateException("当前审批已结束");
         }
-        String currentUserRole = SecurityContext.roleCode();
-        String currentNode = approval.getCurrentNode();
-        
-        if (currentNode == null || currentNode.isEmpty()) {
-            if (!java.util.Set.of("DEPT_LEADER", "LEGAL", "EXECUTIVE", "ADMIN").contains(currentUserRole)) {
-                throw new SecurityException("当前用户没有审批权限");
-            }
-        } else {
-            boolean isAuthorized = false;
-            if ("DEPT_LEADER".equals(currentNode) && "DEPT_LEADER".equals(currentUserRole)) {
-                isAuthorized = true;
-            } else if ("LEGAL".equals(currentNode) && "LEGAL".equals(currentUserRole)) {
-                isAuthorized = true;
-            } else if ("EXECUTIVE".equals(currentNode) && "EXECUTIVE".equals(currentUserRole)) {
-                isAuthorized = true;
-            } else if ("ADMIN".equals(currentUserRole)) {
-                isAuthorized = true;
-            }
-            
-            if (!isAuthorized) {
-                throw new SecurityException("当前用户没有该审批节点的审批权限");
-            }
-        }
 
         ApprovalRecord record = new ApprovalRecord();
         record.setInstanceId(instanceId);
