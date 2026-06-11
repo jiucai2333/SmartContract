@@ -1,0 +1,115 @@
+/* ============================================================
+   风险审查页面样式
+   ============================================================ */
+
+/* ---- Review Layout ---- */
+.review-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(380px, .85fr);
+    gap: 22px;
+    align-items: start;
+}
+
+/* ---- Contract Preview Panel ---- */
+.contract-preview {
+    position: sticky;
+    top: 20px;
+}
+
+.contract-preview article {
+    line-height: 1.9;
+    font-size: 14px;
+    color: var(--ink-secondary);
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.contract-preview article p {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition);
+}
+
+.contract-preview article p:hover {
+    background: var(--line-light);
+}
+
+.contract-preview article p.highlight {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn);
+}
+
+/* ---- Risk Cards ---- */
+.risk-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    border-left: 4px solid transparent;
+    transition: box-shadow var(--transition), transform var(--transition);
+    cursor: pointer;
+}
+
+.risk-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateX(4px);
+}
+
+.risk-card.HIGH {
+    border-left-color: var(--danger);
+    background: var(--danger-bg);
+}
+
+.risk-card.MEDIUM {
+    border-left-color: var(--warn);
+    background: var(--warn-bg);
+}
+
+.risk-card.LOW {
+    border-left-color: var(--success);
+    background: var(--success-bg);
+}
+
+.risk-card strong { font-size: 14px; color: var(--ink); }
+
+.risk-card small {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.risk-card .suggestion {
+    color: var(--ink-secondary);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+/* ---- Review Badge ---- */
+.review-required {
+    color: var(--danger);
+    font-weight: 800;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+/* ---- Review Input Panel ---- */
+#reviewInputPanel {
+    margin-bottom: 22px;
+}
+
+#reviewInputPanel textarea {
+    min-height: 120px;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+@media (max-width: 1024px) {
+    .review-layout { grid-template-columns: 1fr; }
+    .contract-preview { position: static; }
+}

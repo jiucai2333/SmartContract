@@ -1,3 +1,135 @@
+/* ============================================================
+   合同台账筛选栏：与模板/草稿页完全对齐
+   搜索框 260px × 44px；下拉框 150px × 44px；重置按钮 44px；间距 10px
+   ============================================================ */
+
+.ledger-filter-panel {
+    padding: 18px 22px;
+    border-radius: 14px;
+    box-shadow: 0 3px 12px rgba(33, 55, 85, .06);
+}
+
+.ledger-filter-panel .filters {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.ledger-filter-panel .search-field {
+    position: relative;
+    width: 260px;
+    flex: 0 0 260px;
+}
+
+.ledger-filter-panel .search-field input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px 0 40px;
+    border: 1px solid #dce5ef;
+    border-radius: 10px;
+    color: var(--ink);
+    background: #fff;
+    font-size: 13.5px;
+}
+
+.ledger-filter-panel .search-field > :is(i, svg) {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    display: block;
+    width: 17px;
+    height: 17px;
+    color: #91a1b8;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.ledger-filter-panel .search-field > svg,
+.ledger-filter-panel #resetBtn svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ledger-filter-panel .search-field > svg {
+    width: 17px;
+    height: 17px;
+}
+
+.ledger-filter-panel select {
+    width: 150px;
+    min-width: 150px;
+    height: 44px;
+    padding: 0 34px 0 14px;
+    border: 1px solid #dce5ef;
+    border-radius: 10px;
+    color: var(--ink);
+    background-color: #fff;
+    font-size: 13.5px;
+}
+
+.ledger-filter-panel #resetBtn {
+    height: 44px;
+    padding: 0 16px;
+    color: #31415a;
+    background: #f4f7fb;
+    border: 1px solid #dce5ef;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.ledger-filter-panel #resetBtn:hover {
+    background: #edf2f7;
+    border-color: #cbd5e1;
+    color: var(--ink-secondary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+}
+
+@media (max-width: 900px) {
+    .ledger-filter-panel .filters {
+        flex-wrap: wrap;
+    }
+
+    .ledger-filter-panel .search-field {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .ledger-filter-panel select {
+        width: auto;
+        flex: 1 1 150px;
+    }
+}
+
+@media (max-width: 640px) {
+    .ledger-filter-panel {
+        padding: 14px 16px;
+    }
+
+    .ledger-filter-panel .filters {
+        gap: 8px;
+    }
+
+    .ledger-filter-panel .search-field,
+    .ledger-filter-panel select,
+    .ledger-filter-panel #resetBtn {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+}
+
 .table-wrap { border-radius: var(--radius); }
 .action-cell { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .action-cell a, .action-cell button { font-size: 12px; padding: 5px 10px; }
