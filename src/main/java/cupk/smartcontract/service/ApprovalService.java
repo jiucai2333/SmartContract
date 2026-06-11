@@ -14,37 +14,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 @Service
 public class ApprovalService {
 
-    private static final Map<String, List<String>> FLOW_NODES = Map.of(
-            "NORMAL", List.of("部门主管审批"),
-            "MAJOR", List.of("部门主管审批", "法务专员审批"),
-            "SUPER", List.of("部门主管审批", "法务专员审批", "企业高管审批")
-    );
-
-    private static final Map<String, Set<String>> NODE_ROLES = Map.of(
-            "部门主管审批", Set.of("DEPT_LEADER", "ADMIN"),
-            "法务专员审批", Set.of("LEGAL", "ADMIN"),
-            "企业高管审批", Set.of("EXECUTIVE", "ADMIN")
-    );
-
     private final ApprovalInstanceMapper mapper;
     private final ApprovalRecordMapper recordMapper;
     private final ContractMainMapper contractMapper;
-    private final StatusTransitionService statusTransitionService;
 
     public ApprovalService(ApprovalInstanceMapper mapper,
                            ApprovalRecordMapper recordMapper,
-                           ContractMainMapper contractMapper,
-                           StatusTransitionService statusTransitionService) {
+                           ContractMainMapper contractMapper) {
         this.mapper = mapper;
         this.recordMapper = recordMapper;
         this.contractMapper = contractMapper;
-        this.statusTransitionService = statusTransitionService;
     }
 
     public List<ApprovalVO> listApprovals() {
@@ -55,27 +38,45 @@ public class ApprovalService {
 
     @Transactional
     public ApprovalVO agree(Long instanceId, String comment) {
-        Approval approval = requireRunning(instanceId);
-        String currentNode = approval.getCurrentNode() == null ? "部门主管审批" : approval.getCurrentNode();
-        assertNodeRole(currentNode);
-
-        insertRecord(instanceId, currentNode, "AGREE", comment);
-
-        List<String> nodes = flowNodes(approval.getFlowType());
-        int idx = nodes.indexOf(currentNode);
-        if (idx < 0) {
-            throw new IllegalStateException("未知审批节点：" + currentNode);
+        Approval approval = mapper.selectById(instanceId);
+        if (approval == null) {
+            throw new IllegalArgumentException("审批实例不存在");
+        }
+        if (!"RUNNING".equals(approval.getStatus())) {
+            throw new IllegalStateException("当前审批已结束");
+        }
+        String currentUserRole = SecurityContext.roleCode();
+        String currentNode = approval.getCurrentNode();
+        
+        if (currentNode == null || currentNode.isEmpty()) {
+            if (!java.util.Set.of("DEPT_LEADER", "LEGAL", "EXECUTIVE", "ADMIN").contains(currentUserRole)) {
+                throw new SecurityException("当前用户没有审批权限");
+            }
+        } else {
+            boolean isAuthorized = false;
+            if ("DEPT_LEADER".equals(currentNode) && "DEPT_LEADER".equals(currentUserRole)) {
+                isAuthorized = true;
+            } else if ("LEGAL".equals(currentNode) && "LEGAL".equals(currentUserRole)) {
+                isAuthorized = true;
+            } else if ("EXECUTIVE".equals(currentNode) && "EXECUTIVE".equals(currentUserRole)) {
+                isAuthorized = true;
+            } else if ("ADMIN".equals(currentUserRole)) {
+                isAuthorized = true;
+            }
+            
+            if (!isAuthorized) {
+                throw new SecurityException("当前用户没有该审批节点的审批权限");
+            }
         }
 
-        if (idx < nodes.size() - 1) {
-            approval.setCurrentNode(nodes.get(idx + 1));
-            approval.setUpdatedBy(SecurityContext.username());
-            approval.setUpdatedAt(LocalDateTime.now());
-            mapper.updateById(approval);
-            statusTransitionService.writeLog(SecurityContext.userId(), "APPROVAL_AGREE",
-                    "CONTRACT", approval.getContractId(), "NODE_ADVANCED");
-            return toVo(approval);
-        }
+        ApprovalRecord record = new ApprovalRecord();
+        record.setInstanceId(instanceId);
+        record.setNodeName(approval.getCurrentNode() == null ? "审批" : approval.getCurrentNode());
+        record.setApproverId(SecurityContext.userId());
+        record.setAction("AGREE");
+        record.setComment(comment);
+        record.setActionTime(LocalDateTime.now());
+        recordMapper.insert(record);
 
         approval.setStatus("APPROVED");
         approval.setEndedAt(LocalDateTime.now());
@@ -85,68 +86,12 @@ public class ApprovalService {
 
         ContractMain contract = contractMapper.selectById(approval.getContractId());
         if (contract != null && "APPROVING".equals(contract.getStatus())) {
-            statusTransitionService.transitionToApproved(contract);
-            statusTransitionService.writeLog(SecurityContext.userId(), "APPROVAL_PASS",
-                    "CONTRACT", approval.getContractId(), "SUCCESS");
+            contract.setStatus("APPROVED");
+            contract.setUpdatedBy(SecurityContext.username());
+            contract.setUpdatedAt(LocalDateTime.now());
+            contractMapper.updateById(contract);
         }
         return toVo(approval);
-    }
-
-    @Transactional
-    public ApprovalVO reject(Long instanceId, String comment) {
-        Approval approval = requireRunning(instanceId);
-        String currentNode = approval.getCurrentNode() == null ? "部门主管审批" : approval.getCurrentNode();
-        assertNodeRole(currentNode);
-
-        insertRecord(instanceId, currentNode, "REJECT",
-                comment == null || comment.isBlank() ? "驳回" : comment);
-
-        approval.setStatus("REJECTED");
-        approval.setEndedAt(LocalDateTime.now());
-        approval.setUpdatedBy(SecurityContext.username());
-        approval.setUpdatedAt(LocalDateTime.now());
-        mapper.updateById(approval);
-
-        ContractMain contract = contractMapper.selectById(approval.getContractId());
-        if (contract != null && "APPROVING".equals(contract.getStatus())) {
-            statusTransitionService.transitionToDraft(contract);
-            statusTransitionService.writeLog(SecurityContext.userId(), "APPROVAL_REJECT",
-                    "CONTRACT", approval.getContractId(), "SUCCESS");
-        }
-        return toVo(approval);
-    }
-
-    private Approval requireRunning(Long instanceId) {
-        Approval approval = mapper.selectById(instanceId);
-        if (approval == null) {
-            throw new IllegalArgumentException("审批实例不存在");
-        }
-        if (!"RUNNING".equals(approval.getStatus())) {
-            throw new IllegalStateException("当前审批已结束");
-        }
-        return approval;
-    }
-
-    private void assertNodeRole(String nodeName) {
-        Set<String> allowed = NODE_ROLES.get(nodeName);
-        if (allowed == null || !allowed.contains(SecurityContext.roleCode())) {
-            throw new IllegalStateException("当前角色无权处理节点：" + nodeName);
-        }
-    }
-
-    private List<String> flowNodes(String flowType) {
-        return FLOW_NODES.getOrDefault(flowType, FLOW_NODES.get("NORMAL"));
-    }
-
-    private void insertRecord(Long instanceId, String nodeName, String action, String comment) {
-        ApprovalRecord record = new ApprovalRecord();
-        record.setInstanceId(instanceId);
-        record.setNodeName(nodeName);
-        record.setApproverId(SecurityContext.userId());
-        record.setAction(action);
-        record.setComment(comment);
-        record.setActionTime(LocalDateTime.now());
-        recordMapper.insert(record);
     }
 
     private ApprovalVO toVo(Approval approval) {
