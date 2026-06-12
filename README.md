@@ -1,184 +1,186 @@
-# 智能合同管理系统
+# SmartContract — 智能合同管理系统
 
-基于 Spring Boot 的企业级智能合同全生命周期管理平台，集成 AI 起草、OCR 识别、审批流程、风险审查、签章归档、履约跟踪等功能，支持 RBAC 六角色权限管控与行级数据隔离。
+基于 **Spring Boot 3.5** + **MyBatis-Plus** + **MySQL 8.0** + 原生 Web 技术构建的企业级合同全生命周期管理平台。
+
+覆盖合同起草、模板管理、版本控制、附件 & OCR、AI 风险审查、审批流转、电子签章、归档确认、履约绩效和安全审计。
+
+---
+
+## 目录
+
+- [功能总览](#功能总览)
+- [技术栈](#技术栈)
+- [项目结构](#项目结构)
+- [快速开始](#快速开始)
+- [配置说明](#配置说明)
+- [前端页面](#前端页面)
+- [后端模块](#后端模块)
+- [API 参考](#api-参考)
+- [安全模型](#安全模型)
+- [开发约定](#开发约定)
+
+---
+
+## 功能总览
+
+### 合同全生命周期
+
+```
+DRAFT → APPROVING → APPROVED → SIGNING → ARCHIVED → EXECUTING → COMPLETED
+                                                          ↘ EXPIRED / TERMINATED
+```
+
+- 合同草稿的创建、编辑、删除、筛选与台账查询
+- 在线富文本编辑器 + 模板字段填充 + Word（DOCX）导出
+- 版本快照、版本对比、版本恢复与历史文件下载
+- 状态流转约束（如归档后禁止编辑、高风险合同拦截提交）
+- 交易对手方与部门基础数据管理
+
+### AI & 文档智能
+
+| 能力 | 说明 |
+|------|------|
+| AI 合同起草 | 通义千问（Qwen）生成正文，支持 SSE 流式输出 |
+| AI 模板字段识别 | 从合同正文自动提取可填充字段 |
+| AI 风险审查 | 逐条风险识别、等级评定，报告落库 + DOCX 导出 |
+| OCR 文档识别 | PaddleOCR / 阿里云 OCR，支持版式还原 |
+| 文档解析 | PDF、DOCX、DOC 文本提取 |
+| Markdown | 导入解析、预览、导出为 Markdown |
+
+### 审批、签章与归档
+
+- 三级审批：**普通** < **重大**（≥10 万，Legal + Executive 会签）< **超阈值**（≥50 万，同步会签）
+- 审批同意 / 驳回、审批记录追溯
+- 高风险合同在审批提交时自动阻断
+- 电子签章登记与用印记录
+- 归档编号自动生成、版本锁定
+
+### 履约与绩效
+
+- 履约计划制定与状态跟踪
+- 交付物登记、确认 / 取消确认
+- 付款计划与付款记录台账
+- 逾期天数计算与逾期清单
+- 合同履约进度统计
+- 到期前 30 / 7 / 1 天分级提醒
+
+### 安全与审计
+
+- JWT（HMAC-SHA256）认证
+- BCrypt 密码哈希
+- `@RequireRole` 声明式角色控制
+- SELF / DEPT / ALL 三级数据权限
+- `@AuditOperation` 操作审计（失败不影响业务响应）
+- 页面登录用户水印
 
 ---
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 后端框架 | Java 17 + Spring Boot 3.5.14 |
-| ORM | MyBatis-Plus 3.5.12（乐观锁 + 分页 + 逻辑删除） |
-| 数据库 | MySQL 8.0 |
-| 认证 | 自签 JWT (HMAC-SHA256) + BCrypt |
-| AI 大模型 | 通义千问 Qwen（合同起草 / 风险审查 / 模板字段识别） |
-| OCR | PaddleOCR / 阿里云 OCR（合同扫描件识别） |
-| 文档解析 | Apache PDFBox 3.0.5 + Apache POI 5.4.1 |
-| HTML 处理 | Jsoup 1.20.1（清洗 / Markdown 转换） |
-| 前端 | 原生 HTML / CSS / JavaScript |
-
----
-
-## 核心功能
-
-### 合同全生命周期
-
-```
-草稿(DRAFT) → 审批中(APPROVING) → 已审批(APPROVED) → 已签章(SIGNING) → 已归档(ARCHIVED) → 履约中(EXECUTING) → 已完成(COMPLETED)
-                                                                                                  ↘ 已到期(EXPIRED)
-                                                                                                  ↘ 已终止(TERMINATED)
-```
-
-- **合同起草**：AI 辅助生成合同草稿（通义千问），支持 SSE 流式输出；从模板创建；从 OCR 识别的纸质合同导入；从 Markdown 导入
-- **审批流程**：根据合同金额自动确定审批流程（普通/重大/特大），高风险合同阻断提交
-- **风险审查**：AI 驱动的合同风险识别，标注风险等级（HIGH/MEDIUM/LOW）并给出修改建议
-- **签章登记**：电子签章/用印登记，记录签章服务提供商、区块链交易 ID、签名数据
-- **归档确认**：自动生成归档编号，锁定版本防篡改，Merkle 根哈希完整性校验
-- **履约跟踪**：里程碑管理，自动标记逾期，30/7/1 天三级预警
-- **版本管理**：自动版本号递增，HTML 清洗，SHA256 哈希校验，支持版本恢复与 DOCX 导出
-- **Markdown 导入导出**：结构化 Markdown 格式双向转换，支持 YAML Front Matter、风险标注语法
-
-### AI 能力
-
-| 能力 | 模型 | 说明 |
+| 分类 | 技术 | 版本 |
 |------|------|------|
-| 合同起草 | qwen3-vl-plus | 根据合同类型、甲乙方、金额等生成结构化合同草稿 |
-| 风险审查 | qwen3-vl-plus | 识别法律、履约、付款、知识产权、违约责任等风险，并写入合同风险等级 |
-| 模板字段识别 | qwen3-vl-plus | 从合同模板中识别需填写的字段（甲方、金额、期限等） |
-| OCR 识别 | PaddleOCR / 阿里云 | 将 PDF/DOCX 合同扫描件转为结构化文本 |
-
-### 数据权限
-
-基于角色的行级数据隔离，查询结果自动按权限过滤：
-
-| 角色 | 编码 | 数据范围 |
-|------|------|----------|
-| 系统管理员 | ADMIN | ALL（全部数据） |
-| 法务专员 | LEGAL | ALL |
-| 财务专员 | FINANCE | ALL |
-| 企业高管 | EXECUTIVE | ALL |
-| 部门主管 | DEPT_LEADER | DEPT（本部门数据） |
-| 普通员工 | USER | SELF（仅本人数据） |
+| 语言 | Java | 17 |
+| 框架 | Spring Boot | 3.5.14 |
+| Web | Spring MVC + Jakarta Validation | — |
+| AOP | Spring Boot AOP | — |
+| ORM | MyBatis-Plus | 3.5.12 |
+| 数据库 | MySQL | 8.0 |
+| 缓存 | Spring Data Redis | — |
+| 认证 | 自签 JWT + Spring Security Crypto (BCrypt) | — |
+| AI | 通义千问 Qwen（OpenAI 兼容接口） | — |
+| OCR | PaddleOCR / 阿里云 OCR | — |
+| 文档 | Apache POI / PDFBox | 5.4.1 / 3.0.5 |
+| HTML 解析 | Jsoup | 1.20.1 |
+| 工具 | Lombok | 1.18.46 |
+| 前端 | HTML + CSS + 原生 JavaScript | — |
+| 构建 | Maven + spring-boot-maven-plugin | — |
 
 ---
 
 ## 项目结构
 
 ```
-src/main/java/cupk/smartcontract/
-├── SmartContractApplication.java
-├── common/
-│   ├── Result.java                # 统一响应封装
-│   └── RoleEnum.java              # 六角色枚举 + 数据权限范围
-├── config/
-│   ├── MybatisPlusConfig.java     # MyBatis-Plus 拦截器（乐观锁 + 分页）
-│   ├── OcrProperties.java         # OCR 配置属性
-│   ├── QwenProperties.java        # 通义千问配置属性
-│   ├── StorageProperties.java     # 本地存储配置属性
-│   └── WebMvcConfig.java          # MVC 配置 + 拦截器注册
-├── controller/
-│   ├── AdminController.java       # 管理员 API（用户/角色/合同字段管理）
-│   ├── ApprovalController.java    # 审批 API
-│   ├── ArchiveController.java     # 归档 API
-│   ├── AttachmentController.java  # 附件上传/OCR/关联/下载
-│   ├── ContractController.java    # 合同 CRUD + AI 起草
-│   ├── CounterpartyController.java # 交易对手方查询
-│   ├── DashboardController.java   # 仪表盘汇总
-│   ├── DeptController.java        # 部门查询
-│   ├── FulfillmentController.java # 履约计划管理
-│   ├── GlobalExceptionHandler.java # 全局异常处理
-│   ├── LedgerController.java      # 台账（提交审批/签章/归档记录）
-│   ├── MarkdownController.java    # Markdown 导入导出
-│   ├── RiskController.java        # AI 风险审查
-│   ├── SealController.java        # 签章登记
-│   ├── TemplateController.java    # 合同模板管理
-│   ├── UserController.java        # 用户认证（登录/注册/登出）
-│   └── VersionController.java     # 合同版本管理
-├── dto/                           # 26 个请求/响应 DTO
-├── entity/
-│   ├── BaseAuditEntity.java       # 审计字段基类
-│   ├── ContractMain.java          # 合同主表
-│   ├── ContractVersion.java       # 合同版本
-│   ├── ContractTemplate.java      # 合同模板
-│   ├── ContractAttachment.java    # 合同附件
-│   ├── ContractKnowledge.java     # 合同知识库
-│   ├── Approval.java              # 审批实例
-│   ├── ApprovalRecord.java        # 审批操作记录
-│   ├── RiskItem.java              # 风险项
-│   ├── SealRecord.java            # 用印记录
-│   ├── ArchiveRecord.java         # 归档记录
-│   ├── BlockchainRecord.java      # 区块链存证记录
-│   ├── FulfillmentPlan.java       # 履约计划
-│   ├── ReminderRecord.java        # 提醒记录
-│   ├── AiTaskRecord.java          # AI 任务记录
-│   ├── OperationLog.java          # 操作日志
-│   ├── FileInfo.java              # 文件元数据
-│   ├── DeptInfo.java              # 部门信息
-│   └── UserInfo.java              # 用户信息
-├── mapper/                        # 18 个 MyBatis-Plus Mapper
-├── security/
-│   ├── AuthInterceptor.java       # JWT 认证拦截器
-│   ├── RequireRole.java           # 角色权限注解
-│   └── SecurityContext.java       # 线程级安全上下文
-└── service/
-    ├── AiDraftService.java        # AI 起草/风险审查/模板字段识别
-    ├── ApprovalService.java       # 审批流程管理
-    ├── AuthService.java           # 用户认证与角色管理
-    ├── ContractAttachmentService.java # 附件全生命周期管理
-    ├── ContractManagementService.java # 合同核心业务（CRUD/仪表盘/数据权限）
-    ├── ContractVersionService.java    # 版本管理 + HTML 清洗 + DOCX 归档
-    ├── CounterpartyService.java       # 交易对手方聚合查询
-    ├── DeptService.java               # 部门查询
-    ├── DocumentParseService.java      # PDF/DOCX 文档解析
-    ├── DraftTemplateService.java      # 模板字段识别与填充
-    ├── FileStorageService.java        # 本地文件存储（SHA256 去重）
-    ├── FulfillmentService.java        # 履约计划管理
-    ├── MarkdownContractService.java   # Markdown 导入导出
-    ├── OcrService.java                # OCR 识别（PaddleOCR/阿里云）
-    ├── StatusTransitionService.java   # 合同状态流转管控
-    ├── TemplateService.java           # 合同模板管理
-    ├── TokenService.java              # JWT 签发/校验
-    └── WordArchiveService.java        # HTML 转 Word DOCX
-
-src/main/resources/
-├── application.properties
-└── static/
-    ├── html/                      # 15 个前端页面
-    │   ├── index.html             # 入口跳转
-    │   ├── login.html             # 登录
-    │   ├── register.html          # 注册
-    │   ├── dashboard.html         # 工作台（按角色展示）
-    │   ├── draft.html             # 合同草稿列表
-    │   ├── edit.html              # 在线编辑（富文本 + OCR）
-    │   ├── ledger.html            # 合同台账
-    │   ├── approval.html          # 审批中心（可视化流程线）
-    │   ├── risk.html              # AI 风险审查
-    │   ├── seal.html              # 签章登记（四步向导）
-    │   ├── signature.html         # 电子签章（集成第三方）
-    │   ├── archive.html           # 归档确认（三步向导）
-    │   ├── fulfillment.html       # 履约预警（甘特图）
-    │   ├── templates.html         # 合同模板管理
-    │   └── users.html             # 用户管理
-    ├── css/                       # 样式文件
-    └── js/                        # 页面逻辑
+SmartContract/
+├── src/main/java/cupk/smartcontract/
+│   ├── SmartContractApplication.java    # 启动入口
+│   ├── common/                          # Result 响应体、RoleEnum 角色枚举
+│   ├── config/                          # MVC、MyBatis-Plus、AI(Qwen)、OCR、存储配置
+│   ├── controller/                      # 19 个 REST Controller
+│   ├── dto/                             # 请求 / 响应 DTO（43 个）
+│   ├── entity/                          # 数据库实体（24 个）
+│   ├── mapper/                          # MyBatis-Plus Mapper（23 个）
+│   ├── security/                        # JWT 拦截、@RequireRole、@AuditOperation 切面
+│   └── service/                         # 业务 Service（26 个）
+├── src/main/resources/
+│   ├── static/
+│   │   ├── css/                         # 全局样式 + 页面样式（13 个）
+│   │   ├── html/                        # 前端页面（14 个）
+│   │   └── js/                          # 全局脚本 + 页面脚本（13 个）
+│   ├── sql/                             # 数据库增量脚本
+│   └── application.properties           # 应用配置
+├── data/uploads/                        # 上传文件存储目录
+├── pom.xml
+└── README.md
 ```
 
 ---
 
-## 快速启动
+## 快速开始
+
+### 环境要求
+
+| 依赖 | 最低版本 |
+|------|----------|
+| JDK | 17 |
+| Maven | 3.9+ |
+| MySQL | 8.0 |
+| Redis | 7.0+ |
 
 ### 1. 创建数据库
 
-导入种子数据：
-
-```bash
-mysql -u root -p < smartcontract.sql
+```sql
+CREATE DATABASE smart_contract_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 2. 配置数据库连接
+然后执行 `src/main/resources/sql/` 下的增量脚本（按需执行）。
 
-编辑 `src/main/resources/application.properties`：
+### 2. 配置环境变量
+
+```powershell
+# 通义千问 API Key（必填）
+$env:DASHSCOPE_API_KEY = "你的 DashScope API Key"
+
+# PaddleOCR Token（使用 PaddleOCR 时必填）
+$env:PADDLE_OCR_TOKEN = "你的 PaddleOCR Token"
+```
+
+### 3. 启动
+
+```powershell
+# 开发模式
+mvn spring-boot:run
+
+# 打包部署
+mvn package -DskipTests
+java -jar target/smartcontract-0.0.1-SNAPSHOT.jar
+```
+
+### 4. 访问
+
+浏览器打开 **http://localhost:8080/**，使用默认管理员账号登录：
+
+```
+用户名：admin
+密码：Admin@123
+```
+
+---
+
+## 配置说明
+
+> 敏感凭据建议通过环境变量注入，不要将生产密钥提交到仓库。
+
+### 数据库
 
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/smart_contract_db?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
@@ -186,170 +188,267 @@ spring.datasource.username=root
 spring.datasource.password=你的密码
 ```
 
-### 3. 配置 AI 服务（可选）
-
-```powershell
-$env:DASHSCOPE_API_KEY="你的 DashScope API Key"
-```
+### AI（通义千问）
 
 ```properties
-# 通义千问（阿里云百炼 OpenAI 兼容模式）
+ai.qwen.enabled=true
+ai.qwen.api-key=${DASHSCOPE_API_KEY}
 ai.qwen.base-url=https://dashscope.aliyuncs.com/compatible-mode/v1
-ai.qwen.model=qwen3-vl-plus
-ai.qwen.enable-thinking=true
-ai.qwen.thinking-budget=81920
-
-# OCR（PaddleOCR 云服务，可选）
-ai.ocr.paddle-token=${PADDLE_OCR_TOKEN:}
+ai.qwen.model=qwen-plus
+ai.qwen.timeout-seconds=120
+ai.qwen.vision-model=qwen-vl-plus
 ```
 
-> 不配置 AI 服务时，系统仍可正常运行，AI 相关功能会返回提示信息。
-
-### 4. 启动
-
-```bash
-./mvnw spring-boot:run
-```
-
-浏览器打开 **http://localhost:8080/**
-
----
-
-## 内置账号
-
-| 用户名 | 密码 | 角色 |
-|--------|------|------|
-| admin | Admin@123 | ADMIN |
-| legal | Legal@123 | LEGAL |
-| user | User@123 | USER |
-| dept_leader | Demo@123 | DEPT_LEADER |
-| finance | Demo@123 | FINANCE |
-| executive | Demo@123 | EXECUTIVE |
-
----
-
-## API 接口
-
-### 用户认证
-
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| POST | `/api/users/login` | 登录 | 否 |
-| POST | `/api/users/register` | 注册 | 否 |
-| POST | `/api/users/logout` | 登出 | 否 |
-| GET | `/api/users/current` | 当前用户 | 是 |
-
-### 管理员
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| GET | `/api/admin/users` | 用户列表 | ADMIN |
-| PUT | `/api/admin/users/{userId}/role` | 更新用户角色 | ADMIN |
-| GET | `/api/admin/roles` | 角色列表 | ADMIN |
-| PUT | `/api/admin/contracts/{contractId}/fields` | 修改合同字段（状态/风险等级） | ADMIN |
-
-### 合同管理
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| GET | `/api/contracts` | 合同列表（支持关键词/状态/风险/类型筛选） | 登录 |
-| POST | `/api/contracts` | 创建合同 | USER+ |
-| PUT | `/api/contracts/{contractId}` | 更新合同（已归档禁止编辑） | 登录 |
-| DELETE | `/api/contracts/{contractId}` | 删除合同（仅草稿） | USER+ |
-| POST | `/api/contracts/{contractId}/submit` | 提交审批 | USER+ |
-
-### AI 能力
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| POST | `/api/ai/draft` | AI 起草合同 | USER+ |
-| POST | `/api/ai/draft-stream` | AI 起草合同（SSE 流式） | USER+ |
-| POST | `/api/ai/risk-review` | AI 风险审查 | LEGAL+ |
-
-### 附件与 OCR
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| POST | `/api/attachments/upload` | 上传附件（自动 OCR） | USER+ |
-| GET | `/api/attachments` | 附件列表 | 登录 |
-| POST | `/api/attachments/{id}/ocr` | 执行 OCR 识别 | USER+ |
-| POST | `/api/attachments/{id}/link` | 关联附件到合同 | USER+ |
-| POST | `/api/contracts/from-ocr` | 从 OCR 结果创建合同 | USER+ |
-| GET | `/api/attachments/{id}/download` | 下载附件 | 登录 |
-
-### 审批
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| GET | `/api/approvals` | 审批记录列表 | 登录 |
-| POST | `/api/approvals/{instanceId}/agree` | 同意审批 | DEPT_LEADER+ |
-
-### 签章与归档
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| POST | `/api/contracts/{contractId}/seal` | 签章登记 | LEGAL+ |
-| POST | `/api/contracts/{contractId}/archive` | 归档确认 | LEGAL+ |
-| GET | `/api/contracts/{contractId}/seal-records` | 签章记录 | 登录 |
-| GET | `/api/contracts/{contractId}/archive-records` | 归档记录 | 登录 |
-
-### 版本管理
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| POST | `/api/contracts/{contractId}/versions` | 保存版本快照 | USER+ |
-| GET | `/api/contracts/{contractId}/versions` | 版本列表 | 登录 |
-| GET | `/api/contracts/{contractId}/versions/latest` | 最新版本 | 登录 |
-| GET | `/api/contracts/{contractId}/versions/{versionId}` | 版本详情 | 登录 |
-| POST | `/api/contracts/{contractId}/versions/{versionId}/restore` | 恢复历史版本 | USER+ |
-| GET | `/api/contracts/{contractId}/versions/{versionId}/download` | 下载版本文件 | 登录 |
-
-### Markdown 导入导出
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| GET | `/api/contracts/{contractId}/export/markdown` | 导出 Markdown | USER+ |
-| GET | `/api/contracts/{contractId}/export/markdown/preview` | 预览导出内容 | USER+ |
-| POST | `/api/contracts/import/markdown/parse` | 解析 Markdown | USER+ |
-| POST | `/api/contracts/import/markdown` | 从 Markdown 创建合同 | USER+ |
-| GET | `/api/contracts/import/markdown/spec` | 格式说明 | 登录 |
-
-### 模板管理
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| GET | `/api/templates` | 模板列表 | 登录 |
-| GET | `/api/templates/{id}` | 模板详情 | 登录 |
-| POST | `/api/templates` | 创建模板 | LEGAL+ |
-| PUT | `/api/templates/{id}` | 更新模板 | LEGAL+ |
-| DELETE | `/api/templates/{id}` | 删除模板 | LEGAL+ |
-| GET | `/api/templates/{id}/download` | 下载模板文件 | 登录 |
-
-### 其他
-
-| 方法 | 路径 | 说明 | 权限 |
-|------|------|------|------|
-| GET | `/api/dashboard` | 仪表盘汇总 | 登录 |
-| GET | `/api/counterparties` | 交易对手方列表 | 登录 |
-| GET | `/api/departments` | 部门列表 | 登录 |
-| GET | `/api/fulfillment-plans` | 履约计划列表 | 登录 |
-| PUT | `/api/fulfillment-plans/{planId}/status` | 更新履约状态 | 登录 |
-
-> 权限说明：`USER+` = USER / DEPT_LEADER / LEGAL / FINANCE / EXECUTIVE / ADMIN；`LEGAL+` = LEGAL / EXECUTIVE / ADMIN；`DEPT_LEADER+` = DEPT_LEADER / LEGAL / EXECUTIVE / ADMIN；ADMIN 拥有全部权限。
-
----
-
-## 合同审批阈值配置
+### OCR
 
 ```properties
-# 重大合同最低金额（默认 10 万），达到后触发 Legal + Executive 会签
-contract.threshold.major=100000
-# 超阈值合同最低金额（默认 50 万），达到后触发 Legal + Executive 同时会签
-contract.threshold.super=500000
+ai.ocr.enabled=true
+ai.ocr.provider=paddle          # paddle | aliyun-openapi | aliyun
+ai.ocr.paddle-token=${PADDLE_OCR_TOKEN}
+ai.ocr.paddle-model=PaddleOCR-VL-1.6
+```
+
+### 文件存储
+
+```properties
+storage.local.base-dir=./data/uploads
+spring.servlet.multipart.max-file-size=200MB
+spring.servlet.multipart.max-request-size=210MB
+```
+
+### 审批阈值
+
+```properties
+contract.threshold.major=100000    # 重大合同最低金额（元）
+contract.threshold.super=500000    # 超阈值合同最低金额（元）
 ```
 
 ---
 
-## 合同模板分类
+## 前端页面
 
-系统内置 8 种合同模板类型：保密合同、劳务合同、采购合同、销售合同、技术合同、物流合同、企业服务合同、知识产权合同。
+系统采用多页面结构。侧边栏和顶栏由 `common.js` 统一渲染，公共样式集中在 `styles.css`。
+
+| 页面 | 文件 | 功能说明 |
+|------|------|----------|
+| 入口 | [index.html](src/main/resources/static/html/index.html) | 根据登录状态跳转 |
+| 登录 | [login.html](src/main/resources/static/html/login.html) | 用户登录 |
+| 注册 | [register.html](src/main/resources/static/html/register.html) | 用户注册 |
+| 工作台 | [dashboard.html](src/main/resources/static/html/dashboard.html) | 合同指标、趋势、到期预警、待办 |
+| 合同编制 | [draft.html](src/main/resources/static/html/draft.html) | 合同草稿管理 |
+| 在线编辑 | [edit.html](src/main/resources/static/html/edit.html) | 富文本编辑、OCR、模板、Word 下载 |
+| 合同模板 | [templates.html](src/main/resources/static/html/templates.html) | 模板浏览与使用 |
+| 风险审查 | [risk.html](src/main/resources/static/html/risk.html) | AI 风险审查与报告 |
+| 审批中心 | [approval.html](src/main/resources/static/html/approval.html) | 审批流转与操作 |
+| 合同台账 | [ledger.html](src/main/resources/static/html/ledger.html) | 合同台账与状态记录 |
+| 签章登记 | [seal.html](src/main/resources/static/html/seal.html) | 电子签章登记 |
+| 归档确认 | [archive.html](src/main/resources/static/html/archive.html) | 归档编号与版本锁定 |
+| 履约预警 | [fulfillment.html](src/main/resources/static/html/fulfillment.html) | 履约计划、交付、付款、预警 |
+| 用户管理 | [users.html](src/main/resources/static/html/users.html) | 用户与角色管理（ADMIN） |
+
+---
+
+## 后端模块
+
+### Controller 层（19 个）
+
+| Controller | 职责 |
+|------|------|
+| `ContractController` | 合同 CRUD、AI 起草 & SSE 流式、提交审批 |
+| `RiskController` | 风险审查触发、报告列表、详情、导出、风险项查询 |
+| `ApprovalController` | 审批列表、同意、驳回 |
+| `AttachmentController` | 附件上传、下载、关联、OCR、模板字段分析 |
+| `TemplateController` | 模板 CRUD 与启停 |
+| `VersionController` | 版本保存、查询、恢复、下载 |
+| `SealController` | 签章登记与记录查询 |
+| `ArchiveController` | 归档确认与记录查询 |
+| `FulfillmentController` | 履约计划管理 |
+| `PerformanceController` | 交付物、付款、逾期、进度 |
+| `MarkdownController` | Markdown 解析、导入、导出、预览 |
+| `ContractImportController` | 批量合同导入 |
+| `LedgerController` | 合同台账与状态 |
+| `DashboardController` | 工作台汇总 |
+| `UserController` | 登录、注册、登出、当前用户 |
+| `AdminController` | 用户管理、角色管理、审计日志（ADMIN） |
+| `CounterpartyController` | 交易对手方管理 |
+| `DeptController` | 部门管理 |
+| `SecurityAuditController` | 安全审计日志查询 |
+| `GlobalExceptionHandler` | 全局异常处理 |
+
+### Service 层（26 个）
+
+| 服务 | 职责 |
+|------|------|
+| `ContractManagementService` | 合同 CRUD、数据权限、审批提交 |
+| `AiDraftService` | AI 起草、风险分析、模板字段识别 |
+| `ApprovalService` | 多级审批处理与状态流转 |
+| `ContractVersionService` | 版本快照、恢复、HTML 清洗、归档文件 |
+| `ContractAttachmentService` | 附件上传、关联、OCR 触发、下载 |
+| `OcrService` | PaddleOCR / 阿里云 OCR 统一调用 |
+| `RiskReportExportService` | 风险报告 DOCX 导出 |
+| `FulfillmentService` | 履约计划管理 |
+| `PerformanceService` | 交付物、付款、逾期、进度统计 |
+| `StatusTransitionService` | 签章、归档及合同状态机流转 |
+| `TemplateService` | 模板 CRUD |
+| `DraftTemplateService` | 模板字段定义与解析 |
+| `DocumentParseService` | PDF / DOCX / DOC 文本解析 |
+| `ContractImportService` | 批量合同导入 |
+| `ContractNumberService` | 合同编号生成 |
+| `LayoutFeatureService` | OCR 版式特征提取 |
+| `OcrLayoutHtmlService` | OCR 版式 HTML 生成 |
+| `QwenOcrInputBuilder` | Qwen OCR 输入构建 |
+| `MarkdownContractService` | Markdown 导入导出 |
+| `WordArchiveService` | HTML 转 DOCX |
+| `FileStorageService` | 本地文件存储（按日期分目录） |
+| `AuthService` | 登录认证 |
+| `TokenService` | JWT 签发与校验 |
+| `SecurityAuditService` | 审计日志记录与查询 |
+| `CounterpartyService` | 交易对手方 |
+| `DeptService` | 部门管理 |
+
+---
+
+## API 参考
+
+除登录、注册接口外，`/api/**` 路径均需携带 JWT：
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+### 认证与用户
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| POST | `/api/users/login` | 登录 | 公开 |
+| POST | `/api/users/register` | 注册 | 公开 |
+| POST | `/api/users/logout` | 登出 | 登录用户 |
+| GET | `/api/users/current` | 当前用户信息 | 登录用户 |
+| GET | `/api/admin/users` | 用户列表 | ADMIN |
+| PUT | `/api/admin/users/{userId}/role` | 修改角色 | ADMIN |
+| GET | `/api/admin/roles` | 角色列表 | ADMIN |
+| GET | `/api/admin/audit-logs` | 审计日志 | ADMIN |
+
+### 合同 & 工作台
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/dashboard` | 工作台汇总 |
+| GET | `/api/contracts` | 合同列表（含筛选） |
+| POST | `/api/contracts` | 创建合同 |
+| PUT | `/api/contracts/{contractId}` | 修改合同 |
+| DELETE | `/api/contracts/{contractId}` | 删除草稿 |
+| POST | `/api/contracts/{contractId}/submit` | 提交审批 |
+| GET | `/api/counterparties` | 对手方列表 |
+| GET | `/api/departments` | 部门列表 |
+
+### AI 风险审查
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| POST | `/api/ai/risk-review` | 执行 AI 风险审查 | LEGAL / EXECUTIVE / ADMIN |
+| GET | `/api/risk-reports` | 报告列表 | DEPT_LEADER+ |
+| GET | `/api/risk-reports/{reportId}` | 报告详情 | DEPT_LEADER+ |
+| GET | `/api/risk-reports/{reportId}/export` | 导出 DOCX | LEGAL / EXECUTIVE / ADMIN |
+| GET | `/api/risks` | 风险项查询（兼容） | DEPT_LEADER+ |
+
+### AI 起草
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/ai/draft` | AI 合同起草（同步） |
+| POST | `/api/ai/draft-stream` | SSE 流式起草 |
+
+### 附件 & OCR
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/attachments/upload` | 上传附件 |
+| GET | `/api/attachments` | 附件列表 |
+| GET | `/api/attachments/{id}` | 附件详情 |
+| POST | `/api/attachments/{id}/ocr` | 触发 OCR |
+| GET/POST | `/api/attachments/{id}/draft-analysis` | 模板字段分析 |
+| POST | `/api/attachments/{id}/link` | 关联合同 |
+| POST | `/api/contracts/from-ocr` | 从 OCR 创建合同 |
+| GET | `/api/attachments/{id}/download` | 下载附件 |
+
+### 审批、签章与归档
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/approvals` | 审批列表 |
+| POST | `/api/approvals/{instanceId}/agree` | 同意 |
+| POST | `/api/approvals/{instanceId}/reject` | 驳回 |
+| POST | `/api/contracts/{contractId}/seal` | 签章登记 |
+| POST | `/api/contracts/{contractId}/archive` | 归档确认 |
+| GET | `/api/contracts/{contractId}/seal-records` | 签章记录 |
+| GET | `/api/contracts/{contractId}/archive-records` | 归档记录 |
+
+### 版本、模板与 Markdown
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST / GET | `/api/contracts/{contractId}/versions` | 保存 / 查询 |
+| GET | `/api/contracts/{contractId}/versions/latest` | 最新版本 |
+| GET | `/api/contracts/{contractId}/versions/{versionId}` | 版本详情 |
+| POST | `/api/contracts/{contractId}/versions/{versionId}/restore` | 恢复版本 |
+| GET | `/api/contracts/{contractId}/versions/{versionId}/download` | 下载版本文件 |
+| GET/POST/PUT/DELETE | `/api/templates/**` | 模板 CRUD |
+| GET | `/api/contracts/{contractId}/export/markdown` | 导出 Markdown |
+| GET | `/api/contracts/{contractId}/export/markdown/preview` | Markdown 预览 |
+| POST | `/api/contracts/import/markdown/parse` | 解析 Markdown |
+| POST | `/api/contracts/import/markdown` | 导入 Markdown |
+
+### 履约与绩效
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/fulfillment-plans` | 履约计划列表 |
+| PUT | `/api/fulfillment-plans/{planId}/status` | 更新履约状态 |
+| POST / GET | `/api/performance/deliverables` | 新增 / 查询交付物 |
+| PUT | `/api/performance/deliverables/{id}/confirm` | 确认交付 |
+| PUT | `/api/performance/deliverables/{id}/unconfirm` | 取消确认 |
+| POST / GET | `/api/performance/payment-plans` | 付款计划 |
+| POST / GET | `/api/performance/payment-records` | 付款记录 |
+| GET | `/api/performance/overdue-list` | 逾期清单 |
+| GET | `/api/performance/progress/{contractId}` | 履约进度 |
+
+---
+
+## 安全模型
+
+### 角色体系
+
+| 角色 | 编码 | 数据范围 | 典型权限 |
+|------|------|----------|----------|
+| 系统管理员 | `ADMIN` | ALL | 用户管理、角色变更、审计日志 |
+| 法务专员 | `LEGAL` | ALL | 风险审查、报告导出、审批 |
+| 财务专员 | `FINANCE` | ALL | 付款审批、财务台账 |
+| 企业高管 | `EXECUTIVE` | ALL | 重大合同审批、全局视图 |
+| 部门主管 | `DEPT_LEADER` | DEPT | 部门合同管理与审批 |
+| 普通员工 | `USER` | SELF | 个人合同的起草与查看 |
+
+### 数据权限
+
+- **SELF** — 只能访问本人负责的合同
+- **DEPT** — 可访问本部门所有合同
+- **ALL** — 可访问全部合同
+
+### 审计追踪
+
+所有关键操作（登录、合同增删改、审批、签章、归档、风险报告）通过 `@AuditOperation` 注解记录到 `operation_log` 表。审计写操作失败不会阻塞原业务请求。
+
+---
+
+## 开发约定
+
+- 前端侧边栏和顶栏统一使用 `common.js` 的 `appShellHtml()` 渲染，不在单页面重复
+- 公共样式维护在 `styles.css`，页面 CSS 只处理页面主体区域
+- 数据库结构变更使用独立增量 SQL 脚本，放置在 `src/main/resources/sql/`
+- 日志中禁止输出密码、JWT、完整 AI Prompt、API Key 和敏感合同正文
+- 所有新 API 接口必须配置 `@RequireRole`，关键写操作配置 `@AuditOperation`
+- 查询合同关联数据时必须复用 `ContractManagementService` 中的数据权限逻辑
+- 以下内容不提交到仓库：
+  - `data/uploads/` 上传文件
+  - 运行日志、IDE 输出目录
+  - 真实密钥和凭据
