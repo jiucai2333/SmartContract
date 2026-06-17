@@ -15,12 +15,13 @@ import java.time.LocalDate;
 public class PaymentPlan extends BaseAuditEntity {
     @TableId(value = "payment_plan_id", type = IdType.AUTO)
     private Long paymentPlanId;
-    private Long planId;
     private Long contractId;
-    private Integer installmentNo;
-    private BigDecimal ratio;
-    private BigDecimal amount;
+    private String phaseName;
+    private BigDecimal percentage;
+    private BigDecimal plannedAmount;
     private LocalDate dueDate;
+    private String prerequisiteDelivery;
+    private BigDecimal penaltyRate;
     private String status;
-    private Long prerequisiteDeliverableId;
+    private String remark;
 }

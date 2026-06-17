@@ -1,0 +1,20 @@
+CREATE TABLE `fulfillment_plan` (
+  `plan_id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'plan id',
+  `contract_id` bigint unsigned NOT NULL COMMENT 'contract id',
+  `node_name` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT 'node name',
+  `plan_type` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT 'OTHER' COMMENT 'plan type',
+  `due_date` date NOT NULL COMMENT 'due date',
+  `status` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT 'TODO' COMMENT 'status',
+  `progress` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'progress',
+  `owner_name` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'owner name',
+  `source_type` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT 'MANUAL' COMMENT 'source type',
+  `extracted_rule` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'extract rule',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'remark',
+  `handled_at` datetime DEFAULT NULL COMMENT 'handled time',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'created time',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'updated time',
+  `is_deleted` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'delete flag',
+  PRIMARY KEY (`plan_id`),
+  KEY `idx_fulfillment_contract` (`contract_id`,`due_date`,`status`),
+  KEY `idx_fulfillment_due` (`due_date`,`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='fulfillment plan';
