@@ -7,24 +7,23 @@ import cupk.smartcontract.dto.AiDraftVO;
 import cupk.smartcontract.dto.ContractCreateRequest;
 import cupk.smartcontract.service.AiDraftService;
 import cupk.smartcontract.service.ContractManagementService;
-import cupk.smartcontract.service.PerformanceService;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
 public class ContractController {
     private final ContractManagementService contractService;
     private final AiDraftService aiDraftService;
-    private final PerformanceService performanceService;
 
     public ContractController(ContractManagementService contractService, AiDraftService aiDraftService) {
         this.contractService = contractService;
         this.aiDraftService = aiDraftService;
-        this.performanceService = performanceService;
     }
 
     // ==================== Contracts ====================
