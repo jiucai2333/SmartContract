@@ -30,12 +30,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -112,6 +114,32 @@ public class ContractManagementService {
             wrapper.inSql(RiskItem::getContractId,
                     "SELECT contract_id FROM contract_main WHERE dept_id = " + currentDeptId);
         }
+    }
+
+    public void assertCanAccess(Long contractId) {
+        if (!canAccess(findContract(contractId))) {
+            throw new SecurityException("无权访问该合同");
+        }
+    }
+
+    public boolean canAccess(ContractMain contract) {
+        if (contract == null) {
+            return false;
+        }
+        String role = SecurityContext.roleCode();
+        if ("ADMIN".equals(role)) {
+            return true;
+        }
+        String scope = SecurityContext.dataScope();
+        Long currentUserId = SecurityContext.userId();
+        Long currentDeptId = SecurityContext.deptId();
+        if ("SELF".equals(scope)) {
+            return currentUserId != null && currentUserId.equals(contract.getOwnerId());
+        }
+        if ("DEPT".equals(scope)) {
+            return currentDeptId != null && currentDeptId.equals(contract.getDeptId());
+        }
+        return true;
     }
 
     // ==================== 仪表盘 ====================

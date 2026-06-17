@@ -26,4 +26,12 @@ public class FulfillmentPlan extends BaseAuditEntity {
     private String extractedRule;
     private String remark;
     private LocalDateTime handledAt;
+
+    public String getMilestoneName() {
+        return nodeName;
+    }
+
+    public void setMilestoneName(String milestoneName) {
+        this.nodeName = milestoneName;
+    }
 }
