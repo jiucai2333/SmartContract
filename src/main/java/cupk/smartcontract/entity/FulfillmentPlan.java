@@ -4,26 +4,26 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("fulfillment_plan")
-public class FulfillmentPlan {
+public class FulfillmentPlan extends BaseAuditEntity {
     @TableId(value = "plan_id", type = IdType.AUTO)
     private Long planId;
     private Long contractId;
-    private String milestoneName;
+    private String nodeName;
+    private String planType;
     private LocalDate dueDate;
-    private LocalDate actualDate;
-    private Long ownerId;
     private String status;
-    private String completionNotes;
-    private String createdBy;
-    private LocalDateTime createdAt;
-    private String updatedBy;
-    private LocalDateTime updatedAt;
-    private Integer isDeleted;
-    private Integer version;
+    private Integer progress;
+    private String ownerName;
+    private String sourceType;
+    private String extractedRule;
+    private String remark;
+    private LocalDateTime handledAt;
 }

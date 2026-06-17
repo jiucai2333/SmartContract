@@ -1,18 +1,18 @@
 package cupk.smartcontract.dto;
 
-import lombok.Data;
-
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
-@Data
-public class PaymentRecordVO {
-    private Long recordId;
-    private Long paymentPlanId;
-    private Long contractId;
-    private BigDecimal paidAmount;
-    private LocalDateTime paidAt;
-    private String receiptNo;
-    private String notes;
-    private LocalDateTime createdAt;
+public record PaymentRecordVO(
+        Long paymentRecordId,
+        Long paymentPlanId,
+        Long contractId,
+        String contractTitle,
+        String phaseName,
+        BigDecimal paidAmount,
+        LocalDate paidDate,
+        String payer,
+        String receiver,
+        String remark
+) {
 }
