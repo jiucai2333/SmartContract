@@ -112,6 +112,11 @@ async function loadContracts() {
     contractPickerEl.innerHTML = '<div class="list-item"><span>正在加载合同列表...</span></div>';
     const contracts = await api('/api/contracts');
     pageState.contracts = Array.isArray(contracts) ? contracts : [];
+    await Promise.allSettled(pageState.contracts.map(async contract => {
+        const version = await api(`/api/contracts/${contract.contractId}/versions/latest`).catch(() => null);
+        contract.latestVersion = version;
+        contract.hasReviewText = htmlToPlainText(version?.content || '').replace(/\s+/g, '').length >= 20;
+    }));
     renderContractPicker();
     if (pageState.contractId) {
         const selected = pageState.contracts.find(item => Number(item.contractId) === Number(pageState.contractId));
@@ -133,12 +138,14 @@ function renderContractPicker() {
     }
     contractPickerEl.innerHTML = contracts.map(contract => {
         const active = Number(contract.contractId) === Number(pageState.contractId);
-        return `<button type="button" class="contract-choice ${active ? 'active' : ''}" data-pick-contract-id="${contract.contractId}">
+        const canReview = Boolean(contract.hasReviewText);
+        return `<button type="button" class="contract-choice ${active ? 'active' : ''} ${canReview ? '' : 'disabled-choice'}" data-pick-contract-id="${contract.contractId}">
             <span>
                 <strong>${escapeHtml(contract.contractNo || `合同 #${contract.contractId}`)} - ${escapeHtml(contract.title || '未命名合同')}</strong>
-                ${escapeHtml(contract.counterparty || '未填写相对方')} · ${escapeHtml(STATUS_TEXT[contract.status] || contract.status || '未知状态')} · ${escapeHtml(contract.type || '未分类')}
+                ${escapeHtml(contract.counterparty || '未填写相对方')} · ${escapeHtml(STATUS_TEXT[contract.status] || contract.status || '未知状态')} · ${escapeHtml(typeLabel(contract.type) || contract.type || '未分类')}
+                <small>${canReview ? `可审查 · 最新草稿 ${escapeHtml(contract.latestVersion?.versionNo || '')}` : '暂无正文 · 请先保存草稿版本'}</small>
             </span>
-            <em>${active ? '已选择' : '选择'}</em>
+            <em>${active ? '已选择' : (canReview ? '选择' : '去保存')}</em>
         </button>`;
     }).join('');
 }
@@ -146,6 +153,10 @@ function renderContractPicker() {
 async function pickExistingContract(contractId) {
     const contract = pageState.contracts.find(item => Number(item.contractId) === Number(contractId));
     if (!contract) return;
+    if (!contract.hasReviewText) {
+        location.href = `/html/edit.html?contractId=${encodeURIComponent(contract.contractId)}`;
+        return;
+    }
     await fillExistingContract(contract, true);
 }
 
