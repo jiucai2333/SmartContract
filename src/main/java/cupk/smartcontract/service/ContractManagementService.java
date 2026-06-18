@@ -331,14 +331,39 @@ public class ContractManagementService {
 
     @Transactional
     public AiRiskReviewResult aiRiskReview(AiRiskReviewRequest request) {
-        if (request.contractId() != null) {
-            assertCanAccess(request.contractId());
-        }
-        List<AiRiskVO> risks = aiDraftService.analyzeRisks(request);
-        RiskReport report = persistRiskReport(request, risks);
+        AiRiskReviewRequest effectiveRequest = ensureRiskReviewContract(request);
+        List<AiRiskVO> risks = aiDraftService.analyzeRisks(effectiveRequest);
+        RiskReport report = persistRiskReport(effectiveRequest, risks);
         return new AiRiskReviewResult(
                 report.getReportId(), report.getContractId(), report.getVersionId(),
                 report.getReportNo(), report.getHighestRiskLevel(), report.getRiskCount(), risks);
+    }
+
+    private AiRiskReviewRequest ensureRiskReviewContract(AiRiskReviewRequest request) {
+        if (request.contractId() != null) {
+            assertCanAccess(request.contractId());
+            return request;
+        }
+        ContractMain contract = createContract(new ContractCreateRequest(
+                defaultReviewTitle(request),
+                defaultReviewType(request.contractType()),
+                BigDecimal.ZERO,
+                defaultReviewCounterparty(request),
+                SecurityContext.deptId() != null ? SecurityContext.deptId() : 1L,
+                SecurityContext.userId() != null ? SecurityContext.userId() : 1L,
+                null,
+                LocalDate.now().plusDays(90)
+        ));
+        return new AiRiskReviewRequest(
+                request.contractText(),
+                contract.getContractId(),
+                request.versionId(),
+                request.contractType(),
+                request.partyA(),
+                request.partyB(),
+                request.businessScope(),
+                request.specialTerms()
+        );
     }
 
     private RiskReport persistRiskReport(AiRiskReviewRequest request, List<AiRiskVO> risks) {
@@ -484,6 +509,26 @@ public class ContractManagementService {
         if (amount.compareTo(new BigDecimal("500000")) > 0) return "HIGH";
         if (amount.compareTo(new BigDecimal("50000")) > 0) return "MEDIUM";
         return "LOW";
+    }
+
+    private String defaultReviewTitle(AiRiskReviewRequest request) {
+        String type = StringUtils.hasText(request.contractType()) ? request.contractType().trim() : "PDF合同";
+        return clip(type + "风险审查", 120);
+    }
+
+    private String defaultReviewType(String contractType) {
+        if (!StringUtils.hasText(contractType)) return "TECH";
+        if (contractType.contains("采购")) return "PURCHASE";
+        if (contractType.contains("销售")) return "SALES";
+        if (contractType.contains("劳务")) return "LABOR";
+        if (contractType.contains("技术")) return "TECH";
+        return "TECH";
+    }
+
+    private String defaultReviewCounterparty(AiRiskReviewRequest request) {
+        if (StringUtils.hasText(request.partyB())) return clip(request.partyB(), 120);
+        if (StringUtils.hasText(request.partyA())) return clip(request.partyA(), 120);
+        return "PDF导入合同";
     }
 
     private String highestRiskLevel(List<AiRiskVO> risks) {
