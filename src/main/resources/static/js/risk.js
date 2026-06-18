@@ -45,6 +45,7 @@ reviewBtn.addEventListener('click', async () => {
             specialTerms: $('#specialTerms').value.trim() || undefined
         };
         const result = await api('/api/ai/risk-review', {method: 'POST', body: JSON.stringify(body)});
+        pageState.contractId = result.contractId || pageState.contractId;
         const risks = riskItemsOf(result);
         renderContractBody(contractText);
         renderRisks(risks);
