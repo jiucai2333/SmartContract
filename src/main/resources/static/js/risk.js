@@ -115,6 +115,7 @@ async function uploadPdfAndExtractText() {
         }
         setPdfStatus(`已解析：${result.fileName || file.name}${result.pageCount ? `，${result.pageCount} 页` : ''}`);
         renderContractBody(text);
+        autofillContractFields(text, result?.fileName || file.name);
         return text;
     } catch (error) {
         setPdfStatus(error.message || 'PDF 解析失败');
@@ -149,11 +150,69 @@ function renderRisks(risks) {
         const levelLabel = RISK_TEXT[level] || formatRiskLevel(level);
         const category = formatRiskCategory(risk.category || risk.riskType);
         return `<button class="risk-card ${escapeHtml(level)}" data-clause="${escapeHtml(risk.clause || risk.clauseRef || '')}">
-            <strong><span class="tag ${escapeHtml(level)}">${escapeHtml(levelLabel)}</span> <span class="tag">${escapeHtml(category)}</span> ${escapeHtml(risk.clause || risk.clauseRef || '未指明条款')}</strong>
-            <span>${escapeHtml(risk.reason || '')}</span>
-            <small>建议：${escapeHtml(risk.suggestion || '')}</small>
+            <strong class="risk-card-title">
+                <span class="tag ${escapeHtml(level)}">${escapeHtml(levelLabel)}</span>
+                <span class="tag">${escapeHtml(category)}</span>
+                <span class="risk-clause">${escapeHtml(risk.clause || risk.clauseRef || '未指明条款')}</span>
+            </strong>
+            <span class="risk-reason">${escapeHtml(risk.reason || '')}</span>
+            <small class="risk-suggestion">建议：${escapeHtml(risk.suggestion || '')}</small>
         </button>`;
     }).join('');
+}
+
+function autofillContractFields(text, fileName = '') {
+    const normalized = htmlToPlainText(text).replace(/\s+/g, ' ').trim();
+    if (!normalized) return;
+    const meta = {
+        contractType: detectContractType(captureContractValue(normalized, ['合同类型'], ['合同金额', '甲方', '乙方', '业务范围', '一、', '二、']) || fileName),
+        partyA: captureContractValue(normalized, ['甲方', '采购方', '委托方'], ['统一社会信用代码', '乙方', '合同类型', '合同金额', '业务范围', '地址', '联系人', '一、']),
+        partyB: captureContractValue(normalized, ['乙方', '供应商', '服务方', '受托方'], ['统一社会信用代码', '甲方', '合同类型', '合同金额', '业务范围', '地址', '联系人', '一、']),
+        businessScope: captureContractValue(normalized, ['业务范围', '项目内容', '服务内容'], ['合同金额', '甲方', '乙方', '二、', '三、', '四、', '付款', '交付'])
+    };
+    setSelectIfEmpty($('#contractType'), meta.contractType);
+    setInputIfEmpty($('#partyA'), meta.partyA);
+    setInputIfEmpty($('#partyB'), meta.partyB);
+    setInputIfEmpty($('#businessScope'), meta.businessScope);
+}
+
+function captureContractValue(text, labels, stops) {
+    for (const label of labels) {
+        const index = text.indexOf(label);
+        if (index < 0) continue;
+        let value = text.slice(index + label.length).replace(/^[:：\s]+/, '').trim();
+        let end = value.length;
+        for (const stop of stops) {
+            const stopIndex = value.indexOf(stop);
+            if (stopIndex > 0) end = Math.min(end, stopIndex);
+        }
+        value = value.slice(0, end).replace(/[，,。；;：:]+$/g, '').trim();
+        if (value.length > 80) value = value.slice(0, 80).trim();
+        if (value.length >= 2) return value;
+    }
+    return '';
+}
+
+function detectContractType(value) {
+    if (!value) return '';
+    if (value.includes('采购')) return '采购合同';
+    if (value.includes('销售')) return '销售合同';
+    if (value.includes('服务')) return '服务合同';
+    if (value.includes('技术') || value.includes('开发')) return '技术开发合同';
+    if (value.includes('租赁')) return '租赁合同';
+    if (value.includes('劳动') || value.includes('劳务')) return '劳动合同';
+    if (value.includes('合作') || value.includes('协议')) return '合作协议';
+    return '';
+}
+
+function setInputIfEmpty(input, value) {
+    if (input && !input.value.trim() && value) input.value = value;
+}
+
+function setSelectIfEmpty(select, value) {
+    if (!select || select.value || !value) return;
+    const option = Array.from(select.options).find(item => item.value === value || item.textContent.trim() === value);
+    if (option) select.value = option.value;
 }
 
 riskListEl.addEventListener('click', event => {

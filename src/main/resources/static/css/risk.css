@@ -132,6 +132,7 @@
     overflow: hidden;
     overflow-wrap: anywhere;
     word-break: break-word;
+    white-space: normal;
 }
 
 .risk-card:hover {
@@ -154,23 +155,33 @@
     background: var(--success-bg);
 }
 
-.risk-card strong {
+.risk-card-title {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+    width: 100%;
     min-width: 0;
     font-size: 14px;
     color: var(--ink);
     line-height: 1.55;
+    white-space: normal;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
-.risk-card span:not(.tag),
-.risk-card small {
+.risk-card .risk-clause {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.risk-card .risk-reason,
+.risk-card .risk-suggestion {
+    display: block;
+    width: 100%;
     min-width: 0;
     max-width: 100%;
+    white-space: normal;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
