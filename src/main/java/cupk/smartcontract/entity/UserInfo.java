@@ -3,6 +3,7 @@ package cupk.smartcontract.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -17,4 +18,8 @@ public class UserInfo extends BaseAuditEntity {
     private String username;
     private String password;
     private Integer status;
+    private String createdBy;
+    private String updatedBy;
+    @Version
+    private Integer version;
 }

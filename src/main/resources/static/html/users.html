@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>用户管理 - 智能合同管理</title>
     <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/users.css">
 </head>
 <body>
 <script src="../js/common.js"></script>
@@ -12,7 +13,7 @@
 <section class="section">
     <div class="panel">
         <div class="panel-head">
-            <div><p class="eyebrow">RBAC Admin</p><h2>用户与权限管理</h2></div>
+            <div><p class="eyebrow">用户权限</p><h2>用户与权限管理</h2></div>
         </div>
         <div class="table-wrap">
             <table>
@@ -21,6 +22,8 @@
                         <th>用户ID</th>
                         <th>用户名</th>
                         <th>当前角色</th>
+                        <th>部门</th>
+                        <th>状态</th>
                         <th>操作</th>
                     </tr>
                 </thead>
@@ -30,7 +33,6 @@
     </div>
 </section>
 
-<!-- 角色编辑模态框 -->
 <div id="roleModal" class="modal" hidden>
     <div class="modal-card">
         <div class="modal-head">

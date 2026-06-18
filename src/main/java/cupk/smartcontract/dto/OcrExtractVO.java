@@ -2,7 +2,7 @@ package cupk.smartcontract.dto;
 
 import java.math.BigDecimal;
 
-public record OcrExtractResult(
+public record OcrExtractVO(
         String contractType,
         String partyA,
         String partyB,

@@ -2,7 +2,7 @@ package cupk.smartcontract.dto;
 
 import java.util.*;
 
-public record DraftTemplateAnalysis(
+public record DraftTemplateVO(
         String markdown,
         List<DraftField> fields,
         String analysisMode,

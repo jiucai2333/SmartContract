@@ -1,5 +1,5 @@
 /* ============================================================
-   认证页面样式 — 登录 / 注册
+   认证页面样式 …登录 / 注册
    ============================================================ */
 
 .auth-page {
@@ -24,7 +24,6 @@
     border: 1px solid rgba(203, 213, 225, .78);
     border-radius: var(--radius-xl);
     box-shadow: 0 20px 55px rgba(15, 46, 43, .12);
-    backdrop-filter: blur(18px);
     transition: box-shadow var(--transition), transform var(--transition);
 }
 
@@ -189,5 +188,68 @@
     .auth-page { padding: 16px; }
     .auth-card { padding: 28px 22px; }
     .auth-brand { margin-bottom: 24px; }
-    .login-card { grid-template-columns: 1fr; min-width: 0; }
+    .login-card { grid-template-columns: 1fr; min-width: 0; gap: 6px; }
+}
+
+/* ---- Floating decoration circles ---- */
+.auth-page::before {
+    content: "";
+    position: absolute;
+    top: -120px;
+    left: -80px;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(20,184,166,.12), transparent 70%);
+    transform: translateZ(0);
+    pointer-events: none;
+}
+
+.auth-page::after {
+    content: "";
+    position: absolute;
+    right: -60px;
+    bottom: -100px;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(37,99,235,.10), transparent 70%);
+    transform: translateZ(0);
+    pointer-events: none;
+}
+
+/* ---- Card entrance animation ---- */
+.auth-card {
+    animation: authCardIn .5s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes authCardIn {
+    from { opacity: 0; transform: translateY(24px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---- Brand mark float ---- */
+/* ---- Auth card gradient border ---- */
+.auth-card::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(20,184,166,.3), transparent 40%, transparent 60%, rgba(37,99,235,.2));
+    opacity: 0;
+    transition: opacity .4s ease;
+}
+
+.auth-card:hover::before {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
 }

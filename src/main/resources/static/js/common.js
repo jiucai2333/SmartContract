@@ -86,27 +86,47 @@ const state = {
     lastDraft: localStorage.getItem('lastDraft') || ''
 };
 
-const statusText = {
-    DRAFT: '草稿',
-    APPROVING: '审批中',
-    SIGNING: '待签章',
-    EXECUTING: '履约中',
-    EXPIRED: '已到期',
-    TERMINATED: '已终止'
+const STATUS_TEXT = {
+    DRAFT: '草稿', APPROVING: '审批中', APPROVED: '已审批',
+    SIGNING: '已签章', ARCHIVED: '已归档',
+    EXECUTING: '履约中', COMPLETED: '已完成',
+    EXPIRED: '已到期', TERMINATED: '已终止',
+    REVIEWING: '审核中'
 };
-const riskText = {LOW: '低', MEDIUM: '中', HIGH: '高'};
+const statusTagClass = {
+    DRAFT: 'tag-gray', APPROVING: 'tag-blue', APPROVED: 'tag-purple',
+    SIGNING: 'tag-orange', ARCHIVED: 'tag-green',
+    EXECUTING: 'tag-cyan', COMPLETED: 'tag-darkgreen',
+    EXPIRED: 'tag-red', TERMINATED: 'tag-red',
+    REVIEWING: 'tag-blue'
+};
+const RISK_TEXT = {LOW: '低', MEDIUM: '中', HIGH: '高'};
+const APPROVAL_STATUS_TEXT = {RUNNING: '审批中', APPROVED: '已通过', REJECTED: '已驳回'};
+const FLOW_TYPE_TEXT = {NORMAL: '普通合同', MAJOR: '重大合同', SUPER: '超阈值合同'};
+const APPROVAL_NODE_ROLES = {
+    '部门主管审批': ['DEPT_LEADER', 'ADMIN'],
+    '法务专员审批': ['LEGAL', 'ADMIN'],
+    '企业高管审批': ['EXECUTIVE', 'ADMIN']
+};
+const SEAL_STATUS_TEXT = {ELECTRONIC: '电子签章', SEALED: '已签章'};
+const FULFILLMENT_STATUS_TEXT = {
+    PENDING: '待履约', PROCESSING: '履约中', FULFILLED: '已完成', OVERDUE: '已逾期'
+};
+
+const GROUP_LABELS = {drafting: '合同编制', contract: '合同业务'};
 
 const NAV_ITEMS = [
-    {id: 'dashboard', href: '/html/dashboard.html', label: '工作台', menu: 'ALL'},
-    {id: 'draft', href: '/html/draft.html', label: '合同草稿', menu: 'USER,DEPT_LEADER,LEGAL,ADMIN', group: 'contract'},
-    {id: 'templates', href: '/html/templates.html', label: '合同模板', menu: 'ALL', group: 'contract'},
-    {id: 'edit', href: '/html/edit.html', label: '在线编辑', menu: 'USER,DEPT_LEADER,LEGAL,ADMIN', group: 'contract'},
-    {id: 'ledger', href: '/html/ledger.html', label: '合同台账', menu: 'ALL'},
-    {id: 'risk', href: '/html/risk.html', label: '风险审查', menu: 'ALL'},
-    {id: 'approval', href: '/html/approval.html', label: '审批中心', menu: 'DEPT_LEADER,LEGAL,EXECUTIVE,ADMIN'},
-    {id: 'signature', href: '/html/signature.html', label: '电子签章', menu: 'LEGAL,EXECUTIVE,ADMIN'},
-    {id: 'fulfillment', href: '/html/fulfillment.html', label: '履约预警', menu: 'ALL'},
-    {id: 'users', href: '/html/users.html', label: '用户管理', menu: 'ADMIN'}
+    {id: 'dashboard',   href: '/html/dashboard.html',   label: '工作台',     menu: 'ALL'},
+    {id: 'draft',       href: '/html/draft.html',       label: '合同草稿',   menu: 'USER,DEPT_LEADER,LEGAL,ADMIN', group: 'drafting'},
+    {id: 'templates',   href: '/html/templates.html',   label: '合同模板',   menu: 'ALL',                              group: 'drafting'},
+    {id: 'edit',        href: '/html/edit.html',        label: '在线编辑',   menu: 'USER,DEPT_LEADER,LEGAL,ADMIN', group: 'drafting'},
+    {id: 'risk',        href: '/html/risk.html',        label: '风险审查',   menu: 'ALL'},
+    {id: 'approval',    href: '/html/approval.html',    label: '审批中心',   menu: 'DEPT_LEADER,LEGAL,EXECUTIVE,ADMIN'},
+    {id: 'ledger',      href: '/html/ledger.html',      label: '合同台账',   menu: 'ALL',                              group: 'contract'},
+    {id: 'seal',        href: '/html/seal.html',        label: '签章登记',   menu: 'LEGAL,DEPT_LEADER,ADMIN',          group: 'contract'},
+    {id: 'archive',     href: '/html/archive.html',     label: '归档确认',   menu: 'LEGAL,DEPT_LEADER,ADMIN',          group: 'contract'},
+    {id: 'fulfillment', href: '/html/fulfillment.html', label: '履约预警',   menu: 'ALL'},
+    {id: 'users',       href: '/html/users.html',       label: '用户管理',   menu: 'ADMIN'}
 ];
 
 function escapeHtml(value) {
@@ -116,25 +136,22 @@ function escapeHtml(value) {
 }
 
 function toast(message) {
-    let container = $('#toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        container.className = 'toast-container';
-        document.body.appendChild(container);
+    let el = $('#toast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'toast';
+        el.className = 'toast';
+        document.body.appendChild(el);
     }
-    const el = document.createElement('div');
-    el.className = 'toast-item';
     el.textContent = message;
-    container.appendChild(el);
-    el.addEventListener('animationend', (e) => {
-        if (e.animationName === 'toastOut') el.remove();
-    });
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2800);
 }
 
 function authHeaders(options = {}) {
+    const isFormData = options.body instanceof FormData;
     return {
-        'Content-Type': 'application/json',
+        ...(!isFormData ? {'Content-Type': 'application/json'} : {}),
         ...(state.accessToken ? {Authorization: `Bearer ${state.accessToken}`} : {}),
         ...(options.headers || {})
     };
@@ -173,11 +190,7 @@ function downloadFilename(response, fallbackName) {
     const disposition = response.headers.get('Content-Disposition') || '';
     const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
     if (utf8Match) {
-        try {
-            return decodeURIComponent(utf8Match[1]);
-        } catch {
-            return utf8Match[1];
-        }
+        try { return decodeURIComponent(utf8Match[1]); } catch { return utf8Match[1]; }
     }
     const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
     return plainMatch ? plainMatch[1] : fallbackName;
@@ -251,21 +264,17 @@ function persistUser(user) {
 }
 
 async function login(username, password) {
-    const res = await request('/api/user/login', {method: 'POST', body: JSON.stringify({username, password})});
+    const res = await request('/api/users/login', {method: 'POST', body: JSON.stringify({username, password})});
     persistUser(res.data);
 }
 
 async function register(username, password) {
-    const res = await request('/api/user/register', {method: 'POST', body: JSON.stringify({username, password})});
+    const res = await request('/api/users/register', {method: 'POST', body: JSON.stringify({username, password})});
     persistUser(res.data);
 }
 
 async function logout(redirect = '/html/login.html') {
-    try {
-        await request('/api/user/logout', {method: 'POST'});
-    } catch {
-        // Ignore logout errors; local credentials still need clearing.
-    }
+    try { await request('/api/users/logout', {method: 'POST'}); } catch {}
     ['user', 'accessToken', 'refreshToken', 'roleCode', 'dataScope', 'userId', 'deptId'].forEach(key => localStorage.removeItem(key));
     Object.assign(state, {user: null, username: '', userId: null, deptId: null, roleCode: 'USER', dataScope: 'SELF', accessToken: '', refreshToken: ''});
     if (redirect) location.href = redirect;
@@ -287,6 +296,7 @@ function hasMenuPermission(item) {
     const allowed = item.menu.split(',').map(r => r.trim().toUpperCase());
     return allowed.includes('ALL') || allowed.includes(state.roleCode);
 }
+function canOperateSealArchive() { return ['LEGAL', 'DEPT_LEADER', 'ADMIN'].includes(state.roleCode); }
 
 function applyIdentity() {
     renderWatermark();
@@ -295,6 +305,10 @@ function applyIdentity() {
         const roleLabel = ROLE_LABELS[state.roleCode] || state.roleCode;
         userChip.innerHTML = `<strong>${escapeHtml(state.username || '未登录')}</strong><small>${escapeHtml(roleLabel)}</small>`;
     }
+    $$('[data-role-panel]').forEach(panel => {
+        const panelRole = String(panel.dataset.rolePanel).trim().toUpperCase();
+        panel.hidden = panelRole !== state.roleCode;
+    });
 }
 
 let _wmTimer = null;
@@ -302,26 +316,53 @@ function renderWatermark() {
     const container = $('#wmContainer');
     if (!container) return;
     const username = state.username || 'anonymous';
-    const render = () => {
+    const updateText = () => {
         const text = `${username} · ${new Date().toLocaleString('zh-CN', {hour12: false})}`;
-        container.innerHTML = Array.from({length: 24}, () => `<div class="watermark-text">${escapeHtml(text)}</div>`).join('');
+        container.querySelectorAll('.watermark-text').forEach(item => {
+            item.textContent = text;
+        });
     };
-    render();
+    if (!container.children.length) {
+        const fragment = document.createDocumentFragment();
+        for (let index = 0; index < 24; index++) {
+            const item = document.createElement('div');
+            item.className = 'watermark-text';
+            fragment.appendChild(item);
+        }
+        container.appendChild(fragment);
+    }
+    updateText();
     if (_wmTimer) clearInterval(_wmTimer);
-    _wmTimer = setInterval(render, 1000);
+    _wmTimer = setInterval(updateText, 60000);
 }
 
-function renderSidebar(activeId) {
-    const nav = $('#mainNav');
-    if (!nav) return;
-    nav.innerHTML = renderNavItems(NAV_ITEMS.filter(hasMenuPermission), activeId);
-    initNavGroups(nav);
-    nav.addEventListener('click', (e) => {
-        const parent = e.target.closest('.nav-parent');
-        if (parent) toggleNavParent(parent);
-    });
-    applyIdentity();
-    renderLucideIcons();
+function renderNavItems(items, activeId) {
+    const allItems = items.filter(hasMenuPermission);
+    const rendered = {};
+    let html = '';
+    let i = 0;
+    while (i < allItems.length) {
+        const item = allItems[i];
+        if (item.group) {
+            const g = item.group;
+            if (!rendered[g]) {
+                rendered[g] = true;
+                const groupItems = allItems.filter(it => it.group === g);
+                const hasActiveChild = groupItems.some(it => it.id === activeId);
+                const stateClass = hasActiveChild ? 'expanded' : 'collapsed';
+                const label = GROUP_LABELS[g] || g;
+                html += `<div class="nav-parent ${stateClass}${hasActiveChild ? ' has-active' : ''}">${escapeHtml(label)}<span class="arrow">›</span></div>`;
+                html += `<div class="nav-group ${stateClass}">`;
+            }
+            html += `<a href="${item.href}" class="nav-child${item.id === activeId ? ' active' : ''}">${escapeHtml(item.label)}</a>`;
+            const next = allItems[i + 1];
+            if (!next || next.group !== item.group) html += '</div>';
+        } else {
+            html += `<a href="${item.href}" class="${item.id === activeId ? 'active' : ''}">${escapeHtml(item.label)}</a>`;
+        }
+        i++;
+    }
+    return html;
 }
 
 function initNavGroups(nav) {
@@ -341,40 +382,45 @@ function toggleNavParent(parent) {
     group.style.maxHeight = expanded ? '0px' : `${group.scrollHeight}px`;
 }
 
+function renderSidebar(activeId) {
+    const nav = $('#mainNav');
+    if (!nav) return;
+    nav.innerHTML = renderNavItems(NAV_ITEMS, activeId);
+    initNavGroups(nav);
+    nav.addEventListener('click', (e) => {
+        const parent = e.target.closest('.nav-parent');
+        if (parent) toggleNavParent(parent);
+        // 导航链接点击时加淡出动画
+        const link = e.target.closest('a[href]');
+        if (link) {
+            e.preventDefault();
+            const href = link.getAttribute('href');
+            const shell = document.querySelector('.app-shell');
+            if (shell) {
+                shell.style.transition = 'opacity .15s ease, transform .15s ease';
+                shell.style.opacity = '0';
+                shell.style.transform = 'translateY(-4px)';
+                setTimeout(() => { location.href = href; }, 150);
+            } else {
+                location.href = href;
+            }
+        }
+    });
+    applyIdentity();
+    renderLucideIcons();
+}
+
 function renderNavInShell(activeId) {
-    return renderNavItems(NAV_ITEMS.filter(hasMenuPermission), activeId);
+    return renderNavItems(NAV_ITEMS, activeId);
 }
 
-function renderNavItems(items, activeId) {
-    let contractGroupRendered = false;
-    let html = '';
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.group === 'contract' && !contractGroupRendered) {
-            contractGroupRendered = true;
-            const contractItems = items.filter(it => it.group === 'contract');
-            const hasActiveChild = contractItems.some(it => it.id === activeId);
-            const stateClass = hasActiveChild ? 'expanded' : 'collapsed';
-            html += `<div class="nav-parent ${stateClass}${hasActiveChild ? ' has-active' : ''}">合同业务<span class="arrow">›</span></div>`;
-            html += `<div class="nav-group ${stateClass}">`;
-        }
-        const classes = [item.id === activeId ? 'active' : '', item.group === 'contract' ? 'nav-child' : ''].filter(Boolean).join(' ');
-        html += `<a href="${item.href}" class="${classes}">${escapeHtml(item.label)}</a>`;
-        if (item.group === 'contract') {
-            const nextItem = items[i + 1];
-            if (!nextItem || nextItem.group !== 'contract') html += '</div>';
-        }
-    }
-    return html;
-}
-
-function initAppShell(activeId, title, eyebrow) {
+function initAppShell(activeId, title, subtitle) {
     if (!requireAuth()) return false;
     renderSidebar(activeId);
     const titleEl = $('#pageTitle');
-    const eyebrowEl = $('#pageEyebrow');
+    const subtitleEl = $('#pageSubtitle');
     if (titleEl) titleEl.textContent = title;
-    if (eyebrowEl) eyebrowEl.textContent = eyebrow;
+    if (subtitleEl) subtitleEl.textContent = subtitle;
     const logoutBtn = $('#logoutBtn');
     if (logoutBtn) logoutBtn.addEventListener('click', () => logout());
     renderLucideIcons();
@@ -382,20 +428,25 @@ function initAppShell(activeId, title, eyebrow) {
 }
 
 function appShellHtml(activeId) {
+    const navLinks = renderNavInShell(activeId);
     return `
 <div class="watermark-container" id="wmContainer"></div>
 <aside class="sidebar">
     <div class="brand">
         <span class="brand-mark">合</span>
-        <div><strong>智能合同管理</strong></div>
+        <div><strong>智能合同管理</strong><small>Qwen ContractOps</small></div>
     </div>
-    <nav id="mainNav">${renderNavInShell(activeId)}</nav>
+    <nav id="mainNav">${navLinks}</nav>
+    <div class="security-note">
+        <strong>合规控制</strong>
+        <span>Qwen 调用前脱敏，高风险未复核阻断提交，预览叠加登录人水印。</span>
+    </div>
 </aside>
 <main class="app-shell">
     <header class="topbar">
-        <div>
-            <h1 id="pageTitle">工作台</h1>
-            <p class="eyebrow topbar-subtitle" id="pageEyebrow">基于通义千问 Qwen 的合同全生命周期管理</p>
+        <div class="topbar-heading">
+            <h1 class="topbar-title" id="pageTitle">工作台</h1>
+            <p class="topbar-subtitle" id="pageSubtitle">合同全生命周期概览，待办事项与数据统计</p>
         </div>
         <div class="topbar-right">
             <div class="user-chip" id="userChip"></div>
@@ -405,5 +456,5 @@ function appShellHtml(activeId) {
 }
 
 function closeAppShell() {
-    return '</main>';
+    return '</main><div id="toast" class="toast"></div>';
 }
