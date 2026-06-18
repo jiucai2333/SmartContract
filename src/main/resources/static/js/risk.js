@@ -25,6 +25,14 @@ const REVIEW_PROGRESS_STEPS = [
     '整理审查报告'
 ];
 
+const RISK_CATEGORY_TEXT = {
+    LEGAL_COMPLIANCE: '法律合规风险',
+    PERFORMANCE_DELIVERY: '履约交付风险',
+    PAYMENT_SETTLEMENT: '付款结算风险',
+    IP_CONFIDENTIALITY: '知识产权与保密风险',
+    LIABILITY_APPROVAL: '违约责任与审批风险'
+};
+
 function ensureReportPanels() {
     let summary = $('#reportSummary');
     let list = $('#reportList');
@@ -245,9 +253,10 @@ function renderRisks(risks) {
     riskListEl.innerHTML = risks.map(risk => {
         const level = normalizeRiskLevel(risk.level || risk.riskLevel);
         const levelLabel = formatRiskLevel(level);
+        const category = normalizeRiskCategory(risk.category || risk.riskType);
         const clause = risk.clause || risk.clauseRef || '未指明条款';
         return `<article class="risk-card ${escapeHtml(level)}" data-clause="${escapeHtml(clause)}" tabindex="0">
-            <strong><span class="tag ${escapeHtml(level)}">${escapeHtml(levelLabel)}</span> ${escapeHtml(clause)}</strong>
+            <strong><span class="tag ${escapeHtml(level)}">${escapeHtml(levelLabel)}</span> <span class="tag">${escapeHtml(formatRiskCategory(category))}</span> ${escapeHtml(clause)}</strong>
             <span>${escapeHtml(risk.reason || risk.riskType || '')}</span>
             <small>建议：${escapeHtml(risk.suggestion || '')}</small>
         </article>`;
@@ -299,6 +308,20 @@ function normalizeRiskLevel(level) {
     if (normalized === 'HIGH' || normalized.includes('高')) return 'HIGH';
     if (normalized === 'MEDIUM' || normalized.includes('中')) return 'MEDIUM';
     return 'LOW';
+}
+
+function formatRiskCategory(category) {
+    return RISK_CATEGORY_TEXT[normalizeRiskCategory(category)] || RISK_CATEGORY_TEXT.LEGAL_COMPLIANCE;
+}
+
+function normalizeRiskCategory(category) {
+    const value = String(category || '').trim().toUpperCase();
+    if (RISK_CATEGORY_TEXT[value]) return value;
+    if (value.includes('PAYMENT') || value.includes('付款') || value.includes('结算')) return 'PAYMENT_SETTLEMENT';
+    if (value.includes('PERFORMANCE') || value.includes('DELIVERY') || value.includes('履约') || value.includes('交付') || value.includes('验收')) return 'PERFORMANCE_DELIVERY';
+    if (value.includes('IP') || value.includes('CONFIDENTIAL') || value.includes('知识产权') || value.includes('保密')) return 'IP_CONFIDENTIALITY';
+    if (value.includes('LIABILITY') || value.includes('APPROVAL') || value.includes('违约') || value.includes('审批')) return 'LIABILITY_APPROVAL';
+    return 'LEGAL_COMPLIANCE';
 }
 
 function riskItemsOf(value) {

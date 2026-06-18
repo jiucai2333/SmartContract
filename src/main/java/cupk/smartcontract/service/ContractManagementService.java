@@ -2,6 +2,7 @@ package cupk.smartcontract.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import cupk.smartcontract.common.RiskCategoryEnum;
 import cupk.smartcontract.security.SecurityContext;
 import cupk.smartcontract.entity.Approval;
 import cupk.smartcontract.entity.ArchiveRecord;
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -377,7 +379,7 @@ public class ContractManagementService {
             item.setContractId(report.getContractId() == null ? 0L : report.getContractId());
             item.setVersionId(report.getVersionId());
             item.setClauseRef(clip(risk.clause(), 255));
-            item.setRiskType("AI_REVIEW");
+            item.setRiskType(normalizeRiskCategory(risk.category()));
             item.setRiskLevel(normalizeRiskLevel(risk.level()));
             item.setSuggestion(buildRiskSuggestion(risk));
             item.setReviewStatus("AI_PENDING");
@@ -437,7 +439,7 @@ public class ContractManagementService {
             reason = parts[0].replaceFirst("^风险原因：", "").trim();
             suggestion = parts.length > 1 ? parts[1].replaceFirst("^修改建议：", "").trim() : suggestion;
         }
-        return new AiRiskVO(item.getRiskLevel(), item.getClauseRef(), reason, suggestion);
+        return new AiRiskVO(normalizeRiskCategory(item.getRiskType()), item.getRiskLevel(), item.getClauseRef(), reason, suggestion);
     }
 
     public List<Approval> listApprovals() {
@@ -501,6 +503,10 @@ public class ContractManagementService {
         if (normalized.contains("高")) return "HIGH";
         if (normalized.contains("中")) return "MEDIUM";
         return "LOW";
+    }
+
+    private String normalizeRiskCategory(String category) {
+        return RiskCategoryEnum.fromCode(category).getCode();
     }
 
     private String clip(String value, int max) {

@@ -3,6 +3,7 @@ package cupk.smartcontract.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import cupk.smartcontract.common.RiskCategoryEnum;
 import cupk.smartcontract.config.QwenProperties;
 import cupk.smartcontract.dto.AiDraftRequest;
 import cupk.smartcontract.dto.AiDraftVO;
@@ -159,7 +160,7 @@ public class AiDraftService {
         try {
             Map<String, Object> payload = baseChatPayload(
                     List.of(
-                            Map.of("role", "system", "content", RISK_SYSTEM_PROMPT),
+                            Map.of("role", "system", "content", buildRiskSystemPrompt()),
                             Map.of("role", "user", "content", buildRiskUserPrompt(contractText, sanitizedContext))
                     ),
                     false,
@@ -174,6 +175,23 @@ public class AiDraftService {
 
     public String modelName() {
         return qwenProperties.resolvedModel();
+    }
+
+    private String buildRiskSystemPrompt() {
+        return RISK_SYSTEM_PROMPT + """
+
+                Risk category requirement:
+                Every risk item must include category, and category must be exactly one of:
+                LEGAL_COMPLIANCE, PERFORMANCE_DELIVERY, PAYMENT_SETTLEMENT, IP_CONFIDENTIALITY, LIABILITY_APPROVAL.
+                Return JSON as:
+                {"risks":[{"category":"LEGAL_COMPLIANCE","level":"HIGH","clause":"","reason":"","suggestion":""}]}
+                Category definitions:
+                - LEGAL_COMPLIANCE: law, qualification, validity, jurisdiction, mandatory compliance.
+                - PERFORMANCE_DELIVERY: scope, deliverables, acceptance, schedule, quality.
+                - PAYMENT_SETTLEMENT: price, invoice, payment condition, settlement, overdue payment.
+                - IP_CONFIDENTIALITY: intellectual property, data, trade secret, confidentiality.
+                - LIABILITY_APPROVAL: breach liability, termination, indemnity, approval or authorization.
+                """;
     }
 
     public List<DraftField> analyzeDraftFields(String markdown) {
@@ -286,10 +304,52 @@ public class AiDraftService {
                 break;
             }
             if (mentionsMissingRisk(contractText, rule.terms()) && !hasRelatedRisk(merged, rule.terms())) {
-                merged.add(new AiRiskVO(rule.level(), rule.clause(), rule.reason(), rule.suggestion()));
+                merged.add(new AiRiskVO(categoryForRule(rule), rule.level(), rule.clause(), rule.reason(), rule.suggestion()));
             }
         }
-        return merged;
+        return normalizeRiskCategories(merged);
+    }
+
+    private List<AiRiskVO> normalizeRiskCategories(List<AiRiskVO> risks) {
+        return risks.stream()
+                .map(risk -> new AiRiskVO(
+                        RiskCategoryEnum.fromCode(inferCategory(risk)).getCode(),
+                        risk.level(),
+                        risk.clause(),
+                        risk.reason(),
+                        risk.suggestion()))
+                .toList();
+    }
+
+    private String inferCategory(AiRiskVO risk) {
+        if (risk == null) return RiskCategoryEnum.LEGAL_COMPLIANCE.getCode();
+        if (risk.category() != null && !risk.category().isBlank()) return risk.category();
+        return categoryForText(risk.clause() + " " + risk.reason() + " " + risk.suggestion());
+    }
+
+    private String categoryForRule(MissingRiskRule rule) {
+        return categoryForText(rule.clause() + " " + String.join(" ", rule.terms()));
+    }
+
+    private String categoryForText(String value) {
+        String text = compact(value);
+        if (containsAny(text, List.of("付款", "支付", "结算", "发票", "价款", "收款",
+                "浠樻", "鏀粯", "缁撶畻", "鍙戠エ"))) {
+            return RiskCategoryEnum.PAYMENT_SETTLEMENT.getCode();
+        }
+        if (containsAny(text, List.of("履约", "交付", "验收", "质量", "进度",
+                "灞ョ害", "浜や粯", "楠屾敹", "璐ㄩ噺"))) {
+            return RiskCategoryEnum.PERFORMANCE_DELIVERY.getCode();
+        }
+        if (containsAny(text, List.of("知识产权", "保密", "商业秘密", "专利", "著作权",
+                "鐭ヨ瘑浜ф潈", "淇濆瘑", "鍟嗕笟绉樺瘑"))) {
+            return RiskCategoryEnum.IP_CONFIDENTIALITY.getCode();
+        }
+        if (containsAny(text, List.of("违约", "赔偿", "解除", "审批", "授权",
+                "杩濈害", "璧斿伩", "瀹℃壒", "鎺堟潈"))) {
+            return RiskCategoryEnum.LIABILITY_APPROVAL.getCode();
+        }
+        return RiskCategoryEnum.LEGAL_COMPLIANCE.getCode();
     }
 
     private boolean mentionsMissingRisk(String contractText, List<String> terms) {

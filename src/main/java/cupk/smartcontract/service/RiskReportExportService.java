@@ -2,6 +2,7 @@ package cupk.smartcontract.service;
 
 import cupk.smartcontract.dto.AiRiskVO;
 import cupk.smartcontract.dto.RiskReportVO;
+import cupk.smartcontract.common.RiskCategoryEnum;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -60,6 +61,8 @@ public class RiskReportExportService {
             int index = 1;
             for (AiRiskVO risk : report.risks()) {
                 html.append("<h3>").append(index++).append(". ")
+                        .append(escape(formatRiskCategory(risk.category())))
+                        .append(" / ")
                         .append(escape(formatRiskLevel(risk.level())))
                         .append(" - ")
                         .append(escape(risk.clause()))
@@ -88,6 +91,10 @@ public class RiskReportExportService {
 
     private String safeName(String value) {
         return Objects.toString(value, "未命名报告").replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    private String formatRiskCategory(String category) {
+        return RiskCategoryEnum.fromCode(category).getLabel();
     }
 
     private String clip(String value, int max) {
