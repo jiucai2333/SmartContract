@@ -56,7 +56,10 @@ async function restoreLatestDraft() {
         $('#contractType').value = contract.type || 'OTHER';
         $('#contractAmount').value = contract.amount ?? '';
     }
-    if (!version?.content) return;
+    if (!version?.content) {
+        updateStatus('该合同暂无草稿正文，可上传材料或直接编辑后保存草稿。');
+        return;
+    }
     setDraftContent(version.content);
     showSavedVersion(version);
     updateStatus(`已加载最新草稿 ${version.versionNo}`);
