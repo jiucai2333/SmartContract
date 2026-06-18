@@ -7,6 +7,7 @@ import cupk.smartcontract.entity.ApprovalRecord;
 import cupk.smartcontract.entity.ArchiveRecord;
 import cupk.smartcontract.entity.ContractAttachment;
 import cupk.smartcontract.entity.ContractMain;
+import cupk.smartcontract.entity.FileInfo;
 import cupk.smartcontract.entity.FulfillmentPlan;
 import cupk.smartcontract.entity.RiskItem;
 import cupk.smartcontract.entity.RiskReport;
@@ -25,6 +26,7 @@ import cupk.smartcontract.mapper.ApprovalInstanceMapper;
 import cupk.smartcontract.mapper.ApprovalRecordMapper;
 import cupk.smartcontract.mapper.ContractAttachmentMapper;
 import cupk.smartcontract.mapper.ContractMainMapper;
+import cupk.smartcontract.mapper.FileInfoMapper;
 import cupk.smartcontract.mapper.FulfillmentPlanMapper;
 import cupk.smartcontract.mapper.RiskItemMapper;
 import cupk.smartcontract.mapper.RiskReportMapper;
@@ -33,9 +35,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +58,7 @@ public class ContractManagementService {
 
     private final ContractMainMapper contractMapper;
     private final ContractAttachmentMapper attachmentMapper;
+    private final FileInfoMapper fileInfoMapper;
     private final ContractNumberService contractNumberService;
     private final RiskItemMapper riskMapper;
     private final RiskReportMapper riskReportMapper;
@@ -62,9 +67,12 @@ public class ContractManagementService {
     private final FulfillmentPlanMapper planMapper;
     private final AiDraftService aiDraftService;
     private final StatusTransitionService statusTransitionService;
+    private final FileStorageService fileStorageService;
+    private final WordArchiveService wordArchiveService;
 
     public ContractManagementService(ContractMainMapper contractMapper,
                                      ContractAttachmentMapper attachmentMapper,
+                                     FileInfoMapper fileInfoMapper,
                                      ContractNumberService contractNumberService,
                                      RiskItemMapper riskMapper,
                                      RiskReportMapper riskReportMapper,
@@ -72,9 +80,12 @@ public class ContractManagementService {
                                      ApprovalRecordMapper approvalRecordMapper,
                                      FulfillmentPlanMapper planMapper,
                                      AiDraftService aiDraftService,
-                                     StatusTransitionService statusTransitionService) {
+                                     StatusTransitionService statusTransitionService,
+                                     FileStorageService fileStorageService,
+                                     WordArchiveService wordArchiveService) {
         this.contractMapper = contractMapper;
         this.attachmentMapper = attachmentMapper;
+        this.fileInfoMapper = fileInfoMapper;
         this.contractNumberService = contractNumberService;
         this.riskMapper = riskMapper;
         this.riskReportMapper = riskReportMapper;
@@ -83,6 +94,8 @@ public class ContractManagementService {
         this.planMapper = planMapper;
         this.aiDraftService = aiDraftService;
         this.statusTransitionService = statusTransitionService;
+        this.fileStorageService = fileStorageService;
+        this.wordArchiveService = wordArchiveService;
     }
 
     // ==================== 数据权限 ====================
@@ -426,6 +439,7 @@ public class ContractManagementService {
         report.setUpdatedAt(now);
         riskReportMapper.insert(report);
         persistAiRiskItems(report, risks, now);
+        persistRiskReportAttachment(report, risks, now);
 
         if (request.contractId() != null) {
             ContractMain contract = findContract(request.contractId());
@@ -435,6 +449,112 @@ public class ContractManagementService {
             contractMapper.updateById(contract);
         }
         return report;
+    }
+
+    private void persistRiskReportAttachment(RiskReport report, List<AiRiskVO> risks, LocalDateTime now) {
+        if (report.getContractId() == null || report.getReportId() == null) {
+            return;
+        }
+        String filename = "风险报告-" + safeAttachmentName(report.getReportNo()) + ".docx";
+        try {
+            byte[] bytes = wordArchiveService.toDocx(buildRiskReportAttachmentHtml(report, risks));
+            FileStorageService.StoredFile stored = fileStorageService.store(bytes, filename, "docx");
+            String operator = SecurityContext.username();
+
+            FileInfo file = new FileInfo();
+            file.setObjectKey(stored.objectKey());
+            file.setFileName(filename);
+            file.setFileType(stored.fileType());
+            file.setSize(stored.size());
+            file.setSha256(stored.sha256());
+            file.setCreatedBy(operator);
+            file.setUpdatedBy(operator);
+            file.setCreatedAt(now);
+            file.setUpdatedAt(now);
+            file.setDeleted(0);
+            file.setVersion(1);
+            fileInfoMapper.insert(file);
+
+            ContractAttachment attachment = new ContractAttachment();
+            attachment.setContractId(report.getContractId());
+            attachment.setFileId(file.getFileId());
+            attachment.setAttachType("RISK_REPORT");
+            attachment.setRemark("AI风险审查报告：" + report.getReportNo());
+            attachment.setCreatedBy(operator);
+            attachment.setUpdatedBy(operator);
+            attachment.setCreatedAt(now);
+            attachment.setUpdatedAt(now);
+            attachment.setDeleted(0);
+            attachment.setVersion(1);
+            attachmentMapper.insert(attachment);
+        } catch (IOException ex) {
+            throw new IllegalStateException("风险报告附件生成失败：" + ex.getMessage(), ex);
+        }
+    }
+
+    private String buildRiskReportAttachmentHtml(RiskReport report, List<AiRiskVO> risks) {
+        StringBuilder html = new StringBuilder();
+        html.append("<h1>合同风险审查报告</h1>");
+        html.append("<h2>一、报告概览</h2><table>");
+        htmlRow(html, "报告编号", report.getReportNo());
+        htmlRow(html, "合同类型", report.getContractType());
+        htmlRow(html, "甲方", report.getPartyA());
+        htmlRow(html, "乙方", report.getPartyB());
+        htmlRow(html, "业务范围", report.getBusinessScope());
+        htmlRow(html, "最高风险等级", readableRiskLevel(report.getHighestRiskLevel()));
+        htmlRow(html, "风险总数", report.getRiskCount());
+        htmlRow(html, "高 / 中 / 低风险",
+                countValue(report.getHighCount()) + " / " + countValue(report.getMediumCount())
+                        + " / " + countValue(report.getLowCount()));
+        htmlRow(html, "摘要", report.getSummary());
+        htmlRow(html, "模型", report.getModelName());
+        htmlRow(html, "审查人", report.getCreatedBy());
+        htmlRow(html, "生成时间", report.getCreatedAt() == null
+                ? "" : report.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        html.append("</table><h2>二、风险明细</h2>");
+
+        if (risks == null || risks.isEmpty()) {
+            html.append("<p>本次审查未发现明显风险。</p>");
+            return html.toString();
+        }
+        int index = 1;
+        for (AiRiskVO risk : risks) {
+            html.append("<h3>").append(index++).append(". ")
+                    .append(escapeHtml(readableRiskLevel(risk.level()))).append(" - ")
+                    .append(escapeHtml(risk.clause())).append("</h3>")
+                    .append("<p>风险原因：").append(escapeHtml(risk.reason())).append("</p>")
+                    .append("<p>修改建议：").append(escapeHtml(risk.suggestion())).append("</p>");
+        }
+        return html.toString();
+    }
+
+    private void htmlRow(StringBuilder html, String label, Object value) {
+        html.append("<tr><td>").append(escapeHtml(label)).append("</td><td>")
+                .append(escapeHtml(Objects.toString(value, ""))).append("</td></tr>");
+    }
+
+    private int countValue(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private String readableRiskLevel(String level) {
+        return switch (normalizeRiskLevel(level)) {
+            case "HIGH" -> "高风险";
+            case "MEDIUM" -> "中风险";
+            default -> "低风险";
+        };
+    }
+
+    private String safeAttachmentName(String value) {
+        return Objects.toString(value, "未命名报告").replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    private String escapeHtml(Object value) {
+        return Objects.toString(value, "")
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 
     private void persistAiRiskItems(RiskReport report, List<AiRiskVO> risks, LocalDateTime now) {
