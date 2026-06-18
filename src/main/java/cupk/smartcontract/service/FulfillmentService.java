@@ -49,6 +49,7 @@ public class FulfillmentService {
     private static final List<String> CLOSED_STATUS = List.of("COMPLETED", "HANDLED");
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
     private static final BigDecimal DEFAULT_PENALTY_RATE = new BigDecimal("0.05");
+    private static final String RESPONSIBILITY_DISCLAIMER = "责任归属仅作辅助提示，最终由人工确认，不自动作出法律结论。";
 
     private final FulfillmentPlanMapper planMapper;
     private final ReminderRecordMapper reminderMapper;
@@ -374,10 +375,13 @@ public class FulfillmentService {
     }
 
     @Transactional
-    public List<ReminderRecordVO> dispatchReminders() {
+    public List<ReminderRecordVO> dispatchReminders(Long contractId) {
         ensureSchemaReady();
+        if (contractId != null) {
+            contractService.assertCanAccess(contractId);
+        }
         syncOverdueStatus();
-        List<FulfillmentPlanVO> warningPlans = listPlans(null, "WARNING", null);
+        List<FulfillmentPlanVO> warningPlans = listPlans(contractId, "WARNING", null);
         LocalDate today = LocalDate.now();
         for (FulfillmentPlanVO vo : warningPlans) {
             if ("NORMAL".equals(vo.warningLevel()) || "NONE".equals(vo.warningLevel())) {
@@ -405,26 +409,33 @@ public class FulfillmentService {
             record.setDeleted(0);
             reminderMapper.insert(record);
         }
-        return listReminders();
+        return listReminders(contractId);
     }
 
-    public List<ReminderRecordVO> listReminders() {
+    public List<ReminderRecordVO> listReminders(Long contractId) {
         ensureSchemaReady();
+        if (contractId != null) {
+            contractService.assertCanAccess(contractId);
+        }
         List<ReminderRecord> records = reminderMapper.selectList(new LambdaQueryWrapper<ReminderRecord>()
+                .eq(contractId != null, ReminderRecord::getContractId, contractId)
                 .orderByDesc(ReminderRecord::getSentAt)
                 .last("LIMIT 50"));
         return toReminderVos(records);
     }
 
-    public FulfillmentStats stats() {
+    public FulfillmentStats stats(Long contractId) {
         ensureSchemaReady();
-        List<FulfillmentPlanVO> plans = listPlans(null, null, null);
+        if (contractId != null) {
+            contractService.assertCanAccess(contractId);
+        }
+        List<FulfillmentPlanVO> plans = listPlans(contractId, null, null);
         long total = plans.size();
         long warning = plans.stream().filter(p -> p.warningLevel() != null && p.warningLevel().startsWith("LEVEL")).count();
         long overdue = plans.stream().filter(p -> "OVERDUE".equals(p.warningLevel()) || "OVERDUE".equals(p.status())).count();
         long completed = plans.stream().filter(p -> "COMPLETED".equals(p.status())).count();
         long handled = plans.stream().filter(p -> "HANDLED".equals(p.status())).count();
-        long reminderCount = listReminders().size();
+        long reminderCount = listReminders(contractId).size();
         return new FulfillmentStats(total, warning, overdue, completed, handled, reminderCount);
     }
 
@@ -486,10 +497,12 @@ public class FulfillmentService {
         contractService.assertCanAccess(request.contractId());
         PaymentPlan plan = new PaymentPlan();
         applyPaymentPlanRequest(plan, request);
+        validatePaymentPercentage(plan);
         plan.setCreatedAt(LocalDateTime.now());
         plan.setUpdatedAt(LocalDateTime.now());
         plan.setDeleted(0);
         paymentPlanMapper.insert(plan);
+        syncPaymentPlanStatus(plan);
         return toPaymentPlanVo(paymentPlanMapper.selectById(plan.getPaymentPlanId()));
     }
 
@@ -498,8 +511,10 @@ public class FulfillmentService {
         ensureSchemaReady();
         PaymentPlan plan = assertPaymentPlanAccess(paymentPlanId);
         applyPaymentPlanRequest(plan, request);
+        validatePaymentPercentage(plan);
         plan.setUpdatedAt(LocalDateTime.now());
         paymentPlanMapper.updateById(plan);
+        syncPaymentPlanStatus(plan);
         return toPaymentPlanVo(paymentPlanMapper.selectById(paymentPlanId));
     }
 
@@ -516,10 +531,23 @@ public class FulfillmentService {
     public PaymentRecordVO createPaymentRecord(Long paymentPlanId, PaymentRecordRequest request) {
         ensureSchemaReady();
         PaymentPlan plan = assertPaymentPlanAccess(paymentPlanId);
+        BigDecimal paidAmount = money(request.paidAmount());
+        BigDecimal remainingAmount = money(plan.getPlannedAmount()).subtract(paidAmount(plan.getPaymentPlanId()))
+                .max(BigDecimal.ZERO)
+                .setScale(2, RoundingMode.HALF_UP);
+        if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("该付款计划已足额到账，无需重复登记");
+        }
+        if (paidAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("到账金额必须大于 0");
+        }
+        if (paidAmount.compareTo(remainingAmount) > 0) {
+            throw new IllegalArgumentException("到账金额不能超过剩余未收金额 " + remainingAmount + " 元");
+        }
         PaymentRecord record = new PaymentRecord();
         record.setPaymentPlanId(plan.getPaymentPlanId());
         record.setContractId(plan.getContractId());
-        record.setPaidAmount(money(request.paidAmount()));
+        record.setPaidAmount(paidAmount);
         record.setPaidDate(request.paidDate() != null ? request.paidDate() : LocalDate.now());
         record.setPayer(StringUtils.hasText(request.payer()) ? request.payer().trim() : "甲方");
         record.setReceiver(StringUtils.hasText(request.receiver()) ? request.receiver().trim() : "乙方");
@@ -530,6 +558,21 @@ public class FulfillmentService {
         paymentRecordMapper.insert(record);
         syncPaymentPlanStatus(plan);
         return toPaymentRecordVo(paymentRecordMapper.selectById(record.getPaymentRecordId()));
+    }
+
+    @Transactional
+    public void deletePaymentRecord(Long recordId) {
+        ensureSchemaReady();
+        PaymentRecord record = paymentRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new IllegalArgumentException("payment record not found");
+        }
+        contractService.assertCanAccess(record.getContractId());
+        PaymentPlan plan = paymentPlanMapper.selectById(record.getPaymentPlanId());
+        paymentRecordMapper.deleteById(recordId);
+        if (plan != null) {
+            syncPaymentPlanStatus(plan);
+        }
     }
 
     private void createStandardDeliverables(Long contractId) {
@@ -562,6 +605,7 @@ public class FulfillmentService {
                     .eq(PaymentPlan::getContractId, plan.getContractId())
                     .eq(PaymentPlan::getPhaseName, plan.getPhaseName()));
             if (count == null || count == 0) {
+                validatePaymentPercentage(plan);
                 paymentPlanMapper.insert(plan);
             }
         }
@@ -654,8 +698,36 @@ public class FulfillmentService {
         plan.setDueDate(request.dueDate() != null ? request.dueDate() : LocalDate.now());
         plan.setPrerequisiteDelivery(StringUtils.hasText(request.prerequisiteDelivery()) ? request.prerequisiteDelivery().trim() : "");
         plan.setPenaltyRate(request.penaltyRate() != null ? request.penaltyRate() : DEFAULT_PENALTY_RATE);
-        plan.setStatus(StringUtils.hasText(request.status()) ? request.status().trim() : "UNPAID");
+        if (StringUtils.hasText(request.status())) {
+            plan.setStatus(request.status().trim());
+        } else if (!StringUtils.hasText(plan.getStatus())) {
+            plan.setStatus("UNPAID");
+        }
         plan.setRemark(StringUtils.hasText(request.remark()) ? request.remark().trim() : "");
+    }
+
+    private void validatePaymentPercentage(PaymentPlan plan) {
+        BigDecimal percentage = plan.getPercentage() != null ? plan.getPercentage() : BigDecimal.ZERO;
+        if (percentage.compareTo(BigDecimal.ZERO) < 0 || percentage.compareTo(ONE_HUNDRED) > 0) {
+            throw new IllegalArgumentException("付款比例必须在 0% 到 100% 之间");
+        }
+        BigDecimal total = paymentPercentageTotal(plan.getContractId(), plan.getPaymentPlanId()).add(percentage);
+        if (total.compareTo(ONE_HUNDRED) > 0) {
+            throw new IllegalArgumentException("同一合同付款比例合计不能超过 100%，当前保存后合计为 " + formatPercent(total));
+        }
+    }
+
+    private BigDecimal paymentPercentageTotal(Long contractId, Long excludingPaymentPlanId) {
+        if (contractId == null) {
+            return BigDecimal.ZERO;
+        }
+        return paymentPlanMapper.selectList(new LambdaQueryWrapper<PaymentPlan>()
+                        .eq(PaymentPlan::getContractId, contractId))
+                .stream()
+                .filter(item -> excludingPaymentPlanId == null || !Objects.equals(item.getPaymentPlanId(), excludingPaymentPlanId))
+                .map(PaymentPlan::getPercentage)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private void applyConfirm(FulfillmentDeliverable item, boolean confirmed) {
@@ -671,6 +743,15 @@ public class FulfillmentService {
                 .ne(FulfillmentPlan::getStatus, "OVERDUE"));
         for (FulfillmentPlan plan : overduePlans) {
             plan.setStatus("OVERDUE");
+            plan.setUpdatedAt(LocalDateTime.now());
+            planMapper.updateById(plan);
+        }
+
+        List<FulfillmentPlan> recoveredPlans = planMapper.selectList(new LambdaQueryWrapper<FulfillmentPlan>()
+                .ge(FulfillmentPlan::getDueDate, LocalDate.now())
+                .eq(FulfillmentPlan::getStatus, "OVERDUE"));
+        for (FulfillmentPlan plan : recoveredPlans) {
+            plan.setStatus(plan.getProgress() != null && plan.getProgress() > 0 ? "IN_PROGRESS" : "TODO");
             plan.setUpdatedAt(LocalDateTime.now());
             planMapper.updateById(plan);
         }
@@ -796,7 +877,7 @@ public class FulfillmentService {
         BigDecimal penaltyAmount = overdueDays <= 0
                 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
                 : unpaid.multiply(rate).multiply(BigDecimal.valueOf(overdueDays)).divide(ONE_HUNDRED, 2, RoundingMode.HALF_UP);
-        String status = paymentStatus(plan.getStatus(), planned, paid, overdueDays);
+        String status = paymentStatus(planned, paid, overdueDays);
         return new PaymentPlanVO(
                 plan.getPaymentPlanId(),
                 plan.getContractId(),
@@ -902,7 +983,7 @@ public class FulfillmentService {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    private String paymentStatus(String storedStatus, BigDecimal planned, BigDecimal paid, long overdueDays) {
+    private String paymentStatus(BigDecimal planned, BigDecimal paid, long overdueDays) {
         if (planned.compareTo(BigDecimal.ZERO) > 0 && paid.compareTo(planned) >= 0) {
             return "PAID";
         }
@@ -912,20 +993,21 @@ public class FulfillmentService {
         if (paid.compareTo(BigDecimal.ZERO) > 0) {
             return "PARTIAL";
         }
-        return StringUtils.hasText(storedStatus) ? storedStatus : "UNPAID";
+        return "UNPAID";
     }
 
     private String responsibilityHint(String status, long overdueDays, boolean prerequisiteCompleted) {
+        String hint;
         if ("PAID".equals(status)) {
-            return "已到账，无需责任提示";
+            hint = "已到账，无需责任提示";
+        } else if (overdueDays <= 0) {
+            hint = "未到付款期限，持续跟踪";
+        } else if (prerequisiteCompleted) {
+            hint = "到期未付款且前置交付已完成，提示甲方延迟支付";
+        } else {
+            hint = "前置交付未完成，提示待人工判断乙方履约责任";
         }
-        if (overdueDays <= 0) {
-            return "未到付款期限，持续跟踪";
-        }
-        if (prerequisiteCompleted) {
-            return "到期未付款且前置交付已完成，提示甲方延迟支付";
-        }
-        return "前置交付未完成，提示待人工判断乙方履约责任";
+        return hint + "（" + RESPONSIBILITY_DISCLAIMER + "）";
     }
 
     private String warningLevel(FulfillmentPlan plan) {
@@ -960,6 +1042,10 @@ public class FulfillmentService {
 
     private BigDecimal money(BigDecimal value) {
         return (value != null ? value : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String formatPercent(BigDecimal value) {
+        return value.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "%";
     }
 
     private Map<Long, ContractMain> contractMap(List<Long> ids) {

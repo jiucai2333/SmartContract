@@ -13,6 +13,7 @@ import cupk.smartcontract.dto.PaymentRecordVO;
 import cupk.smartcontract.dto.ReminderRecordVO;
 import cupk.smartcontract.security.RequireRole;
 import cupk.smartcontract.service.FulfillmentService;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -74,18 +75,18 @@ public class FulfillmentController {
 
     @PostMapping("/reminders/dispatch")
     @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
-    public List<ReminderRecordVO> dispatchReminders() {
-        return service.dispatchReminders();
+    public List<ReminderRecordVO> dispatchReminders(@RequestParam(required = false) Long contractId) {
+        return service.dispatchReminders(contractId);
     }
 
     @GetMapping("/reminders")
-    public List<ReminderRecordVO> reminders() {
-        return service.listReminders();
+    public List<ReminderRecordVO> reminders(@RequestParam(required = false) Long contractId) {
+        return service.listReminders(contractId);
     }
 
     @GetMapping("/stats")
-    public FulfillmentStats stats() {
-        return service.stats();
+    public FulfillmentStats stats(@RequestParam(required = false) Long contractId) {
+        return service.stats(contractId);
     }
 
     @GetMapping("/deliverables")
@@ -135,5 +136,12 @@ public class FulfillmentController {
     public PaymentRecordVO createPaymentRecord(@PathVariable Long paymentPlanId,
                                                @RequestBody PaymentRecordRequest request) {
         return service.createPaymentRecord(paymentPlanId, request);
+    }
+
+    @DeleteMapping("/payments/records/{recordId}")
+    @RequireRole({"USER", "DEPT_LEADER", "FINANCE", "ADMIN"})
+    public Result deletePaymentRecord(@PathVariable Long recordId) {
+        service.deletePaymentRecord(recordId);
+        return Result.success();
     }
 }

@@ -31,6 +31,7 @@ const paymentStatusMap = {
     OVERDUE: '已逾期'
 };
 const channelTextMap = {IN_APP: '站内消息'};
+const PAYMENT_RATIO_TARGET = 100;
 
 let contracts = [];
 let plans = [];
@@ -100,13 +101,13 @@ async function loadPaymentRecords() {
 }
 
 async function loadReminders() {
-    const list = await api('/api/fulfillment/reminders');
+    const list = await api(endpointWithContract('/api/fulfillment/reminders'));
     renderReminders(list);
     return list;
 }
 
 async function refreshAll() {
-    const statPromise = api('/api/fulfillment/stats');
+    const statPromise = api(endpointWithContract('/api/fulfillment/stats'));
     const reminderPromise = loadReminders();
     await Promise.all([loadPlans(), loadDeliverables(), loadPaymentPlans(), loadPaymentRecords()]);
     const [stat, reminders] = await Promise.all([statPromise, reminderPromise]);
@@ -121,7 +122,7 @@ function renderStats(stat, reminders = []) {
     $('#statOverdue').textContent = stat.overduePlans || 0;
     $('#statDeliverable').textContent = `${confirmedCount}/${deliverables.length}`;
     $('#statPaymentOverdue').textContent = overduePaymentCount;
-    $('#statReminder').textContent = reminders.length || stat.reminderRecords || 0;
+    $('#statReminder').textContent = reminders.length;
 }
 
 function renderPlans(list) {
@@ -186,6 +187,7 @@ function renderDeliverables(list) {
 }
 
 function renderPaymentPlans(list) {
+    renderPaymentRatioSummary(list);
     const body = $('#paymentPlanTbody');
     if (!list.length) {
         body.innerHTML = '<tr><td colspan="8" class="empty-cell">暂无付款计划，请先生成标准台账或新增付款计划</td></tr>';
@@ -193,6 +195,8 @@ function renderPaymentPlans(list) {
     }
     body.innerHTML = list.map(item => {
         const prereqClass = item.prerequisiteCompleted ? 'status-COMPLETED' : 'warning-LEVEL2';
+        const unpaidAmount = Number(item.unpaidAmount || 0);
+        const canRecordPayment = item.status !== 'PAID' && unpaidAmount > 0;
         return `
             <tr>
                 <td><strong>${escapeHtml(item.phaseName || '-')}</strong><br><small>${escapeHtml(item.contractTitle || '')}</small></td>
@@ -205,7 +209,9 @@ function renderPaymentPlans(list) {
                 <td>
                     <div class="row-actions">
                         <button class="icon-btn edit-payment-btn" data-id="${item.paymentPlanId}" title="编辑"><i data-lucide="edit-3"></i></button>
-                        <button class="link-btn record-payment-btn" data-id="${item.paymentPlanId}" type="button">到账</button>
+                        ${canRecordPayment
+                            ? `<button class="link-btn record-payment-btn" data-id="${item.paymentPlanId}" type="button">到账</button>`
+                            : '<span class="tag payment-PAID">已足额到账</span>'}
                     </div>
                 </td>
             </tr>
@@ -217,7 +223,7 @@ function renderPaymentPlans(list) {
 function renderPaymentRecords(list) {
     const body = $('#paymentRecordTbody');
     if (!list.length) {
-        body.innerHTML = '<tr><td colspan="7" class="empty-cell">暂无到账记录</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" class="empty-cell">暂无到账记录</td></tr>';
         return;
     }
     body.innerHTML = list.map(item => `
@@ -229,8 +235,14 @@ function renderPaymentRecords(list) {
             <td>${escapeHtml(item.payer || '-')}</td>
             <td>${escapeHtml(item.receiver || '-')}</td>
             <td>${escapeHtml(item.remark || '-')}</td>
+            <td>
+                <button class="icon-btn delete-payment-record-btn" data-id="${item.paymentRecordId}" title="删除到账记录">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </td>
         </tr>
     `).join('');
+    renderLucideIcons();
 }
 
 function renderReminders(list) {
@@ -267,6 +279,145 @@ function formatMoney(value) {
 function formatPercent(value) {
     const number = Number(value || 0);
     return `${number.toFixed(number % 1 === 0 ? 0 : 2)}%`;
+}
+
+function normalizedRatio(value) {
+    return Math.round(Number(value || 0) * 100) / 100;
+}
+
+function paymentRatioClass(total) {
+    const rounded = normalizedRatio(total);
+    if (rounded > PAYMENT_RATIO_TARGET) return 'is-danger';
+    if (rounded === PAYMENT_RATIO_TARGET) return 'is-valid';
+    return 'is-warning';
+}
+
+function paymentRatioTotalFor(contractId, excludingPaymentPlanId = '') {
+    return normalizedRatio(paymentPlans
+        .filter(item => String(item.contractId) === String(contractId))
+        .filter(item => !excludingPaymentPlanId || String(item.paymentPlanId) !== String(excludingPaymentPlanId))
+        .reduce((sum, item) => sum + Number(item.percentage || 0), 0));
+}
+
+function renderPaymentRatioSummary(list) {
+    const summary = $('#paymentRatioSummary');
+    if (!summary) return;
+    if (!list.length) {
+        summary.textContent = '付款比例合计：暂无计划';
+        summary.className = 'payment-ratio-summary';
+        return;
+    }
+    const groups = new Map();
+    list.forEach(item => {
+        const key = String(item.contractId || '');
+        const group = groups.get(key) || {title: item.contractTitle || '未命名合同', total: 0};
+        group.total = normalizedRatio(group.total + Number(item.percentage || 0));
+        groups.set(key, group);
+    });
+    const values = Array.from(groups.values());
+    if (values.length === 1) {
+        const total = values[0].total;
+        const matched = normalizedRatio(total) === PAYMENT_RATIO_TARGET;
+        summary.textContent = matched
+            ? `付款比例合计：${formatPercent(total)}，已满足 100%`
+            : `付款比例合计：${formatPercent(total)}，应为 100%`;
+        summary.className = `payment-ratio-summary ${paymentRatioClass(total)}`;
+        return;
+    }
+    const validCount = values.filter(item => normalizedRatio(item.total) === PAYMENT_RATIO_TARGET).length;
+    const overCount = values.filter(item => normalizedRatio(item.total) > PAYMENT_RATIO_TARGET).length;
+    summary.textContent = overCount > 0
+        ? `付款比例校验：${validCount}/${values.length} 个合同合计为 100%，${overCount} 个超过 100%`
+        : `付款比例校验：${validCount}/${values.length} 个合同合计为 100%`;
+    summary.className = `payment-ratio-summary ${overCount > 0 ? 'is-danger' : (validCount === values.length ? 'is-valid' : 'is-warning')}`;
+}
+
+function renderPaymentRatioCheck() {
+    const check = $('#paymentRatioCheck');
+    if (!check) return;
+    const contractId = Number($('#paymentContract').value || 0);
+    const current = normalizedRatio($('#percentage').value);
+    const existing = paymentRatioTotalFor(contractId, $('#paymentPlanId').value);
+    const total = normalizedRatio(existing + current);
+    if (!contractId) {
+        check.textContent = '请选择合同后校验付款比例';
+        check.className = 'ratio-check wide';
+        return;
+    }
+    if (total > PAYMENT_RATIO_TARGET) {
+        check.textContent = `保存后合计 ${formatPercent(total)}，超过 100%`;
+    } else if (total === PAYMENT_RATIO_TARGET) {
+        check.textContent = '保存后合计 100%，满足分期配置';
+    } else {
+        check.textContent = `保存后合计 ${formatPercent(total)}，距 100% 还差 ${formatPercent(PAYMENT_RATIO_TARGET - total)}`;
+    }
+    check.className = `ratio-check wide ${paymentRatioClass(total)}`;
+}
+
+function validatePaymentRatioBeforeSave(payload, paymentPlanId) {
+    if (payload.percentage < 0 || payload.percentage > PAYMENT_RATIO_TARGET) {
+        throw new Error('付款比例必须在 0% 到 100% 之间');
+    }
+    const total = normalizedRatio(paymentRatioTotalFor(payload.contractId, paymentPlanId) + payload.percentage);
+    if (total > PAYMENT_RATIO_TARGET) {
+        throw new Error(`同一合同付款比例合计不能超过 100%，当前保存后合计为 ${formatPercent(total)}`);
+    }
+}
+
+function prerequisiteTokens(value) {
+    return String(value || '')
+        .split(/[,，、]/)
+        .map(item => item.trim())
+        .filter(Boolean);
+}
+
+function selectedPrerequisiteDelivery() {
+    return Array.from($('#prerequisiteDelivery').selectedOptions)
+        .map(option => option.value.trim())
+        .filter(Boolean)
+        .join('、');
+}
+
+function addPrerequisiteOption(select, value, text, selected) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = text;
+    option.selected = selected;
+    select.appendChild(option);
+}
+
+async function loadPrerequisiteDeliveryOptions(contractId, selectedValue = '') {
+    const select = $('#prerequisiteDelivery');
+    const selected = new Set(prerequisiteTokens(selectedValue));
+    select.disabled = true;
+    select.innerHTML = '';
+    addPrerequisiteOption(select, '', '加载交付物中...', false);
+    if (!contractId) {
+        select.innerHTML = '';
+        addPrerequisiteOption(select, '', '请先选择合同', false);
+        select.disabled = true;
+        return;
+    }
+    const items = await api(`/api/fulfillment/deliverables?contractId=${contractId}`);
+    select.innerHTML = '';
+    const unmatched = new Set(selected);
+    items.forEach(item => {
+        const value = item.deliverableName || item.deliverableType || '';
+        if (!value) return;
+        const selectedByName = selected.has(item.deliverableName);
+        const selectedByType = selected.has(item.deliverableType);
+        const text = item.deliverableName || value;
+        addPrerequisiteOption(select, value, text, selectedByName || selectedByType);
+        unmatched.delete(item.deliverableName);
+        unmatched.delete(item.deliverableType);
+    });
+    unmatched.forEach(value => addPrerequisiteOption(select, value, value, true));
+    if (!select.options.length) {
+        addPrerequisiteOption(select, '', '暂无交付物，请先生成标准台账', false);
+        select.disabled = true;
+        return;
+    }
+    select.disabled = false;
 }
 
 function openPlanModal(plan = null) {
@@ -315,10 +466,12 @@ function openPaymentPlanModal(plan = null) {
     $('#percentage').value = plan?.percentage ?? '';
     $('#plannedAmount').value = plan?.plannedAmount ?? '';
     $('#paymentDueDate').value = plan?.dueDate || new Date().toISOString().slice(0, 10);
-    $('#prerequisiteDelivery').value = plan?.prerequisiteDelivery || '';
     $('#penaltyRate').value = plan?.penaltyRate ?? 0.05;
     $('#paymentRemark').value = plan?.remark || '';
     $('#paymentPlanModal').hidden = false;
+    renderPaymentRatioCheck();
+    loadPrerequisiteDeliveryOptions($('#paymentContract').value, plan?.prerequisiteDelivery || '')
+        .catch(error => toast(error.message));
     renderLucideIcons();
 }
 
@@ -326,6 +479,10 @@ function closePaymentPlanModal() {
     $('#paymentPlanModal').hidden = true;
     $('#paymentContract').disabled = false;
     $('#paymentPlanForm').reset();
+    $('#paymentRatioCheck').textContent = '';
+    $('#paymentRatioCheck').className = 'ratio-check wide';
+    $('#prerequisiteDelivery').innerHTML = '';
+    $('#prerequisiteDelivery').disabled = false;
 }
 
 function paymentPlanPayload() {
@@ -335,15 +492,18 @@ function paymentPlanPayload() {
         percentage: Number($('#percentage').value || 0),
         plannedAmount: Number($('#plannedAmount').value || 0),
         dueDate: $('#paymentDueDate').value,
-        prerequisiteDelivery: $('#prerequisiteDelivery').value.trim(),
+        prerequisiteDelivery: selectedPrerequisiteDelivery(),
         penaltyRate: Number($('#penaltyRate').value || 0),
-        status: 'UNPAID',
         remark: $('#paymentRemark').value.trim()
     };
 }
 
 function openPaymentRecordModal(planId) {
     const plan = paymentPlans.find(item => String(item.paymentPlanId) === String(planId));
+    if (!plan || plan.status === 'PAID' || Number(plan.unpaidAmount || 0) <= 0) {
+        toast('该付款计划已足额到账，无需重复登记');
+        return;
+    }
     $('#recordPaymentPlanId').value = planId;
     $('#paidAmount').value = plan?.unpaidAmount || plan?.plannedAmount || '';
     $('#paidDate').value = new Date().toISOString().slice(0, 10);
@@ -371,8 +531,10 @@ async function savePlan(event) {
 async function savePaymentPlan(event) {
     event.preventDefault();
     const id = $('#paymentPlanId').value;
+    const payload = paymentPlanPayload();
+    validatePaymentRatioBeforeSave(payload, id);
     const url = id ? `/api/fulfillment/payments/plans/${id}` : '/api/fulfillment/payments/plans';
-    await api(url, {method: id ? 'PUT' : 'POST', body: JSON.stringify(paymentPlanPayload())});
+    await api(url, {method: id ? 'PUT' : 'POST', body: JSON.stringify(payload)});
     closePaymentPlanModal();
     await refreshAll();
     toast(id ? '付款计划已更新' : '付款计划已新增');
@@ -396,6 +558,13 @@ async function savePaymentRecord(event) {
     toast('到账记录已保存');
 }
 
+async function deletePaymentRecord(id) {
+    if (!window.confirm('确认删除这条到账记录吗？删除后付款计划状态会重新计算。')) return;
+    await api(`/api/fulfillment/payments/records/${id}`, {method: 'DELETE'});
+    await refreshAll();
+    toast('到账记录已删除');
+}
+
 async function initializeMemberE() {
     const contractId = selectedContractId('#initContract');
     if (!contractId) return toast('请先选择合同');
@@ -415,9 +584,10 @@ async function extractPlans() {
 }
 
 async function dispatchReminders() {
-    await api('/api/fulfillment/reminders/dispatch', {method: 'POST'});
+    const contractId = currentFilterContractId();
+    await api(endpointWithContract('/api/fulfillment/reminders/dispatch'), {method: 'POST'});
     await refreshAll();
-    toast('预警提醒已生成');
+    toast(contractId ? '当前合同预警提醒已生成' : '全部合同预警提醒已生成');
 }
 
 async function completePlan(id) {
@@ -465,6 +635,12 @@ $('#closePaymentRecordModal').addEventListener('click', closePaymentRecordModal)
 $('#planForm').addEventListener('submit', event => savePlan(event).catch(error => toast(error.message)));
 $('#paymentPlanForm').addEventListener('submit', event => savePaymentPlan(event).catch(error => toast(error.message)));
 $('#paymentRecordForm').addEventListener('submit', event => savePaymentRecord(event).catch(error => toast(error.message)));
+$('#paymentContract').addEventListener('change', () => {
+    renderPaymentRatioCheck();
+    loadPrerequisiteDeliveryOptions($('#paymentContract').value)
+        .catch(error => toast(error.message));
+});
+$('#percentage').addEventListener('input', renderPaymentRatioCheck);
 $('#initMemberEBtn').addEventListener('click', () => initializeMemberE().catch(error => toast(error.message)));
 $('#extractBtn').addEventListener('click', () => extractPlans().catch(error => toast(error.message)));
 $('#dispatchBtn').addEventListener('click', () => dispatchReminders().catch(error => toast(error.message)));
@@ -497,6 +673,11 @@ $('#paymentPlanTbody').addEventListener('click', event => {
         if (plan) openPaymentPlanModal(plan);
     }
     if (recordBtn) openPaymentRecordModal(recordBtn.dataset.id);
+});
+
+$('#paymentRecordTbody').addEventListener('click', event => {
+    const deleteBtn = event.target.closest('.delete-payment-record-btn');
+    if (deleteBtn) deletePaymentRecord(deleteBtn.dataset.id).catch(error => toast(error.message));
 });
 
 loadContracts()
