@@ -1,6 +1,6 @@
 package cupk.smartcontract.dto;
 
-public record AiRiskItem(
+public record AiRiskVO(
         String level,
         String clause,
         String reason,

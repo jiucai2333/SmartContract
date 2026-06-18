@@ -2,36 +2,264 @@
    合同智能编辑页面样式
    ============================================================ */
 
-/* ---- Upload Zone ---- */
-.draft-steps {
+/* ── 顶部面板 ── */
+.edit-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.edit-top {
+    padding: 16px 20px;
+    overflow: hidden;
+}
+
+.edit-top-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── 第一行：元信息 + 拖拽上传区 ── */
+.meta-upload-row {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+}
+
+#contractMetaPanel.field-panel {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #f8fafc;
+    margin: 0;
+}
+
+.field-list {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 16px;
+    margin-bottom: 0;
+}
+
+.field-item {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.field-item span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-secondary);
+}
+
+.field-item input,
+.field-item select {
+    height: 36px;
+    padding: 0 10px;
+    font-size: 13px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+/* 拖拽上传区 + 模板选择区 */
+.source-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+    width: 220px;
+}
+
+.upload-zone, .template-picker {
+    flex: 1;
+    border: 2px dashed #cbd5e1;
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    background: var(--line-light);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+}
+
+.upload-zone-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.upload-zone:hover, .template-picker:hover {
+    border-color: var(--accent-light);
+    background: #f0fdfa;
+}
+
+.upload-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+    border-style: solid;
+}
+
+.upload-zone-text {
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.upload-zone-sub {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+.upload-zone .upload-name,
+.template-picker .upload-name {
+    font-size: 11px;
+    color: var(--muted);
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.template-picker select {
+    width: 100%;
+    height: 30px;
+    font-size: 12px;
+    padding: 0 6px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    margin-top: 2px;
+}
+
+.template-picker button {
+    margin-top: 2px;
+}
+
+/* ── 第二行：进度条 + 状态 ── */
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 16px;
+    background: var(--line-light);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    height: 40px;
+    overflow: hidden;
+}
+
+/* OCR 状态条：内联单行，左侧 */
+#ocrPanel.ocr-panel {
+    display: flex;
+    align-items: center;
     gap: 8px;
-    margin: 16px 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+}
+
+#ocrPanel[hidden] {
+    display: none;
+}
+
+#ocrPanel .ocr-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+#ocrPanel .ocr-head strong {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#ocrPanel .ocr-head-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+#ocrPanel .ocr-hint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+/* 进度步骤条：居中，pill 连接线风格 */
+.draft-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+    margin: 0 auto;
+    padding: 0 8px;
+    height: 100%;
 }
 
 .draft-step {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 5px;
+    padding: 4px 10px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--line-light);
+    background: var(--surface);
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+/* 连接线：步骤之间的横线 */
+.draft-step + .draft-step {
+    margin-left: 0;
+}
+
+.draft-steps .connector {
+    width: 18px;
+    height: 1px;
+    background: var(--line);
+    flex-shrink: 0;
 }
 
 .draft-step span {
     display: grid;
-    width: 22px;
-    height: 22px;
+    width: 16px;
+    height: 16px;
     place-items: center;
     border-radius: 50%;
     background: #e2e8f0;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
+    flex-shrink: 0;
 }
 
 .draft-step.active {
@@ -41,7 +269,8 @@
     font-weight: 600;
 }
 
-.draft-step.active span, .draft-step.done span {
+.draft-step.active span,
+.draft-step.done span {
     background: var(--accent);
     color: #fff;
 }
@@ -49,49 +278,32 @@
 .draft-step.done {
     border-color: var(--accent-light);
     color: var(--accent);
-}
-
-.upload-zone {
-    border: 2px dashed #cbd5e1;
-    border-radius: var(--radius);
-    padding: 24px;
-    background: var(--line-light);
-    cursor: pointer;
-    transition: all var(--transition);
-    text-align: center;
-    color: var(--muted);
-    font-size: 13.5px;
-}
-
-.upload-zone:hover {
-    border-color: var(--accent-light);
-    background: #f0fdfa;
-    color: var(--accent);
-}
-
-.upload-zone.dragover {
-    border-color: var(--accent);
     background: var(--accent-bg);
-    border-style: solid;
 }
 
-.upload-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 12px;
-    justify-content: center;
+.draft-step.failed {
+    border-color: #ef4444;
+    background: #fef2f2;
+    color: #b91c1c;
 }
 
-.upload-name {
+.draft-step.failed span {
+    background: #ef4444;
+    color: #fff;
+}
+
+/* 草稿状态：右侧小字 */
+#draftStatus.hint {
+    font-size: 12px;
     color: var(--muted);
-    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-left: 8px;
 }
 
-/* ---- OCR Panel ---- */
+/* ── OCR 通用样式（用于其他场景，非 #ocrPanel 内联场景） ── */
 .ocr-panel {
-    margin-top: 12px;
-    padding: 16px;
+    padding: 12px 16px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--line-light);
@@ -101,16 +313,28 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .ocr-head-actions { display: flex; gap: 8px; align-items: center; }
 
 .ocr-hint {
-    margin: 0 0 10px;
+    margin: 0 0 8px;
     color: var(--muted);
     font-size: 12.5px;
     line-height: 1.5;
+}
+
+.ocr-char-count { color: var(--muted); font-size: 12px; }
+
+.ocr-preview {
+    max-height: 160px;
+    overflow: auto;
+    white-space: pre-wrap;
+    font-size: 13px;
+    color: var(--ink-secondary);
+    margin: 0;
+    line-height: 1.7;
 }
 
 .ocr-editor {
@@ -126,7 +350,6 @@
     resize: vertical;
     background: #fff;
     color: var(--ink);
-    transition: border-color var(--transition), box-shadow var(--transition);
     outline: none;
 }
 
@@ -166,85 +389,101 @@
     box-shadow: 0 4px 12px rgba(37,99,235,.25);
 }
 
-.ocr-char-count { color: var(--muted); font-size: 12px; }
-
-.field-panel {
-    margin-top: 12px;
-    padding: 16px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: #f8fafc;
+/* ── 编辑器区 ── */
+.result-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
-.field-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.result-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
     gap: 12px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
-.field-item { display: grid; gap: 6px; }
-.field-item span { font-size: 13px; font-weight: 600; }
-.field-item small { color: var(--muted); font-size: 11px; }
-.field-item input, .field-item textarea { width: 100%; }
-
-.ocr-preview {
-    max-height: 160px;
-    overflow: auto;
-    white-space: pre-wrap;
-    font-size: 13px;
-    color: var(--ink-secondary);
-    margin: 0;
-    line-height: 1.7;
-}
-
-/* ---- Rich Editor ---- */
-.rich-editor {
-    min-height: 620px;
-    max-height: 760px;
-    overflow: auto;
-    padding: 20px;
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     border: 1px solid var(--line);
-    border-top: 0;
-    border-radius: 0 0 var(--radius) var(--radius);
-    background: #ffffff;
-    font-size: 14px;
-    outline: none;
-    transition: border-color var(--transition), box-shadow var(--transition);
+    border-bottom: 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: #f8fafc;
+    padding: 8px 14px;
 }
 
-.rich-editor:focus {
-    border-color: var(--accent-light);
-    box-shadow: 0 0 0 3px rgba(20,184,166,.08);
-}
-
-/* Toolbar buttons */
 .toolbar-btns {
     display: flex;
-    gap: 4px;
+    gap: 3px;
     align-items: center;
 }
+
 .toolbar-btns button {
     font-size: 13px;
-    padding: 6px 10px;
+    padding: 5px 9px;
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
     background: var(--surface);
     color: var(--ink-secondary);
     cursor: pointer;
     transition: all var(--transition);
-    min-width: 32px;
+    min-width: 30px;
     font-weight: 600;
+    line-height: 1;
 }
+
 .toolbar-btns button:hover {
     background: var(--accent-bg);
     border-color: var(--accent-light);
     color: var(--accent);
 }
+
 .toolbar-btns button.active {
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
+}
+
+.a4-editor-wrapper {
+    background: #e2e8f0;
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 24px 0;
+    display: flex;
+    justify-content: center;
+    overflow: auto;
+    max-height: none;
+}
+
+.rich-editor {
+    width: 794px;
+    min-height: 1500px;
+    padding: 96px 80px;
+    background: #ffffff;
+    box-shadow: 0 2px 12px rgba(15, 23, 42, .12);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: "SimSun", "宋体", serif;
+    font-size: 14px;
+    line-height: 1.8;
+    outline: none;
+    transition: box-shadow var(--transition);
+    flex-shrink: 0;
+}
+
+.rich-editor:focus {
+    box-shadow: 0 2px 12px rgba(15, 23, 42, .12), 0 0 0 3px rgba(20,184,166,.12);
+}
+
+.rich-editor.import-ready {
+    animation: importReadyFlash 1.15s ease;
+}
+
+@keyframes importReadyFlash {
+    0%, 100% { background: #fff; box-shadow: 0 2px 12px rgba(15, 23, 42, .12); }
+    35% { background: #ecfeff; box-shadow: 0 0 0 4px rgba(20, 184, 166, .2); }
 }
 
 .rich-editor:empty::before {
@@ -256,10 +495,13 @@
 .rich-editor h1 { text-align: center; font-size: 24px; margin: 12px 0 24px; }
 .rich-editor h2 { font-size: 18px; margin: 22px 0 10px; }
 .rich-editor h3 { font-size: 16px; margin: 16px 0 8px; }
-.rich-editor p { margin: 8px 0; line-height: 1.85; }
+.rich-editor p { line-height: inherit; }
+.rich-editor p[style*="text-indent"] { text-indent: 2em; }
+.rich-editor .clause-title { text-indent: 0; font-weight: 600; }
 .rich-editor table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #fff; }
 .rich-editor td, .rich-editor th { border: 1px solid #94a3b8; padding: 8px 10px; min-width: 70px; }
 
+/* ── 其他组件 ── */
 .markdown-editor {
     width: 100%;
     min-height: 560px;
@@ -280,20 +522,6 @@
     box-shadow: 0 0 0 3px rgba(20,184,166,.08);
 }
 
-.result-panel {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-}
-
-.result-actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
 .word-page {
     box-sizing: border-box;
     position: relative;
@@ -305,13 +533,10 @@
     color: var(--ink);
     box-shadow: 0 3px 14px rgba(15, 23, 42, .16);
     outline: none;
+    white-space: pre-wrap;
 }
 
-.word-page-content {
-    outline: none;
-    height: 100%;
-    overflow: hidden;
-}
+.word-page-content { outline: none; height: 100%; overflow: hidden; }
 
 .word-block {
     min-height: 1.55em;
@@ -324,6 +549,7 @@
 
 .word-block:hover, .word-block:focus { outline-color: #cbd5e1; }
 .word-block.title { font-weight: 700; }
+
 .word-page-number {
     position: absolute;
     right: 24px;
@@ -332,7 +558,6 @@
     font-size: 12px;
 }
 
-/* ---- Diff View ---- */
 .diff-view {
     margin-top: 16px;
     border: 1px solid var(--line);
@@ -355,7 +580,6 @@
     border-left: 3px solid var(--accent-2);
 }
 
-/* ---- Autocomplete ---- */
 .autocomplete-wrap { position: relative; }
 
 .autocomplete-dropdown {
@@ -380,11 +604,8 @@
 }
 
 .autocomplete-item:last-child { border-bottom: 0; }
-
 .autocomplete-item:hover { background: var(--accent-2-bg); }
-
 .autocomplete-item strong { display: block; font-size: 13px; }
-
 .autocomplete-item small {
     display: block;
     color: var(--muted);
@@ -392,7 +613,6 @@
     font-size: 11.5px;
 }
 
-/* ---- Version List ---- */
 .version-item {
     display: grid;
     gap: 8px;
@@ -404,7 +624,6 @@
 }
 
 .version-item:hover { box-shadow: var(--shadow-sm); }
-
 .version-item .button-row { margin-top: 8px; }
 
 .version-preview {
@@ -427,4 +646,49 @@
     white-space: pre-wrap;
     font-size: 12px;
     line-height: 1.7;
+}
+
+/* ── OCR 坐标版式预览（只读，不会进入编辑器） ── */
+.ocr-preview-area {
+    margin-top: 8px;
+    max-height: 200px;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #f8fafc;
+    padding: 0;
+}
+
+.ocr-preview-area .ocr-page {
+    transform-origin: top left;
+}
+
+.ocr-preview-area .ocr-block {
+    font-family: "SimSun", "宋体", serif;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+    white-space: pre-wrap;
+}
+
+#ocrPreviewToggle {
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 1200px) {
+    .meta-upload-row { flex-direction: column; }
+    .source-cards { width: 100%; flex-direction: row; }
+    .rich-editor { width: 100%; min-height: 800px; padding: 64px 48px; }
+}
+
+@media (max-width: 768px) {
+    .field-list { grid-template-columns: 1fr; }
+    .source-cards { flex-direction: column; }
+    .status-row { height: auto; flex-wrap: wrap; padding: 6px 12px; gap: 6px; }
+    .draft-steps { margin: 0; }
+    #draftStatus.hint { margin-left: 0; padding-left: 0; }
+    .rich-editor { padding: 40px 28px; min-height: 600px; }
+    .a4-editor-wrapper { padding: 16px 0; }
 }

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>履约预警 - 智能合同管理</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/fulfillment.css">
+</head>
+<body>
+<script src="../js/common.js"></script>
+<script>document.write(appShellHtml('fulfillment'));</script>
+
+<section class="section performance-header">
+    <div>
+        <p class="eyebrow">履约台账</p>
+        <h2 id="contractTitle">履约预警与付款台账</h2>
+    </div>
+    <label>当前合同
+        <select id="contractSelector"><option value="">加载中...</option></select>
+    </label>
+</section>
+
+<section class="section overview-grid" id="progressCards"></section>
+
+<nav class="performance-tabs">
+    <button class="secondary active" data-tab="plans">履约节点</button>
+    <button class="secondary" data-tab="deliverables">交付物</button>
+    <button class="secondary" data-tab="payments">付款台账</button>
+</nav>
+
+<section class="section panel tab-panel active" id="tab-plans">
+    <div class="panel-head"><div><p class="eyebrow">Milestones</p><h2>履约节点</h2></div></div>
+    <div id="planList" class="performance-list"></div>
+</section>
+
+<section class="section panel tab-panel" id="tab-deliverables">
+    <div class="panel-head">
+        <div><p class="eyebrow">Deliverables</p><h2>交付物清单</h2></div>
+        <button id="addDeliverable">新增交付物</button>
+    </div>
+    <div id="deliverableList" class="performance-list"></div>
+</section>
+
+<section class="section tab-panel" id="tab-payments">
+    <div class="panel overdue-panel" id="overduePanel" hidden>
+        <div class="panel-head"><div><p class="eyebrow">Overdue</p><h2>逾期提醒</h2></div></div>
+        <div id="overdueList"></div>
+    </div>
+    <div class="panel">
+        <div class="panel-head">
+            <div><p class="eyebrow">Payments</p><h2>付款计划与记录</h2></div>
+            <button id="addPaymentPlan">新增付款计划</button>
+        </div>
+        <div id="paymentPlanList" class="performance-list"></div>
+    </div>
+</section>
+
+<dialog id="deliverableDialog">
+    <form method="dialog" id="deliverableForm">
+        <h3>交付物</h3>
+        <input id="deliverableId" type="hidden">
+        <label>履约节点<select id="deliverablePlan" required></select></label>
+        <label>名称<input id="deliverableName" required></label>
+        <label>类型<select id="deliverableType" required>
+            <option value="DESIGN_DOC">需求设计文档</option>
+            <option value="SOURCE_CODE">源代码</option>
+            <option value="RUNNABLE_PROGRAM">可运行程序</option>
+            <option value="ACCEPTANCE_REPORT">验收报告</option>
+        </select></label>
+        <label>合同阶段<select id="deliverableStage" required>
+            <option value="SIGNING">签订阶段</option>
+            <option value="MID_DELIVERY">中期交付</option>
+            <option value="ACCEPTANCE">验收阶段</option>
+        </select></label>
+        <label>排序<input id="deliverableSort" type="number" min="0" value="0"></label>
+        <div class="dialog-actions"><button value="cancel" class="secondary">取消</button><button id="saveDeliverable" value="default">保存</button></div>
+    </form>
+</dialog>
+
+<dialog id="paymentPlanDialog">
+    <form method="dialog" id="paymentPlanForm">
+        <h3>付款计划</h3>
+        <input id="paymentPlanId" type="hidden">
+        <label>履约节点<select id="paymentPlanNode" required></select></label>
+        <label>期次<input id="installmentNo" type="number" min="1" required></label>
+        <label>付款比例<input id="paymentRatio" type="number" min="0.0001" max="1" step="0.0001" required></label>
+        <label>金额<input id="paymentAmount" type="number" min="0.01" step="0.01" required></label>
+        <label>到期日<input id="paymentDueDate" type="date" required></label>
+        <label>前置交付物<select id="paymentPrerequisite"><option value="">无</option></select></label>
+        <div class="dialog-actions"><button value="cancel" class="secondary">取消</button><button id="savePaymentPlan" value="default">保存</button></div>
+    </form>
+</dialog>
+
+<dialog id="paymentRecordDialog">
+    <form method="dialog" id="paymentRecordForm">
+        <h3>确认到账</h3>
+        <input id="recordPlanId" type="hidden">
+        <label>到账金额<input id="paidAmount" type="number" min="0.01" step="0.01" required></label>
+        <label>到账时间<input id="paidAt" type="datetime-local" required></label>
+        <label>凭证号<input id="receiptNo"></label>
+        <label>备注<textarea id="paymentNotes"></textarea></label>
+        <div class="dialog-actions"><button value="cancel" class="secondary">取消</button><button id="savePaymentRecord" value="default">保存</button></div>
+    </form>
+</dialog>
+
+<script>document.write(closeAppShell());</script>
+<script src="../js/fulfillment.js"></script>
+</body>
+</html>

@@ -8,6 +8,7 @@ public record QwenProperties(
         String baseUrl,
         String model,
         String visionModel,
+        String layoutModel,
         int timeoutSeconds,
         boolean enabled
 ) {
@@ -30,6 +31,10 @@ public record QwenProperties(
 
     public String resolvedVisionModel() {
         return visionModel == null || visionModel.isBlank() ? "qwen-vl-plus" : visionModel;
+    }
+
+    public String resolvedLayoutModel() {
+        return layoutModel == null || layoutModel.isBlank() ? resolvedModel() : layoutModel;
     }
 
     public int resolvedTimeoutSeconds() {

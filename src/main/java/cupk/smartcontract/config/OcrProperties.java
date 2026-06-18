@@ -16,7 +16,11 @@ public record OcrProperties(
         String accessKeySecret,
         String openapiEndpoint,
         String paddleToken,
-        String paddleJobUrl
+        String paddleJobUrl,
+        String paddleModel,
+        boolean useDocOrientationClassify,
+        boolean useDocUnwarping,
+        boolean useChartRecognition
 ) {
     public String resolvedProvider() {
         return provider == null || provider.isBlank() ? "paddle" : provider.trim().toLowerCase();
@@ -56,6 +60,10 @@ public record OcrProperties(
 
     public int resolvedPaddleTimeoutSeconds() {
         return paddleTimeoutSeconds <= 0 ? 120 : paddleTimeoutSeconds;
+    }
+
+    public String resolvedPaddleModel() {
+        return paddleModel == null || paddleModel.isBlank() ? "PaddleOCR-VL-1.6" : paddleModel.trim();
     }
 
     public boolean hasOpenapiCredentials() {

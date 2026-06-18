@@ -28,6 +28,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
         String token = resolveToken(request);
         if (token == null) {
+            SecurityContext.clear();
             unauthorized(response);
             return false;
         }
@@ -58,6 +59,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                             .map(r -> r.trim().toUpperCase())
                             .toList();
                     if (!required.contains(roleCode)) {
+                        SecurityContext.clear();
                         forbidden(response);
                         return false;
                     }
@@ -66,6 +68,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
             return true;
         } catch (Exception ex) {
+            SecurityContext.clear();
             unauthorized(response);
             return false;
         }
@@ -97,10 +100,10 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (!uri.startsWith("/api/")) {
             return false;
         }
-        return !uri.equals("/api/user/login")
-                && !uri.equals("/api/user/register")
-                && !uri.equals("/api/user/notLogin")
-                && !uri.equals("/api/user/noPermission");
+        return !uri.equals("/api/users/login")
+                && !uri.equals("/api/users/register")
+                && !uri.equals("/api/users/notLogin")
+                && !uri.equals("/api/users/noPermission");
     }
 
     private void unauthorized(HttpServletResponse response) throws Exception {

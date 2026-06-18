@@ -1,7 +1,7 @@
 package cupk.smartcontract.service;
 
-import cupk.smartcontract.dto.DraftTemplateAnalysis;
-import cupk.smartcontract.dto.DraftTemplateAnalysis.DraftField;
+import cupk.smartcontract.dto.DraftTemplateVO;
+import cupk.smartcontract.dto.DraftTemplateVO.DraftField;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -22,22 +22,22 @@ public class DraftTemplateService {
     }
 
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile(
-            "(?<label>甲方|乙方|委托方|受托方|合同金额|金额|工期|服务期限|交付物|付款节点|付款方式|签约日期|签订日期)"
-                    + "\\s*[：:]\\s*(?<placeholder>_{2,}|-{2,}|（\\s*）|\\(\\s*\\)|【\\s*】|\\[\\s*]|<[^>]+>|\\{\\{[^}]+}})");
+            "(?<label>甲方|乙方|合同期限|服务期限|合同金额|交付物|付款节点|签署日期|签订日期)"
+                    + "\\s*[:：]\\s*(?<placeholder>_{2,}|-{2,}|待填写\\(\\s*\\)|请填写\\[\\s*]|<[^>]+>|\\{\\{[^}]+}})");
 
     private static final List<FieldDefinition> KEY_FIELDS = List.of(
-            new FieldDefinition("partyA", "甲方信息", "text", true, List.of("甲方", "委托方")),
-            new FieldDefinition("partyB", "乙方信息", "text", true, List.of("乙方", "受托方")),
-            new FieldDefinition("duration", "工期 / 服务期限", "text", true, List.of("工期", "服务期限")),
+            new FieldDefinition("partyA", "甲方名称", "text", true, List.of("甲方", "甲方名称")),
+            new FieldDefinition("partyB", "乙方名称", "text", true, List.of("乙方", "乙方名称")),
+            new FieldDefinition("duration", "合同期限 / 服务期限", "text", true, List.of("合同期限", "服务期限")),
             new FieldDefinition("amount", "合同金额", "number", true, List.of("合同金额", "金额")),
-            new FieldDefinition("deliverables", "交付物", "textarea", true, List.of("交付物", "交付清单")),
-            new FieldDefinition("paymentNodes", "付款节点", "textarea", true, List.of("付款节点", "付款方式", "支付方式")),
-            new FieldDefinition("signDate", "签约日期", "date", false, List.of("签约日期", "签订日期"))
+            new FieldDefinition("deliverables", "交付物", "textarea", true, List.of("交付物", "交付内容")),
+            new FieldDefinition("paymentNodes", "付款节点", "textarea", true, List.of("付款节点", "付款计划", "付款安排")),
+            new FieldDefinition("signDate", "签署日期", "date", false, List.of("签署日期", "签订日期"))
     );
 
-    public DraftTemplateAnalysis analyze(String rawText) {
+    public DraftTemplateVO analyze(String rawText) {
         if (!StringUtils.hasText(rawText)) {
-            throw new IllegalArgumentException("OCR 文本不能为空");
+            throw new IllegalArgumentException("OCR 识别内容不能为空");
         }
         String markdown = normalizeMarkdown(rawText);
         Map<String, DraftField> fields = new LinkedHashMap<>();
@@ -56,11 +56,11 @@ public class DraftTemplateService {
         for (FieldDefinition definition : KEY_FIELDS) {
             fields.putIfAbsent(definition.key(), new DraftField(
                     definition.key(), definition.label(), "", null,
-                    definition.inputType(), definition.required(), "AI 关键字段扫描"));
+                    definition.inputType(), definition.required(), "AI 字段识别建议"));
         }
 
         String analysisMode = "RULE_FALLBACK";
-        String notice = "已将 OCR 结果转换为标准 Markdown，并扫描出需要人工确认的关键字段。";
+        String notice = "已将 OCR 结果转换为 Markdown，并使用规则识别出需要填写的关键字段。";
         try {
             List<DraftField> aiFields = aiDraftService.analyzeDraftFields(markdown);
             for (DraftField aiField : aiFields) {
@@ -70,18 +70,13 @@ public class DraftTemplateService {
             }
             if (!aiFields.isEmpty()) {
                 analysisMode = "QWEN_AI_ENHANCED";
-                notice = "已将 OCR 结果转换为标准 Markdown，并由 Qwen 扫描出需要人工确认的关键字段。";
+                notice = "已将 OCR 结果转换为 Markdown，并由 Qwen 扫描出需要人工确认的关键字段。";
             }
         } catch (Exception ignored) {
-            notice = "已将 OCR 结果转换为标准 Markdown。AI 服务暂不可用，当前使用规则扫描结果。";
+            notice = "已将 OCR 结果转换为 Markdown。AI 服务暂不可用，当前使用规则扫描结果。";
         }
 
-        return new DraftTemplateAnalysis(
-                markdown,
-                new ArrayList<>(fields.values()),
-                analysisMode,
-                notice
-        );
+        return new DraftTemplateVO(markdown, new ArrayList<>(fields.values()), analysisMode, notice);
     }
 
     public String fill(String markdown, Map<String, String> values) {
@@ -115,12 +110,6 @@ public class DraftTemplateService {
         return null;
     }
 
-    private record FieldDefinition(
-            String key,
-            String label,
-            String inputType,
-            boolean required,
-            List<String> aliases
-    ) {
+    private record FieldDefinition(String key, String label, String inputType, boolean required, List<String> aliases) {
     }
 }

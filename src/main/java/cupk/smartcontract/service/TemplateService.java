@@ -41,13 +41,16 @@ public class TemplateService {
     private final ContractTemplateMapper templateMapper;
     private final FileInfoMapper fileInfoMapper;
     private final FileStorageService fileStorageService;
+    private final DocumentParseService documentParseService;
 
     public TemplateService(ContractTemplateMapper templateMapper,
                            FileInfoMapper fileInfoMapper,
-                           FileStorageService fileStorageService) {
+                           FileStorageService fileStorageService,
+                           DocumentParseService documentParseService) {
         this.templateMapper = templateMapper;
         this.fileInfoMapper = fileInfoMapper;
         this.fileStorageService = fileStorageService;
+        this.documentParseService = documentParseService;
     }
 
     public List<ContractTemplate> list(String type, String keyword) {
@@ -64,7 +67,7 @@ public class TemplateService {
 
     public ContractTemplate create(TemplateCreateRequest req, MultipartFile file, String username) throws Exception {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("请上传模板文件");
+            throw new IllegalArgumentException("璇蜂笂浼犳ā鏉挎枃浠?");
         }
         validateTemplateType(req.templateType());
         ContractTemplate template = new ContractTemplate();
@@ -72,9 +75,12 @@ public class TemplateService {
         template.setTemplateName(req.templateName());
         template.setDescription(req.description());
         template.setFileId(storeTemplateFile(file));
+        template.setCreatedBy(username);
         template.setCreatedAt(LocalDateTime.now());
+        template.setUpdatedBy(username);
         template.setUpdatedAt(LocalDateTime.now());
         template.setDeleted(0);
+        template.setVersion(1);
         templateMapper.insert(template);
         return template;
     }
@@ -82,7 +88,7 @@ public class TemplateService {
     public ContractTemplate update(Long id, TemplateCreateRequest req, MultipartFile file, String username) throws Exception {
         ContractTemplate template = get(id);
         if (template == null) {
-            throw new IllegalArgumentException("模板不存在");
+            throw new IllegalArgumentException("妯℃澘涓嶅瓨鍦?");
         }
         validateTemplateType(req.templateType());
         if (file != null && !file.isEmpty()) {
@@ -91,6 +97,7 @@ public class TemplateService {
         template.setTemplateType(req.templateType());
         template.setTemplateName(req.templateName());
         template.setDescription(req.description());
+        template.setUpdatedBy(username);
         template.setUpdatedAt(LocalDateTime.now());
         templateMapper.updateById(template);
         return template;
@@ -127,17 +134,18 @@ public class TemplateService {
         }
         return new TemplateVO(template.getTemplateId(), template.getTemplateType(), templateName,
                 template.getDescription(), template.getFileId(), fileName, fileSize,
-                null, template.getCreatedAt(), null, template.getUpdatedAt(), downloadUrl);
+                template.getCreatedBy(), template.getCreatedAt(),
+                template.getUpdatedBy(), template.getUpdatedAt(), downloadUrl);
     }
 
     public ResponseEntity<Resource> download(Long id) {
         ContractTemplate template = get(id);
         if (template == null || template.getFileId() == null) {
-            throw new IllegalArgumentException("模板文件不存在");
+            throw new IllegalArgumentException("妯℃澘鏂囦欢涓嶅瓨鍦?");
         }
         FileInfo file = fileInfoMapper.selectById(template.getFileId());
         if (file == null) {
-            throw new IllegalArgumentException("模板文件不存在");
+            throw new IllegalArgumentException("妯℃澘鏂囦欢涓嶅瓨鍦?");
         }
         Path path = fileStorageService.resolve(file.getObjectKey());
         return ResponseEntity.ok()
@@ -146,16 +154,29 @@ public class TemplateService {
                 .body(new FileSystemResource(path));
     }
 
+    public DocumentParseService.ParseResult parse(Long id, boolean preserveFormat) throws Exception {
+        ContractTemplate template = get(id);
+        if (template == null || template.getFileId() == null) {
+            throw new IllegalArgumentException("模板文件不存在");
+        }
+        FileInfo file = fileInfoMapper.selectById(template.getFileId());
+        if (file == null) {
+            throw new IllegalArgumentException("模板文件不存在");
+        }
+        return documentParseService.parse(fileStorageService.resolve(file.getObjectKey()),
+                file.getFileType(), preserveFormat);
+    }
+
     private Long storeTemplateFile(MultipartFile file) throws Exception {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("请上传模板文件");
+            throw new IllegalArgumentException("璇蜂笂浼犳ā鏉挎枃浠?");
         }
         if (file.getSize() > MAX_TEMPLATE_FILE_SIZE) {
-            throw new IllegalArgumentException("模板文件不能超过 200MB");
+            throw new IllegalArgumentException("妯℃澘鏂囦欢涓嶈兘瓒呰繃 200MB");
         }
         String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
         if (!name.endsWith(".pdf") && !name.endsWith(".doc") && !name.endsWith(".docx")) {
-            throw new IllegalArgumentException("模板文件仅支持 PDF、DOC 或 DOCX");
+            throw new IllegalArgumentException("妯℃澘鏂囦欢浠呮敮鎸?PDF銆丏OC 鎴?DOCX");
         }
         FileStorageService.StoredFile stored = fileStorageService.store(file);
         FileInfo fileInfo = new FileInfo();
@@ -164,9 +185,11 @@ public class TemplateService {
         fileInfo.setFileType(stored.fileType());
         fileInfo.setSize(stored.size());
         fileInfo.setSha256(stored.sha256());
+        fileInfo.setCreatedBy("template");
         fileInfo.setCreatedAt(LocalDateTime.now());
         fileInfo.setUpdatedAt(LocalDateTime.now());
         fileInfo.setDeleted(0);
+        fileInfo.setVersion(1);
         fileInfoMapper.insert(fileInfo);
         return fileInfo.getFileId();
     }
@@ -180,7 +203,7 @@ public class TemplateService {
 
     private void validateTemplateType(String templateType) {
         if (!TYPE_LABELS.containsKey(templateType)) {
-            throw new IllegalArgumentException("不支持的模板分类");
+            throw new IllegalArgumentException("涓嶆敮鎸佺殑妯℃澘鍒嗙被");
         }
     }
 
