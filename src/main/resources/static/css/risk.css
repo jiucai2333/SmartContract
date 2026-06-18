@@ -298,6 +298,23 @@
     line-height: 1.5;
 }
 
+.contract-choice small {
+    display: block;
+    margin-top: 4px;
+    color: var(--ink-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.contract-choice.disabled-choice {
+    background: var(--line-light);
+}
+
+.contract-choice.disabled-choice em,
+.contract-choice.disabled-choice small {
+    color: var(--warn);
+}
+
 .contract-choice em {
     color: var(--primary);
     font-size: 12px;
