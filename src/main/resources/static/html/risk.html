@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>风险审查 - 智能合同管理</title>
     <link rel="stylesheet" href="../css/styles.css">
-    <link rel="stylesheet" href="../css/risk.css?v=20260618-autofill-wrap">
+    <link rel="stylesheet" href="../css/risk.css?v=20260618-contract-picker">
 </head>
 <body>
 <script src="../js/common.js"></script>
@@ -14,6 +14,16 @@
     <div class="panel" id="reviewInputPanel">
         <div class="panel-head"><div><p class="eyebrow">合同输入</p><h2>上传 PDF 合同</h2></div></div>
         <div class="form-grid">
+            <div class="wide contract-picker-block">
+                <div class="field-label">从现有合同选择</div>
+                <div class="contract-picker-toolbar">
+                    <input id="contractSearch" type="search" placeholder="搜索合同编号、名称或相对方">
+                    <button id="refreshContractsBtn" type="button" class="secondary">刷新</button>
+                </div>
+                <div id="contractPicker" class="contract-picker-list">
+                    <div class="list-item"><span>正在加载合同列表...</span></div>
+                </div>
+            </div>
             <label class="wide">PDF 合同文件
                 <input id="contractPdf" type="file" accept="application/pdf,.pdf">
                 <span id="pdfStatus" class="upload-hint">选择 PDF 后点击开始审查，系统会自动提取合同正文。</span>
@@ -79,6 +89,6 @@
     </div>
 </section>
 <script>document.write(closeAppShell());</script>
-<script src="../js/risk.js?v=20260618-autofill-wrap"></script>
+<script src="../js/risk.js?v=20260618-contract-picker"></script>
 </body>
 </html>

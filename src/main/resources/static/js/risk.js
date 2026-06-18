@@ -9,18 +9,32 @@ const contractBody = $('#contractBody');
 const riskListEl = $('#riskList');
 const reportSummaryEl = $('#reportSummary');
 const reportListEl = $('#reportList');
+const contractPickerEl = $('#contractPicker');
+const contractSearchInput = $('#contractSearch');
+const refreshContractsBtn = $('#refreshContractsBtn');
 const searchParams = new URLSearchParams(location.search);
 const pageState = {
     contractId: Number(searchParams.get('contractId')) || null,
-    currentReportId: Number(searchParams.get('reportId')) || null
+    currentReportId: Number(searchParams.get('reportId')) || null,
+    contracts: []
 };
 
 contractTextInput?.closest('label')?.classList.add('hidden-text-input');
 
 contractPdfInput?.addEventListener('change', () => {
+    pageState.contractId = null;
+    pageState.currentReportId = null;
     contractTextInput.value = '';
+    renderContractPicker();
     const file = selectedPdfFile();
     setPdfStatus(file ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(2)} MB` : '请选择 PDF 合同文件');
+});
+
+contractSearchInput?.addEventListener('input', () => renderContractPicker());
+refreshContractsBtn?.addEventListener('click', () => loadContracts().catch(error => toast(error.message)));
+contractPickerEl?.addEventListener('click', event => {
+    const choice = event.target.closest('[data-pick-contract-id]');
+    if (choice) pickExistingContract(Number(choice.dataset.pickContractId)).catch(error => toast(error.message));
 });
 
 reviewBtn.addEventListener('click', async () => {
@@ -68,6 +82,8 @@ reviewBtn.addEventListener('click', async () => {
 });
 
 clearBtn.addEventListener('click', () => {
+    pageState.contractId = null;
+    pageState.currentReportId = null;
     contractTextInput.value = '';
     if (contractPdfInput) contractPdfInput.value = '';
     setPdfStatus('选择 PDF 后点击开始审查，系统会自动提取合同正文。');
@@ -89,6 +105,73 @@ function selectedPdfFile() {
 
 function setPdfStatus(message) {
     if (pdfStatusEl) pdfStatusEl.textContent = message;
+}
+
+async function loadContracts() {
+    if (!contractPickerEl) return;
+    contractPickerEl.innerHTML = '<div class="list-item"><span>正在加载合同列表...</span></div>';
+    const contracts = await api('/api/contracts');
+    pageState.contracts = Array.isArray(contracts) ? contracts : [];
+    renderContractPicker();
+    if (pageState.contractId) {
+        const selected = pageState.contracts.find(item => Number(item.contractId) === Number(pageState.contractId));
+        if (selected) await fillExistingContract(selected, false);
+    }
+}
+
+function renderContractPicker() {
+    if (!contractPickerEl) return;
+    const keyword = (contractSearchInput?.value || '').trim().toLowerCase();
+    const contracts = pageState.contracts.filter(contract => {
+        if (!keyword) return true;
+        return [contract.contractNo, contract.title, contract.counterparty, contract.type, contract.status]
+            .some(value => String(value || '').toLowerCase().includes(keyword));
+    }).slice(0, 30);
+    if (!contracts.length) {
+        contractPickerEl.innerHTML = '<div class="list-item"><span>暂无匹配合同</span></div>';
+        return;
+    }
+    contractPickerEl.innerHTML = contracts.map(contract => {
+        const active = Number(contract.contractId) === Number(pageState.contractId);
+        return `<button type="button" class="contract-choice ${active ? 'active' : ''}" data-pick-contract-id="${contract.contractId}">
+            <span>
+                <strong>${escapeHtml(contract.contractNo || `合同 #${contract.contractId}`)} - ${escapeHtml(contract.title || '未命名合同')}</strong>
+                ${escapeHtml(contract.counterparty || '未填写相对方')} · ${escapeHtml(STATUS_TEXT[contract.status] || contract.status || '未知状态')} · ${escapeHtml(contract.type || '未分类')}
+            </span>
+            <em>${active ? '已选择' : '选择'}</em>
+        </button>`;
+    }).join('');
+}
+
+async function pickExistingContract(contractId) {
+    const contract = pageState.contracts.find(item => Number(item.contractId) === Number(contractId));
+    if (!contract) return;
+    await fillExistingContract(contract, true);
+}
+
+async function fillExistingContract(contract, loadContent) {
+    pageState.contractId = Number(contract.contractId);
+    setSelectValue($('#contractType'), typeLabel(contract.type) || contract.type || '');
+    setInputValue($('#partyB'), contract.counterparty || '');
+    setInputIfEmpty($('#businessScope'), contract.title || '');
+    if (contractPdfInput) contractPdfInput.value = '';
+    renderContractPicker();
+    await loadRiskReports().catch(() => {});
+    if (!loadContent) return;
+    const version = await api(`/api/contracts/${contract.contractId}/versions/latest`).catch(() => null);
+    const text = htmlToPlainText(version?.content || '');
+    if (!text || text.replace(/\s+/g, '').length < 20) {
+        contractTextInput.value = '';
+        renderContractBody('');
+        setPdfStatus(`已选择合同：${contract.contractNo || contract.title || contract.contractId}，但暂无可审查正文，请先到在线编辑保存草稿版本。`);
+        toast('该合同暂无可审查正文，请先保存草稿版本');
+        return;
+    }
+    contractTextInput.value = text;
+    renderContractBody(text);
+    autofillContractFields(text, contract.title || contract.contractNo || '');
+    setPdfStatus(`已选择合同：${contract.contractNo || contract.title || contract.contractId} · 最新草稿 ${version.versionNo || ''}`);
+    toast('已载入现有合同正文，可以开始风险审查');
 }
 
 async function uploadPdfAndExtractText() {
@@ -209,10 +292,34 @@ function setInputIfEmpty(input, value) {
     if (input && !input.value.trim() && value) input.value = value;
 }
 
+function setInputValue(input, value) {
+    if (input) input.value = value || '';
+}
+
 function setSelectIfEmpty(select, value) {
     if (!select || select.value || !value) return;
+    setSelectValue(select, value);
+}
+
+function setSelectValue(select, value) {
+    if (!select || !value) return;
     const option = Array.from(select.options).find(item => item.value === value || item.textContent.trim() === value);
     if (option) select.value = option.value;
+}
+
+function typeLabel(type) {
+    const map = {
+        PURCHASE: '采购合同',
+        SALES: '销售合同',
+        TECH: '技术开发合同',
+        LABOR: '劳动合同',
+        CONFIDENTIAL: '保密合同',
+        LOGISTICS: '物流合同',
+        ENTERPRISE_SERVICE: '服务合同',
+        INTELLECTUAL_PROPERTY: '知识产权合同',
+        OTHER: ''
+    };
+    return map[String(type || '').toUpperCase()] || type || '';
 }
 
 riskListEl.addEventListener('click', event => {
@@ -347,7 +454,7 @@ function htmlToPlainText(value) {
     return (box.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-loadRiskReports()
+Promise.allSettled([loadContracts(), loadRiskReports()])
     .then(() => pageState.currentReportId ? openReport(pageState.currentReportId) : null)
     .catch(error => {
         reportListEl.innerHTML = `<div class="list-item"><span>报告加载失败：${escapeHtml(error.message)}</span></div>`;

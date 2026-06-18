@@ -228,6 +228,84 @@
     background: var(--surface);
 }
 
+.field-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--ink-secondary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.contract-picker-block {
+    min-width: 0;
+}
+
+.contract-picker-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.contract-picker-list {
+    display: grid;
+    gap: 8px;
+    max-height: 220px;
+    margin-top: 10px;
+    overflow-y: auto;
+}
+
+.contract-choice {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink);
+    text-align: left;
+    white-space: normal;
+}
+
+.contract-choice:hover,
+.contract-choice.active {
+    border-color: var(--primary);
+    background: var(--surface-hover);
+    transform: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.contract-choice strong,
+.contract-choice span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contract-choice strong {
+    display: block;
+    margin-bottom: 4px;
+    white-space: nowrap;
+}
+
+.contract-choice span {
+    display: block;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.contract-choice em {
+    color: var(--primary);
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
 .upload-hint {
     display: block;
     margin-top: 8px;
@@ -239,4 +317,8 @@
 @media (max-width: 1024px) {
     .report-layout, .review-layout { grid-template-columns: 1fr; }
     .contract-preview { position: static; }
+    .contract-picker-toolbar,
+    .contract-choice {
+        grid-template-columns: 1fr;
+    }
 }
