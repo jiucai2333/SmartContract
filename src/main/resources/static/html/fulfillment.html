@@ -34,16 +34,6 @@
             </button>
         </div>
     </section>
-    <div class="page-action-group">
-        <button id="newPlanBtn" class="page-action-btn" type="button">
-            <i data-lucide="plus"></i>
-            新增节点
-        </button>
-        <button id="newPaymentPlanBtn" class="page-action-btn" type="button">
-            <i data-lucide="plus"></i>
-            新增付款计划
-        </button>
-    </div>
 </div>
 
 <section class="section metric-grid">
@@ -71,6 +61,11 @@
         <span>推送记录</span>
         <strong id="statReminder">0</strong>
     </div>
+</section>
+
+<section class="section responsibility-notice">
+    <i data-lucide="info"></i>
+    <span>责任归属仅作辅助提示，最终由人工确认，不自动作出法律结论。</span>
 </section>
 
 <section class="section feature-grid member-e-grid">
@@ -126,6 +121,10 @@
 <section class="section panel fulfillment-table-panel">
     <div class="panel-head">
         <div><p class="eyebrow">履约进度</p><h2>履约节点维护、三级到期预警与逾期处置</h2></div>
+        <button id="newPlanBtn" class="page-action-btn" type="button">
+            <i data-lucide="plus"></i>
+            新增节点
+        </button>
     </div>
     <div class="table-wrap">
         <table>
@@ -171,6 +170,13 @@
 <section class="section panel fulfillment-table-panel">
     <div class="panel-head">
         <div><p class="eyebrow">付款台账</p><h2>付款计划、到账确认与责任提示</h2></div>
+        <div class="panel-action-group">
+            <div id="paymentRatioSummary" class="payment-ratio-summary">付款比例合计：0%</div>
+            <button id="newPaymentPlanBtn" class="page-action-btn" type="button">
+                <i data-lucide="plus"></i>
+                新增付款计划
+            </button>
+        </div>
     </div>
     <div class="table-wrap">
         <table>
@@ -206,6 +212,7 @@
                 <th>付款方</th>
                 <th>收款方</th>
                 <th>备注</th>
+                <th>操作</th>
             </tr>
             </thead>
             <tbody id="paymentRecordTbody"></tbody>
@@ -320,6 +327,7 @@
                 付款比例（%）
                 <input id="percentage" type="number" min="0" max="100" step="0.01" required>
             </label>
+            <div id="paymentRatioCheck" class="ratio-check wide" aria-live="polite"></div>
             <label>
                 计划金额
                 <input id="plannedAmount" type="number" min="0" step="0.01" required>
@@ -334,7 +342,8 @@
             </label>
             <label class="wide">
                 前置交付物
-                <input id="prerequisiteDelivery" placeholder="如：源代码、可运行程序">
+                <select id="prerequisiteDelivery" class="multi-select" multiple size="4"></select>
+                <small class="field-hint">可按住 Ctrl 多选，未选择时视为无前置交付要求</small>
             </label>
             <label class="wide">
                 备注
