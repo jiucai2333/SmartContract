@@ -77,6 +77,11 @@
     align-items: start;
 }
 
+.review-layout > .panel,
+#riskList {
+    min-width: 0;
+}
+
 /* ---- Contract Preview Panel ---- */
 .contract-preview {
     position: sticky;
@@ -112,6 +117,9 @@
 .risk-card {
     display: grid;
     gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding: 16px 18px;
     background: var(--surface);
     border: 1px solid var(--line);
@@ -119,6 +127,11 @@
     border-left: 4px solid transparent;
     transition: box-shadow var(--transition), transform var(--transition);
     cursor: pointer;
+    color: var(--ink);
+    text-align: left;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .risk-card:hover {
@@ -141,7 +154,26 @@
     background: var(--success-bg);
 }
 
-.risk-card strong { font-size: 14px; color: var(--ink); }
+.risk-card strong {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.risk-card span:not(.tag),
+.risk-card small {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
 
 .risk-card small {
     color: var(--muted);
