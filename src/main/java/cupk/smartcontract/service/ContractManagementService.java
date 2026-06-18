@@ -5,6 +5,7 @@ import cupk.smartcontract.security.SecurityContext;
 import cupk.smartcontract.entity.Approval;
 import cupk.smartcontract.entity.ApprovalRecord;
 import cupk.smartcontract.entity.ArchiveRecord;
+import cupk.smartcontract.entity.ContractAttachment;
 import cupk.smartcontract.entity.ContractMain;
 import cupk.smartcontract.entity.FulfillmentPlan;
 import cupk.smartcontract.entity.RiskItem;
@@ -22,6 +23,7 @@ import cupk.smartcontract.dto.RiskReportVO;
 import cupk.smartcontract.dto.SealCreateRequest;
 import cupk.smartcontract.mapper.ApprovalInstanceMapper;
 import cupk.smartcontract.mapper.ApprovalRecordMapper;
+import cupk.smartcontract.mapper.ContractAttachmentMapper;
 import cupk.smartcontract.mapper.ContractMainMapper;
 import cupk.smartcontract.mapper.FulfillmentPlanMapper;
 import cupk.smartcontract.mapper.RiskItemMapper;
@@ -51,6 +53,7 @@ public class ContractManagementService {
     private BigDecimal superThreshold;
 
     private final ContractMainMapper contractMapper;
+    private final ContractAttachmentMapper attachmentMapper;
     private final ContractNumberService contractNumberService;
     private final RiskItemMapper riskMapper;
     private final RiskReportMapper riskReportMapper;
@@ -61,6 +64,7 @@ public class ContractManagementService {
     private final StatusTransitionService statusTransitionService;
 
     public ContractManagementService(ContractMainMapper contractMapper,
+                                     ContractAttachmentMapper attachmentMapper,
                                      ContractNumberService contractNumberService,
                                      RiskItemMapper riskMapper,
                                      RiskReportMapper riskReportMapper,
@@ -70,6 +74,7 @@ public class ContractManagementService {
                                      AiDraftService aiDraftService,
                                      StatusTransitionService statusTransitionService) {
         this.contractMapper = contractMapper;
+        this.attachmentMapper = attachmentMapper;
         this.contractNumberService = contractNumberService;
         this.riskMapper = riskMapper;
         this.riskReportMapper = riskReportMapper;
@@ -332,6 +337,7 @@ public class ContractManagementService {
     @Transactional
     public AiRiskReviewResult aiRiskReview(AiRiskReviewRequest request) {
         AiRiskReviewRequest effectiveRequest = ensureRiskReviewContract(request);
+        linkReviewAttachment(effectiveRequest);
         List<AiRiskVO> risks = aiDraftService.analyzeRisks(effectiveRequest);
         RiskReport report = persistRiskReport(effectiveRequest, risks);
         return new AiRiskReviewResult(
@@ -357,6 +363,7 @@ public class ContractManagementService {
         return new AiRiskReviewRequest(
                 request.contractText(),
                 contract.getContractId(),
+                request.attachmentId(),
                 request.versionId(),
                 request.contractType(),
                 request.partyA(),
@@ -364,6 +371,34 @@ public class ContractManagementService {
                 request.businessScope(),
                 request.specialTerms()
         );
+    }
+
+    private void linkReviewAttachment(AiRiskReviewRequest request) {
+        if (request.attachmentId() == null || request.contractId() == null) {
+            return;
+        }
+        ContractAttachment attachment = attachmentMapper.selectById(request.attachmentId());
+        if (attachment == null) {
+            throw new IllegalArgumentException("审查附件不存在，请重新上传 PDF");
+        }
+        if (attachment.getContractId() != null
+                && !Objects.equals(attachment.getContractId(), request.contractId())) {
+            throw new IllegalStateException("该 PDF 附件已关联到其他合同，请重新选择合同或重新上传");
+        }
+        if (attachment.getContractId() == null && !"ALL".equals(SecurityContext.dataScope())) {
+            Long currentUserId = SecurityContext.userId();
+            String expectedCreatedBy = currentUserId == null ? SecurityContext.username() : String.valueOf(currentUserId);
+            if (!Objects.equals(attachment.getCreatedBy(), expectedCreatedBy)) {
+                throw new SecurityException("无权关联该 PDF 附件");
+            }
+        }
+        if (Objects.equals(attachment.getContractId(), request.contractId())) {
+            return;
+        }
+        attachment.setContractId(request.contractId());
+        attachment.setUpdatedBy(SecurityContext.username());
+        attachment.setUpdatedAt(LocalDateTime.now());
+        attachmentMapper.updateById(attachment);
     }
 
     private RiskReport persistRiskReport(AiRiskReviewRequest request, List<AiRiskVO> risks) {
