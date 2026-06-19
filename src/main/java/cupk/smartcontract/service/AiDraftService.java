@@ -60,14 +60,22 @@ public class AiDraftService {
             """;
 
     private static final String RISK_SYSTEM_PROMPT = """
-            你是一名企业合同法务审查专家，负责识别合同文本中的法律、履约、付款、知识产权、违约责任和审批合规风险。
+            你是一名企业合同法务审查专家，负责识别合同文本中的五类风险。
             请只基于用户提供的合同文本进行分析，不要输出与合同无关的内容。
+
+            风险分类只能使用以下五类 category：
+            - SUBJECT_INFO：主体信息风险，审查甲乙方名称、统一社会信用代码、授权代表、地址、联系方式、签署主体是否完整明确。
+            - PAYMENT：付款风险，审查金额、付款节点、比例、发票、付款条件、逾期付款责任是否明确。
+            - LIABILITY：违约风险，审查违约情形、违约金、损害赔偿、免责条款、责任上限是否合理。
+            - TERM：期限风险，审查生效日期、履行期限、交付/验收期限、续期、解除期限、通知期限是否明确。
+            - DISPUTE_RESOLUTION：争议解决风险，审查管辖法院、仲裁机构、适用法律、争议处理流程是否明确有效。
 
             输出要求：
             - 仅返回 JSON，不要包含 Markdown 代码块或解释性文字。
-            - JSON 格式为 {"risks":[{"level":"HIGH|MEDIUM|LOW","clause":"条款位置或标题","reason":"风险原因","suggestion":"修改建议"}]}。
+            - JSON 格式为 {"risks":[{"level":"HIGH|MEDIUM|LOW","category":"SUBJECT_INFO|PAYMENT|LIABILITY|TERM|DISPUTE_RESOLUTION","clause":"条款位置或标题","reason":"风险原因","suggestion":"修改建议"}]}。
             - 如果没有发现明显风险，返回 {"risks":[]}。
             - 最多返回 10 条风险，优先返回高风险和影响审批的事项。
+            - 每一条风险必须落入上述五类之一，不要自创新分类。
             """;
 
     private final QwenProperties qwenProperties;
@@ -340,7 +348,7 @@ public class AiDraftService {
     private String buildRiskUserPrompt(String contractText, String sanitizedContext) {
         String contextBlock = sanitizedContext.isBlank() ? "" : "\n业务背景：" + sanitizedContext + "\n";
         return """
-                请审查以下合同文本并返回风险 JSON。
+                请审查以下合同文本并返回五类风险 JSON。请特别覆盖主体信息、付款、违约、期限、争议解决五类风险；如果某类没有明显风险则不要强行编造。
                 %s
                 合同文本：
                 ---

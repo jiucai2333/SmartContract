@@ -441,13 +441,19 @@ function formatRiskLevel(level) {
 function formatRiskCategory(category) {
     const value = String(category || '').trim().toUpperCase();
     const map = {
+        SUBJECT_INFO: '主体信息风险',
+        PAYMENT: '付款风险',
+        LIABILITY: '违约风险',
+        TERM: '期限风险',
+        DISPUTE_RESOLUTION: '争议解决风险',
         LEGAL_COMPLIANCE: '法律合规风险',
         PERFORMANCE_DELIVERY: '履约交付风险',
         PAYMENT_SETTLEMENT: '付款结算风险',
         IP_CONFIDENTIALITY: '知识产权与保密风险',
-        LIABILITY_APPROVAL: '违约责任与审批风险'
+        LIABILITY_APPROVAL: '违约责任与审批风险',
+        AI_REVIEW: 'AI风险识别'
     };
-    return map[value] || category || '法律合规风险';
+    return map[value] || category || 'AI风险识别';
 }
 
 function formatReportSummary(summary) {
