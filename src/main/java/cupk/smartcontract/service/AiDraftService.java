@@ -357,7 +357,7 @@ public class AiDraftService {
                 """.formatted(contextBlock, clipText(contractText, 8000));
     }
 
-    private List<AiRiskVO> parseRiskItems(String content) {
+    List<AiRiskVO> parseRiskItems(String content) {
         if (content == null || content.isBlank()) {
             return List.of();
         }
