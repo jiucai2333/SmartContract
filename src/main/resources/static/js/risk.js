@@ -468,12 +468,19 @@ function formatReportTime(value) {
 
 function htmlToPlainText(value) {
     const text = String(value || '');
-    if (!/<[a-z][\s\S]*>/i.test(text)) return text;
+    if (!/<[a-z][\s\S]*>/i.test(text)) return normalizeEscapedLineBreaks(text);
     const box = document.createElement('div');
     box.innerHTML = text
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n\n');
-    return (box.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+    return normalizeEscapedLineBreaks(box.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function normalizeEscapedLineBreaks(value) {
+    return String(value || '')
+        .replace(/\\r\\n/g, '\n')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\n');
 }
 
 Promise.allSettled([loadContracts(), loadRiskReports()])
