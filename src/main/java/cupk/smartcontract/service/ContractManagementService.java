@@ -349,7 +349,7 @@ public class ContractManagementService {
 
     @Transactional
     public AiRiskReviewResult aiRiskReview(AiRiskReviewRequest request) {
-        AiRiskReviewRequest effectiveRequest = ensureRiskReviewContract(request);
+        AiRiskReviewRequest effectiveRequest = ensureRiskReviewContract(normalizeRiskReviewRequest(request));
         linkReviewAttachment(effectiveRequest);
         List<AiRiskVO> risks = aiDraftService.analyzeRisks(effectiveRequest);
         RiskReport report = persistRiskReport(effectiveRequest, risks);
@@ -374,8 +374,22 @@ public class ContractManagementService {
                 LocalDate.now().plusDays(90)
         ));
         return new AiRiskReviewRequest(
-                request.contractText(),
+                normalizeEscapedLineBreaks(request.contractText()),
                 contract.getContractId(),
+                request.attachmentId(),
+                request.versionId(),
+                request.contractType(),
+                request.partyA(),
+                request.partyB(),
+                request.businessScope(),
+                request.specialTerms()
+        );
+    }
+
+    private AiRiskReviewRequest normalizeRiskReviewRequest(AiRiskReviewRequest request) {
+        return new AiRiskReviewRequest(
+                normalizeEscapedLineBreaks(request.contractText()),
+                request.contractId(),
                 request.attachmentId(),
                 request.versionId(),
                 request.contractType(),
@@ -430,7 +444,7 @@ public class ContractManagementService {
         report.setHighCount(countRiskLevel(risks, "HIGH"));
         report.setMediumCount(countRiskLevel(risks, "MEDIUM"));
         report.setLowCount(countRiskLevel(risks, "LOW"));
-        report.setContractText(request.contractText());
+        report.setContractText(normalizeEscapedLineBreaks(request.contractText()));
         report.setSummary(buildReportSummary(report));
         report.setModelName("Qwen");
         report.setReviewStatus("COMPLETED");
@@ -765,6 +779,13 @@ public class ContractManagementService {
         String reason = StringUtils.hasText(risk.reason()) ? risk.reason().trim() : "AI 未返回详细原因";
         String suggestion = StringUtils.hasText(risk.suggestion()) ? risk.suggestion().trim() : "请法务复核该风险项";
         return "风险原因：" + reason + "\n修改建议：" + suggestion;
+    }
+
+    private String normalizeEscapedLineBreaks(String value) {
+        return value == null ? null : value
+                .replace("\\r\\n", "\n")
+                .replace("\\n", "\n")
+                .replace("\\r", "\n");
     }
 
     private String clip(String value, int max) {

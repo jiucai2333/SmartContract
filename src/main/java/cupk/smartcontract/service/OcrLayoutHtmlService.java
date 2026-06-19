@@ -63,7 +63,7 @@ public class OcrLayoutHtmlService {
     public String buildPlainTextHtml(String text) {
         if (!StringUtils.hasText(text)) return null;
         StringBuilder html = new StringBuilder();
-        for (String line : text.replace("\r", "").replace('\f', '\n').split("\n")) {
+        for (String line : normalizeEscapedLineBreaks(text).replace("\r", "").replace('\f', '\n').split("\n")) {
             String cleaned = cleanText(line);
             if (!StringUtils.hasText(cleaned)) continue;
             appendSemanticText(html, cleaned, "", null, "");
@@ -223,7 +223,7 @@ public class OcrLayoutHtmlService {
 
     private void appendEditableBlock(StringBuilder html, EditableBlock block) {
         if ("table".equals(block.type()) && appendTable(html, block.source().table())) return;
-        for (String line : block.text().replace('\f', '\n').split("\\R+")) {
+        for (String line : normalizeEscapedLineBreaks(block.text()).replace('\f', '\n').split("\\R+")) {
             String text = cleanText(line);
             if (StringUtils.hasText(text)) {
                 appendSemanticText(html, text, block.type(), block, block.fontSizeLevel());
@@ -374,10 +374,17 @@ public class OcrLayoutHtmlService {
 
     private String cleanText(String text) {
         if (text == null) return "";
-        return text.replaceFirst("^#{1,6}\\s*", "")
+        return normalizeEscapedLineBreaks(text).replaceFirst("^#{1,6}\\s*", "")
                 .replace('\f', ' ')
                 .replace("\r", "")
                 .trim();
+    }
+
+    private String normalizeEscapedLineBreaks(String text) {
+        return text == null ? "" : text
+                .replace("\\r\\n", "\n")
+                .replace("\\n", "\n")
+                .replace("\\r", "\n");
     }
 
     private String format(double value) {
