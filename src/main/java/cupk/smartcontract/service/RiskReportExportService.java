@@ -61,6 +61,7 @@ public class RiskReportExportService {
             for (AiRiskVO risk : report.risks()) {
                 html.append("<h3>").append(index++).append(". ")
                         .append(escape(formatRiskLevel(risk.level()))).append(" - ")
+                        .append(escape(formatRiskCategory(risk.category()))).append(" - ")
                         .append(escape(risk.clause())).append("</h3>")
                         .append("<p>风险原因：").append(escape(risk.reason())).append("</p>")
                         .append("<p>修改建议：").append(escape(risk.suggestion())).append("</p>");
@@ -83,6 +84,16 @@ public class RiskReportExportService {
             case "HIGH" -> "高风险";
             case "MEDIUM" -> "中风险";
             default -> "低风险";
+        };
+    }
+
+    private String formatRiskCategory(String category) {
+        return switch (Objects.toString(category, "LIABILITY").toUpperCase()) {
+            case "SUBJECT_INFO" -> "主体信息风险";
+            case "PAYMENT" -> "付款风险";
+            case "TERM" -> "期限风险";
+            case "DISPUTE_RESOLUTION" -> "争议解决风险";
+            default -> "违约风险";
         };
     }
 

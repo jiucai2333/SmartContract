@@ -521,6 +521,7 @@ public class ContractManagementService {
         for (AiRiskVO risk : risks) {
             html.append("<h3>").append(index++).append(". ")
                     .append(escapeHtml(readableRiskLevel(risk.level()))).append(" - ")
+                    .append(escapeHtml(readableRiskCategory(risk.category()))).append(" - ")
                     .append(escapeHtml(risk.clause())).append("</h3>")
                     .append("<p>风险原因：").append(escapeHtml(risk.reason())).append("</p>")
                     .append("<p>修改建议：").append(escapeHtml(risk.suggestion())).append("</p>");
@@ -545,6 +546,17 @@ public class ContractManagementService {
         };
     }
 
+    private String readableRiskCategory(String category) {
+        return switch (normalizeRiskCategory(category, null, null, null)) {
+            case "SUBJECT_INFO" -> "主体信息风险";
+            case "PAYMENT" -> "付款风险";
+            case "LIABILITY" -> "违约风险";
+            case "TERM" -> "期限风险";
+            case "DISPUTE_RESOLUTION" -> "争议解决风险";
+            default -> "违约风险";
+        };
+    }
+
     private String safeAttachmentName(String value) {
         return Objects.toString(value, "未命名报告").replaceAll("[\\\\/:*?\"<>|]", "_");
     }
@@ -564,7 +576,7 @@ public class ContractManagementService {
             item.setContractId(report.getContractId());
             item.setVersionId(report.getVersionId());
             item.setClauseRef(clip(risk.clause(), 255));
-            item.setRiskType("AI_REVIEW");
+            item.setRiskType(normalizeRiskCategory(risk.category(), risk.clause(), risk.reason(), risk.suggestion()));
             item.setRiskLevel(normalizeRiskLevel(risk.level()));
             item.setSuggestion(buildRiskSuggestion(risk));
             item.setReviewStatus("AI_PENDING");
@@ -625,7 +637,9 @@ public class ContractManagementService {
             reason = stored.substring(0, separator).replaceFirst("^风险原因：", "").trim();
             suggestion = stored.substring(separator + 1).replaceFirst("^修改建议：", "").trim();
         }
-        return new AiRiskVO(item.getRiskLevel(), item.getClauseRef(), reason, suggestion);
+        return new AiRiskVO(item.getRiskLevel(),
+                normalizeRiskCategory(item.getRiskType(), item.getClauseRef(), reason, suggestion),
+                item.getClauseRef(), reason, suggestion);
     }
 
     public List<Approval> listApprovals() {
@@ -701,6 +715,41 @@ public class ContractManagementService {
     private String normalizeRiskLevel(String level) {
         String normalized = Objects.toString(level, "LOW").trim().toUpperCase();
         return Set.of("HIGH", "MEDIUM", "LOW").contains(normalized) ? normalized : "LOW";
+    }
+
+    private String normalizeRiskCategory(String category, String clause, String reason, String suggestion) {
+        String normalized = Objects.toString(category, "").trim().toUpperCase();
+        if (Set.of("SUBJECT_INFO", "PAYMENT", "LIABILITY", "TERM", "DISPUTE_RESOLUTION").contains(normalized)) {
+            return normalized;
+        }
+        return inferRiskCategory(clause, reason, suggestion);
+    }
+
+    private String inferRiskCategory(String... values) {
+        String text = java.util.Arrays.stream(values)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining(" "));
+        if (text.contains("甲方") || text.contains("乙方") || text.contains("主体")
+                || text.contains("统一社会信用代码") || text.contains("授权") || text.contains("地址")) {
+            return "SUBJECT_INFO";
+        }
+        if (text.contains("付款") || text.contains("支付") || text.contains("金额")
+                || text.contains("发票") || text.contains("结算") || text.contains("款项")) {
+            return "PAYMENT";
+        }
+        if (text.contains("违约") || text.contains("赔偿") || text.contains("免责")
+                || text.contains("责任") || text.contains("违约金")) {
+            return "LIABILITY";
+        }
+        if (text.contains("期限") || text.contains("日期") || text.contains("交付")
+                || text.contains("验收") || text.contains("续期") || text.contains("解除")) {
+            return "TERM";
+        }
+        if (text.contains("争议") || text.contains("管辖") || text.contains("仲裁")
+                || text.contains("诉讼") || text.contains("法院") || text.contains("适用法律")) {
+            return "DISPUTE_RESOLUTION";
+        }
+        return "LIABILITY";
     }
 
     private String buildReportSummary(RiskReport report) {
