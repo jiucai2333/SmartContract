@@ -7,6 +7,7 @@ import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.BreakType;
+import org.apache.poi.xwpf.usermodel.UnderlinePatterns;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
@@ -66,7 +67,7 @@ public class WordArchiveService {
             case "h1" -> appendParagraph(document, element.text(), "Title", indent, align);
             case "h2" -> appendParagraph(document, element.text(), "Heading1", indent, align);
             case "h3" -> appendParagraph(document, element.text(), "Heading2", indent, align);
-            case "p", "li" -> appendParagraph(document, element.text(), null, indent, align);
+            case "p", "li" -> appendRichParagraph(document, element, null, indent, align);
             case "div" -> {
                 if (element.hasClass("signature-block")) {
                     appendParagraph(document, element.text(), null, indent, align);
@@ -169,6 +170,71 @@ public class WordArchiveService {
             run.setBold(true);
             run.setFontSize(13);
         }
+    }
+
+    private void appendRichParagraph(XWPFDocument document, Element element, String style,
+                                      Integer firstLineIndent, ParagraphAlignment alignment) {
+        XWPFParagraph paragraph = document.createParagraph();
+        if (style != null) paragraph.setStyle(style);
+        if (alignment != null) paragraph.setAlignment(alignment);
+        if (firstLineIndent != null && firstLineIndent > 0) {
+            paragraph.setIndentationFirstLine(firstLineIndent);
+        }
+        appendInlineNodes(paragraph, element.childNodes(), false, null, false);
+    }
+
+    private void appendInlineNodes(XWPFParagraph paragraph, List<Node> nodes,
+                                   boolean underline, String color, boolean bold) {
+        for (Node node : nodes) {
+            if (node instanceof TextNode textNode) {
+                appendStyledRun(paragraph, textNode.text(), underline, color, bold);
+            } else if (node instanceof Element child) {
+                if ("br".equals(child.tagName())) {
+                    paragraph.createRun().addBreak();
+                    continue;
+                }
+                String childStyle = child.attr("style").toLowerCase(Locale.ROOT);
+                boolean childUnderline = underline || childStyle.contains("text-decoration:underline")
+                        || childStyle.contains("text-decoration: underline");
+                boolean childBold = bold || childStyle.contains("font-weight:bold")
+                        || childStyle.contains("font-weight: bold");
+                String childColor = parseColor(childStyle);
+                appendInlineNodes(paragraph, child.childNodes(), childUnderline,
+                        childColor == null ? color : childColor, childBold);
+            }
+        }
+    }
+
+    private void appendStyledRun(XWPFParagraph paragraph, String text,
+                                 boolean underline, String color, boolean bold) {
+        if (text == null || text.isEmpty()) return;
+        XWPFRun run = paragraph.createRun();
+        run.setText(text);
+        run.setFontFamily("SimSun");
+        run.setFontSize(12);
+        if (underline) run.setUnderline(UnderlinePatterns.SINGLE);
+        if (bold) run.setBold(true);
+        if (color != null) run.setColor(color);
+    }
+
+    private String parseColor(String style) {
+        if (style == null || style.isBlank()) return null;
+        String lower = style.toLowerCase(Locale.ROOT);
+        int index = lower.indexOf("color:");
+        if (index < 0) return null;
+        String value = lower.substring(index + "color:".length()).trim();
+        int semi = value.indexOf(';');
+        if (semi >= 0) value = value.substring(0, semi).trim();
+        if (value.startsWith("#") && value.length() == 7) {
+            return value.substring(1).toUpperCase(Locale.ROOT);
+        }
+        return switch (value) {
+            case "red" -> "B91C1C";
+            case "orange" -> "B45309";
+            case "blue" -> "1D4ED8";
+            case "green" -> "15803D";
+            default -> null;
+        };
     }
 
     private void appendTable(XWPFDocument document, Element tableElement) {
