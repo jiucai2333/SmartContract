@@ -212,7 +212,7 @@ public class ContractVersionService {
             String safeStyle = java.util.Arrays.stream(element.attr("style").split(";"))
                     .map(String::trim)
                     .filter(rule -> rule.matches(
-                            "(?i)^(text-indent|text-align|font-size|font-weight)\\s*:\\s*[-\\w.%]+$"))
+                            "(?i)^(text-indent|text-align|font-size|font-weight|text-decoration|color)\\s*:\\s*[-#\\w.%]+$"))
                     .collect(java.util.stream.Collectors.joining(";"));
             if (safeStyle.isEmpty()) element.removeAttr("style");
             else element.attr("style", safeStyle);
