@@ -460,6 +460,7 @@ public class ContractManagementService {
         report.setCreatedAt(now);
         report.setUpdatedAt(now);
         riskReportMapper.insert(report);
+        persistRiskReportAttachment(report, risks, now);
         persistAiRiskItems(report, risks, now);
 
         if (request.contractId() != null) {
@@ -497,6 +498,86 @@ public class ContractManagementService {
         Long existing = riskReportMapper.selectCount(wrapper);
         long next = (existing == null ? 0 : existing) + 1;
         return "RISK-V" + next + "-" + now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+    }
+
+    private void persistRiskReportAttachment(RiskReport report, List<AiRiskVO> risks, LocalDateTime now) {
+        if (report.getContractId() == null || report.getReportId() == null) {
+            return;
+        }
+        String reportHtml = buildRiskReportAttachmentHtml(report, risks);
+        String filename = "风险报告-" + safeAttachmentName(report.getReportNo()) + ".docx";
+        try {
+            FileStorageService.StoredFile stored = fileStorageService.store(
+                    wordArchiveService.toDocx(reportHtml), filename, "docx");
+            String operator = SecurityContext.username();
+
+            FileInfo file = new FileInfo();
+            file.setObjectKey(stored.objectKey());
+            file.setFileName(filename);
+            file.setFileType(stored.fileType());
+            file.setSize(stored.size());
+            file.setSha256(stored.sha256());
+            file.setCreatedBy(operator);
+            file.setUpdatedBy(operator);
+            file.setCreatedAt(now);
+            file.setUpdatedAt(now);
+            file.setDeleted(0);
+            file.setVersion(1);
+            fileInfoMapper.insert(file);
+
+            ContractAttachment attachment = new ContractAttachment();
+            attachment.setContractId(report.getContractId());
+            attachment.setFileId(file.getFileId());
+            attachment.setAttachType("RISK_REPORT");
+            attachment.setRemark("AI风险审查报告：" + report.getReportNo());
+            attachment.setCreatedBy(operator);
+            attachment.setUpdatedBy(operator);
+            attachment.setCreatedAt(now);
+            attachment.setUpdatedAt(now);
+            attachment.setDeleted(0);
+            attachment.setVersion(1);
+            attachmentMapper.insert(attachment);
+        } catch (IOException ex) {
+            throw new IllegalStateException("风险报告附件生成失败：" + ex.getMessage(), ex);
+        }
+    }
+
+    private String buildRiskReportAttachmentHtml(RiskReport report, List<AiRiskVO> risks) {
+        StringBuilder html = new StringBuilder();
+        html.append("<h1>合同风险审查报告</h1>");
+        html.append("<h2>一、报告概览</h2><table class=\"risk-overview-table\">");
+        htmlRow(html, "报告编号", report.getReportNo());
+        htmlRow(html, "关联草稿版本", report.getVersionId() == null ? "" : "#" + report.getVersionId());
+        htmlRow(html, "合同类型", report.getContractType());
+        htmlRow(html, "甲方", report.getPartyA());
+        htmlRow(html, "乙方", report.getPartyB());
+        htmlRow(html, "业务范围", report.getBusinessScope());
+        htmlRow(html, "最高风险等级", readableRiskLevel(report.getHighestRiskLevel()));
+        htmlRow(html, "风险总数", report.getRiskCount());
+        htmlRow(html, "高 / 中 / 低风险",
+                countValue(report.getHighCount()) + " / " + countValue(report.getMediumCount())
+                        + " / " + countValue(report.getLowCount()));
+        htmlRow(html, "摘要", report.getSummary());
+        htmlRow(html, "模型", report.getModelName());
+        htmlRow(html, "审查人", report.getCreatedBy());
+        htmlRow(html, "生成时间", report.getCreatedAt() == null
+                ? "" : report.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        html.append("</table>");
+        html.append("<h2>二、风险修改建议</h2>");
+        if (risks == null || risks.isEmpty()) {
+            html.append("<p>本次审查未发现明显风险。</p>");
+            return html.toString();
+        }
+        int index = 1;
+        for (AiRiskVO risk : risks) {
+            html.append("<h3>").append(index++).append(". ")
+                    .append(escapeHtml(readableRiskLevel(risk.level()))).append(" - ")
+                    .append(escapeHtml(readableRiskCategory(risk.category()))).append("</h3>")
+                    .append("<p><strong>风险原文：</strong>").append(escapeHtml(risk.clause())).append("</p>")
+                    .append("<p><strong>风险原因：</strong>").append(escapeHtml(risk.reason())).append("</p>")
+                    .append("<p><strong>建议修改：</strong>").append(escapeHtml(risk.suggestion())).append("</p>");
+        }
+        return html.toString();
     }
 
     private ContractVersion persistRiskAnnotatedDraft(RiskReport report, List<AiRiskVO> risks, LocalDateTime now) {
