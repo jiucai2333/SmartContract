@@ -24,6 +24,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 合同文件导入编排服务。
@@ -33,6 +36,16 @@ import java.util.Locale;
 @Service
 public class ContractImportService {
     private static final Logger log = LoggerFactory.getLogger(ContractImportService.class);
+    private static final String META_LABELS =
+            "合同名称|合同标题|项目名称|合同相对方|相对方|乙方|甲方|采购方|供货方|委托方|受托方|买方|卖方|合同类型|合同类别|合同金额|总金额|价款|金额";
+    private static final Pattern LABEL_VALUE_PATTERN = Pattern.compile(
+            "(?s)(" + META_LABELS + ")\\s*[:：]?\\s*(.+?)(?=\\s*(?:" + META_LABELS + ")\\s*[:：]?|[\\n\\r；;]|$)");
+    private static final Pattern AMOUNT_PATTERN = Pattern.compile(
+            "(?:合同金额|总金额|价款|金额|人民币|合计|总价)[^\\d]{0,12}([￥¥]?\\s*[0-9][0-9,]*(?:\\.[0-9]+)?\\s*(?:元|万元|万|亿元|亿)?)");
+    private static final Pattern FIRST_MONEY_PATTERN = Pattern.compile(
+            "([￥¥]\\s*[0-9][0-9,]*(?:\\.[0-9]+)?|[0-9][0-9,]*(?:\\.[0-9]+)?\\s*(?:元|万元|万|亿元|亿))");
+    private static final List<String> CONTRACT_TYPES = List.of(
+            "采购", "销售", "技术", "劳务", "劳动", "保密", "物流", "运输", "企业服务", "服务", "知识产权", "租赁");
 
     private final ContractAttachmentService attachmentService;
     private final ContractAttachmentOcrMapper attachmentOcrMapper;
@@ -157,7 +170,7 @@ public class ContractImportService {
         if (ocr == null) {
             return new ContractImportResultVO(null, null, "PENDING", null, null,
                     false, false, false, null, null, null, null,
-                    false, null, null, null, null, List.of(), null);
+                    false, null, null, null, null, null, List.of(), null);
         }
         String editorHtml = ocrLayoutHtmlService.buildEditableHtml(
                 ocr.getOcrBlocksJson(), ocr.getQwenLayoutJson());
@@ -173,6 +186,7 @@ public class ContractImportService {
         if (preview != null && preview.length() > 200) {
             preview = preview.substring(0, 200) + "...";
         }
+        OcrExtractVO extract = extractContractMeta(ocr.getPlainText(), fileName);
         return new ContractImportResultVO(
                 ocr.getAttachmentId(),
                 fileName,
@@ -191,6 +205,7 @@ public class ContractImportService {
                 editorHtml,
                 ocr.getPlainText(),
                 preview,
+                extract,
                 parseWarningsList(ocr.getParseWarnings()),
                 ocr.getParseSource()
         );
@@ -345,7 +360,137 @@ public class ContractImportService {
         if (contractType.contains("销售")) return "SALES";
         if (contractType.contains("劳务")) return "LABOR";
         if (contractType.contains("技术")) return "TECH";
+        if (contractType.contains("劳动")) return "LABOR";
+        if (contractType.contains("保密")) return "CONFIDENTIAL";
+        if (contractType.contains("物流") || contractType.contains("运输")) return "LOGISTICS";
+        if (contractType.contains("企业服务") || contractType.contains("服务")) return "ENTERPRISE_SERVICE";
+        if (contractType.contains("知识产权")) return "INTELLECTUAL_PROPERTY";
         return "TECH";
+    }
+
+    private OcrExtractVO extractContractMeta(String rawText, String fileName) {
+        String text = normalizeText(rawText);
+        if (!StringUtils.hasText(text)) {
+            return new OcrExtractVO(null, null, null, titleFromFileName(fileName), null,
+                    null, null, null, rawText);
+        }
+        String title = firstText(labelValue(text, "合同名称", "合同标题", "项目名称"),
+                detectTitle(text), titleFromFileName(fileName));
+        String partyA = firstText(labelValue(text, "甲方", "采购方", "委托方", "买方"),
+                detectParty(text, "甲方", "采购方", "委托方", "买方"));
+        String partyB = firstText(labelValue(text, "合同相对方", "相对方", "乙方", "供货方", "受托方", "卖方"),
+                detectParty(text, "乙方", "供货方", "受托方", "卖方"));
+        String counterparty = firstText(labelValue(text, "合同相对方", "相对方"), partyB, partyA);
+        String typeLabel = firstText(labelValue(text, "合同类型", "合同类别"), detectContractTypeText(text), title);
+        BigDecimal amount = firstAmount(labelValue(text, "合同金额", "总金额", "价款", "金额"), text);
+        return new OcrExtractVO(mapContractType(typeLabel), partyA, partyB, title, counterparty,
+                amount, null, null, rawText);
+    }
+
+    private String normalizeText(String text) {
+        return Objects.toString(text, "")
+                .replace('\u00A0', ' ')
+                .replace("\r", "\n")
+                .replaceAll("[ \\t]+", " ")
+                .replaceAll("\\n{3,}", "\n\n")
+                .trim();
+    }
+
+    private String labelValue(String text, String... labels) {
+        Matcher matcher = LABEL_VALUE_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String label = matcher.group(1);
+            for (String expected : labels) {
+                if (!expected.equals(label)) continue;
+                String value = cleanExtractedText(matcher.group(2));
+                if (StringUtils.hasText(value)) return value;
+            }
+        }
+        return null;
+    }
+
+    private String detectTitle(String text) {
+        for (String rawLine : text.split("\\n")) {
+            String line = cleanExtractedText(rawLine);
+            if (!StringUtils.hasText(line)) continue;
+            if (line.length() <= 60 && line.contains("合同")
+                    && !line.matches(".*[，。；:：].*")
+                    && !line.contains("合同名称")
+                    && !line.contains("合同相对方")) {
+                return line;
+            }
+        }
+        return null;
+    }
+
+    private String detectParty(String text, String... labels) {
+        for (String label : labels) {
+            Pattern pattern = Pattern.compile(label + "\\s*(?:\\([^)]*\\))?\\s*[:：]\\s*([^\\n\\r；;]+)");
+            Matcher matcher = pattern.matcher(text);
+            if (matcher.find()) {
+                String value = cleanExtractedText(matcher.group(1));
+                if (StringUtils.hasText(value)) return value;
+            }
+        }
+        return null;
+    }
+
+    private String detectContractTypeText(String text) {
+        for (String type : CONTRACT_TYPES) {
+            if (text.contains(type + "合同")) return type;
+        }
+        return null;
+    }
+
+    private BigDecimal firstAmount(String labelledValue, String text) {
+        BigDecimal labelledAmount = parseAmount(labelledValue);
+        if (labelledAmount != null) return labelledAmount;
+        Matcher matcher = AMOUNT_PATTERN.matcher(text);
+        if (matcher.find()) {
+            BigDecimal amount = parseAmount(matcher.group(1));
+            if (amount != null) return amount;
+        }
+        matcher = FIRST_MONEY_PATTERN.matcher(text);
+        if (matcher.find()) return parseAmount(matcher.group(1));
+        return null;
+    }
+
+    private BigDecimal parseAmount(String value) {
+        if (!StringUtils.hasText(value)) return null;
+        String normalized = value.replace(",", "").replace("￥", "").replace("¥", "").trim();
+        Matcher number = Pattern.compile("([0-9]+(?:\\.[0-9]+)?)").matcher(normalized);
+        if (!number.find()) return null;
+        try {
+            BigDecimal amount = new BigDecimal(number.group(1));
+            if (normalized.contains("亿")) return amount.multiply(new BigDecimal("100000000"));
+            if (normalized.contains("万")) return amount.multiply(new BigDecimal("10000"));
+            return amount;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private String titleFromFileName(String fileName) {
+        if (!StringUtils.hasText(fileName)) return null;
+        String title = fileName.replaceFirst("\\.[^.]+$", "");
+        title = title.replaceFirst("^[0-9A-Za-z_-]+[-_]", "");
+        return cleanExtractedText(title);
+    }
+
+    private String firstText(String... values) {
+        for (String value : values) {
+            String cleaned = cleanExtractedText(value);
+            if (StringUtils.hasText(cleaned)) return cleaned;
+        }
+        return null;
+    }
+
+    private String cleanExtractedText(String value) {
+        if (!StringUtils.hasText(value)) return null;
+        return value.replaceAll("[：:]+$", "")
+                .replaceAll("\\s+", " ")
+                .replaceAll("^(名称|为|是)[:：]?", "")
+                .trim();
     }
 
     private String trimError(String message) {

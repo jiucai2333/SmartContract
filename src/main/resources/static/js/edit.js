@@ -12,6 +12,12 @@ versionBox.id = 'savedVersion';
 versionBox.className = 'hint';
 versionBox.hidden = true;
 $('#draftStatus').after(versionBox);
+const touchedMetaFields = new Set();
+['contractTitle', 'contractCounterparty', 'contractType', 'contractAmount'].forEach(id => {
+    const field = document.getElementById(id);
+    field?.addEventListener('input', event => { if (event.isTrusted) touchedMetaFields.add(id); });
+    field?.addEventListener('change', event => { if (event.isTrusted) touchedMetaFields.add(id); });
+});
 
 function updateStatus(message) { $('#draftStatus').textContent = message; }
 function initMode() {
@@ -40,6 +46,29 @@ function updateCharCount() { $('#draftCharCount').textContent = `${$('#draftEdit
 function setDraftContent(html) { $('#draftEditor').innerHTML = html || ''; updateCharCount(); }
 function draftContent() { return $('#draftEditor').innerHTML; }
 function hasEditorContent() { return $('#draftEditor').innerText.trim().length > 0; }
+function setMetaValue(selector, value, {force = false} = {}) {
+    const input = $(selector);
+    if (!input || value === null || value === undefined || value === '') return false;
+    if (!force && touchedMetaFields.has(input.id)) return false;
+    if (!force && input.tagName !== 'SELECT' && input.value.trim()) return false;
+    input.value = value;
+    input.dispatchEvent(new Event('input', {bubbles: true}));
+    input.dispatchEvent(new Event('change', {bubbles: true}));
+    return true;
+}
+function applyExtractedMeta(result) {
+    if (draftState.contractId || !result?.extract) return;
+    const extract = result.extract;
+    const filled = [];
+    if (setMetaValue('#contractTitle', extract.title)) filled.push('合同名称');
+    if (setMetaValue('#contractCounterparty', extract.counterparty || extract.partyB || extract.partyA)) filled.push('合同相对方');
+    if (setMetaValue('#contractAmount', extract.amount)) filled.push('合同金额');
+    const typeOptions = Array.from($('#contractType')?.options || []).map(option => option.value);
+    if (extract.contractType && typeOptions.includes(extract.contractType) && setMetaValue('#contractType', extract.contractType)) {
+        filled.push('合同类型');
+    }
+    if (filled.length) toast(`已自动填充${filled.join('、')}`);
+}
 function showSavedVersion(version) {
     versionBox.hidden = false;
     versionBox.innerHTML = `最新草稿：<strong>${escapeHtml(version.versionNo)}</strong> · <a href="${version.downloadUrl}" data-download-url="${version.downloadUrl}" data-file-name="contract-${version.contractId}-${version.versionNo}.docx">下载 Word 草稿</a>`;
@@ -171,6 +200,7 @@ function showParsedResult(result) {
         return;
     }
     setDraftContent(content);
+    applyExtractedMeta(result);
     updateStatus('解析完成，可以在线编辑并保存 Word 草稿。');
     setStep(3);
     const editor = $('#draftEditor');

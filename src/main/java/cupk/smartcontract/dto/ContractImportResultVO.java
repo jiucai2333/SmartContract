@@ -44,6 +44,8 @@ public record ContractImportResultVO(
         String plainText,
         /** 纯文本预览（最多 200 字符） */
         String plainTextPreview,
+        /** 从识别文本中抽取的合同元信息，用于前端自动回填 */
+        OcrExtractVO extract,
         /** 处理过程中的告警列表 */
         List<String> warnings,
         /** 解析来源标识：paddleocr / qwen_layout / plain_text / legacy_markdown / DOCX_POI 等 */
