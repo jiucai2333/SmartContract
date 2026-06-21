@@ -2,9 +2,12 @@ package cupk.smartcontract.controller;
 
 import cupk.smartcontract.entity.ContractMain;
 import cupk.smartcontract.security.RequireRole;
+import cupk.smartcontract.dto.ContractFieldAnalysisRequest;
+import cupk.smartcontract.dto.ContractFieldAnalysisVO;
 import cupk.smartcontract.dto.ContractImportResultVO;
 import cupk.smartcontract.dto.CreateContractFromOcrRequest;
 import cupk.smartcontract.service.ContractAttachmentService;
+import cupk.smartcontract.service.ContractFieldAnalysisService;
 import cupk.smartcontract.service.ContractImportService;
 import cupk.smartcontract.service.DraftTemplateService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,13 +33,16 @@ public class ContractImportController {
     private final ContractAttachmentService attachmentService;
     private final ContractImportService importService;
     private final DraftTemplateService draftTemplateService;
+    private final ContractFieldAnalysisService fieldAnalysisService;
 
     public ContractImportController(ContractAttachmentService attachmentService,
                                      ContractImportService importService,
-                                     DraftTemplateService draftTemplateService) {
+                                     DraftTemplateService draftTemplateService,
+                                     ContractFieldAnalysisService fieldAnalysisService) {
         this.attachmentService = attachmentService;
         this.importService = importService;
         this.draftTemplateService = draftTemplateService;
+        this.fieldAnalysisService = fieldAnalysisService;
     }
 
     // ==================== OCR 触发与查询 ====================
@@ -102,5 +108,11 @@ public class ContractImportController {
             markdown = importService.resolveOcrReferenceText(attachmentId);
         }
         return draftTemplateService.analyze(markdown);
+    }
+
+    @PostMapping("/contracts/field-analysis")
+    @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
+    public ContractFieldAnalysisVO analyzeContractFields(@RequestBody ContractFieldAnalysisRequest request) {
+        return fieldAnalysisService.analyze(request);
     }
 }
