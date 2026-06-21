@@ -16,6 +16,7 @@ const searchParams = new URLSearchParams(location.search);
 const pageState = {
     contractId: Number(searchParams.get('contractId')) || null,
     currentReportId: Number(searchParams.get('reportId')) || null,
+    currentVersionId: null,
     attachmentId: null,
     contracts: []
 };
@@ -54,6 +55,7 @@ reviewBtn.addEventListener('click', async () => {
             contractText,
             contractId: pageState.contractId || undefined,
             attachmentId: pageState.attachmentId || undefined,
+            versionId: pageState.currentVersionId || undefined,
             contractType: $('#contractType').value || undefined,
             partyA: $('#partyA').value.trim() || undefined,
             partyB: $('#partyB').value.trim() || undefined,
@@ -86,6 +88,7 @@ reviewBtn.addEventListener('click', async () => {
 clearBtn.addEventListener('click', () => {
     pageState.contractId = null;
     pageState.currentReportId = null;
+    pageState.currentVersionId = null;
     pageState.attachmentId = null;
     contractTextInput.value = '';
     if (contractPdfInput) contractPdfInput.value = '';
@@ -165,6 +168,7 @@ async function pickExistingContract(contractId) {
 
 async function fillExistingContract(contract, loadContent) {
     pageState.contractId = Number(contract.contractId);
+    pageState.currentVersionId = Number(contract.latestVersion?.versionId) || null;
     pageState.attachmentId = null;
     setSelectValue($('#contractType'), typeLabel(contract.type) || contract.type || '');
     setInputValue($('#partyB'), contract.counterparty || '');
@@ -174,6 +178,7 @@ async function fillExistingContract(contract, loadContent) {
     await loadRiskReports().catch(() => {});
     if (!loadContent) return;
     const version = await api(`/api/contracts/${contract.contractId}/versions/latest`).catch(() => null);
+    pageState.currentVersionId = Number(version?.versionId) || pageState.currentVersionId;
     const text = htmlToPlainText(version?.content || '');
     if (!text || text.replace(/\s+/g, '').length < 20) {
         contractTextInput.value = '';

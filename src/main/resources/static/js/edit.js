@@ -8,6 +8,8 @@ const draftState = {
     templateId: Number(searchParams.get('templateId')) || null,
     dirty: false,
     analyzedFields: [],
+    analyzedRisks: [],
+    latestRiskReport: null,
     currentContract: null
 };
 let editor = null;
@@ -151,6 +153,20 @@ function applyExtractedMeta(result) {
     if (filled.length) toast(`已自动填充${filled.join('、')}`);
 }
 const FIELD_LEVEL_TEXT = {required: '基础必填', before_submit: '审批前提示', optional: '可选'};
+const RISK_LEVEL_TEXT = {HIGH: '高风险', MEDIUM: '中风险', LOW: '低风险'};
+const RISK_CATEGORY_TEXT = {
+    SUBJECT_INFO: '主体信息风险',
+    PAYMENT: '付款风险',
+    LIABILITY: '违约风险',
+    TERM: '期限风险',
+    DISPUTE_RESOLUTION: '争议解决风险',
+    LEGAL_COMPLIANCE: '法律合规风险',
+    PERFORMANCE_DELIVERY: '履约交付风险',
+    PAYMENT_SETTLEMENT: '付款结算风险',
+    IP_CONFIDENTIALITY: '知识产权与保密风险',
+    LIABILITY_APPROVAL: '违约责任与审批风险',
+    AI_REVIEW: 'AI 风险识别'
+};
 
 function fieldInputValue(fieldKey) {
     return document.querySelector(`[data-field-input="${fieldKey}"]`)?.value.trim() || '';
@@ -173,7 +189,49 @@ function renderPlaceholderPreview(text) {
 
 function renderContractFields(result) {
     draftState.analyzedFields = result.fields || [];
-    $('#contractFieldList').innerHTML = draftState.analyzedFields.map(field => {
+    renderFieldPanel();
+    $('#fieldAnalysisSummary').textContent =
+        `基础必填缺失 ${result.requiredMissingCount || 0} 项，审批前提示 ${result.beforeSubmitMissingCount || 0} 项，风险修改点 ${draftState.analyzedRisks.length} 项`;
+    $('#fieldPanel').hidden = false;
+    $('.editor-workspace')?.classList.add('has-field-panel');
+}
+
+function riskLevelText(level) {
+    return RISK_LEVEL_TEXT[String(level || '').toUpperCase()] || level || '风险';
+}
+
+function riskCategoryText(category) {
+    return RISK_CATEGORY_TEXT[String(category || '').toUpperCase()] || category || 'AI 风险识别';
+}
+
+function renderRiskReportVersion(report) {
+    if (!report) return '';
+    const version = report.versionId ? `草稿版本 #${report.versionId}` : '未绑定草稿版本';
+    return `${report.reportNo || '最新风险报告'} · ${version}`;
+}
+
+function renderContractRisks() {
+    if (!draftState.analyzedRisks.length) {
+        const hint = draftState.contractId ? '当前合同暂无风险报告中的修改点。' : '保存草稿并生成风险报告后，这里会显示需修改点。';
+        return `<section class="contract-field-section"><h4>风险修改点</h4><p class="hint">${hint}</p></section>`;
+    }
+    return `<section class="contract-field-section">
+        <h4>风险修改点</h4>
+        <p class="contract-risk-report-ref">${escapeHtml(renderRiskReportVersion(draftState.latestRiskReport))}</p>
+        ${draftState.analyzedRisks.map(risk => {
+            const level = String(risk.level || risk.riskLevel || 'LOW').toUpperCase();
+            return `<div class="contract-field-card contract-risk-card ${escapeHtml(level)}">
+                <div class="contract-field-title"><strong>${escapeHtml(risk.clause || risk.clauseRef || '未定位原文')}</strong>
+                    <span class="contract-field-level">${escapeHtml(riskLevelText(level))} · ${escapeHtml(riskCategoryText(risk.category || risk.riskType))}</span></div>
+                <p class="contract-field-source"><strong>风险原因：</strong>${escapeHtml(risk.reason || '风险报告未返回详细原因')}</p>
+                <p class="contract-field-suggestion"><strong>建议修改：</strong>${escapeHtml(risk.suggestion || '请法务复核该风险项')}</p>
+            </div>`;
+        }).join('')}
+    </section>`;
+}
+
+function renderFieldPanel() {
+    const fieldHtml = draftState.analyzedFields.map(field => {
         const suggestion = field.suggestedValue
             ? `<p class="contract-field-suggestion"><strong>可采用 AI 建议</strong>：${escapeHtml(field.suggestedValue)}
                 <br><button type="button" class="secondary" data-use-suggestion="${escapeHtml(field.fieldKey)}">采用建议</button></p>`
@@ -189,10 +247,7 @@ function renderContractFields(result) {
             <p class="contract-field-source">来源：${renderPlaceholderPreview(field.sourceText)}</p>
         </div>`;
     }).join('') || '<p class="hint">未识别到待填写字段。</p>';
-    $('#fieldAnalysisSummary').textContent =
-        `基础必填缺失 ${result.requiredMissingCount || 0} 项，审批前提示 ${result.beforeSubmitMissingCount || 0} 项`;
-    $('#fieldPanel').hidden = false;
-    $('.editor-workspace')?.classList.add('has-field-panel');
+    $('#contractFieldList').innerHTML = `<section class="contract-field-section"><h4>待填写字段</h4>${fieldHtml}</section>${renderContractRisks()}`;
 }
 
 async function analyzeContractFields() {
@@ -202,22 +257,37 @@ async function analyzeContractFields() {
     const originalText = button.textContent;
     button.textContent = '识别中...';
     try {
-        const result = await api('/api/contracts/field-analysis', {
-            method: 'POST',
-            body: JSON.stringify({
-                contractId: draftState.contractId,
-                versionId: null,
-                html: draftContent(),
-                plainText: editorText(),
-                contractType: $('#contractType').value
-            })
-        });
+        const [result, latestRiskReport] = await Promise.all([
+            api('/api/contracts/field-analysis', {
+                method: 'POST',
+                body: JSON.stringify({
+                    contractId: draftState.contractId,
+                    versionId: null,
+                    html: draftContent(),
+                    plainText: editorText(),
+                    contractType: $('#contractType').value
+                })
+            }),
+            loadLatestRiskReport()
+        ]);
+        draftState.latestRiskReport = latestRiskReport;
+        draftState.analyzedRisks = Array.isArray(latestRiskReport?.risks) ? latestRiskReport.risks : [];
         renderContractFields(result);
-        toast(result.notice || '字段识别完成');
+        const riskNotice = draftState.analyzedRisks.length ? `，风险修改点 ${draftState.analyzedRisks.length} 项` : '';
+        toast((result.notice || '字段识别完成') + riskNotice);
     } finally {
         button.disabled = false;
         button.textContent = originalText;
     }
+}
+
+async function loadLatestRiskReport() {
+    if (!draftState.contractId) return null;
+    const reports = await api(`/api/risk-reports?contractId=${encodeURIComponent(draftState.contractId)}`).catch(() => []);
+    const latest = Array.isArray(reports) ? reports[0] : null;
+    const reportId = latest?.reportId || latest?.id;
+    if (!reportId) return null;
+    return api(`/api/risk-reports/${reportId}`).catch(() => null);
 }
 
 function replaceUniqueText(html, placeholder, value) {
