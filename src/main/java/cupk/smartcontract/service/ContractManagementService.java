@@ -441,9 +441,8 @@ public class ContractManagementService {
         LocalDateTime now = LocalDateTime.now();
         RiskReport report = new RiskReport();
         report.setContractId(request.contractId());
-        report.setVersionId(request.versionId());
-        report.setReportNo("RISK-" + now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                + "-" + Math.floorMod(System.nanoTime(), 10000));
+        report.setVersionId(resolveReviewVersionId(request));
+        report.setReportNo(nextRiskReportNo(request.contractId(), now));
         report.setContractType(clipNullable(request.contractType(), 80));
         report.setPartyA(clipNullable(request.partyA(), 200));
         report.setPartyB(clipNullable(request.partyB(), 200));
@@ -461,12 +460,6 @@ public class ContractManagementService {
         report.setCreatedAt(now);
         report.setUpdatedAt(now);
         riskReportMapper.insert(report);
-        ContractVersion annotatedVersion = persistRiskAnnotatedDraft(report, risks, now);
-        if (annotatedVersion != null) {
-            report.setVersionId(annotatedVersion.getVersionId());
-            report.setContractText(annotatedVersion.getContent());
-            riskReportMapper.updateById(report);
-        }
         persistAiRiskItems(report, risks, now);
 
         if (request.contractId() != null) {
@@ -477,6 +470,33 @@ public class ContractManagementService {
             contractMapper.updateById(contract);
         }
         return report;
+    }
+
+    private Long resolveReviewVersionId(AiRiskReviewRequest request) {
+        if (request.versionId() != null) {
+            return request.versionId();
+        }
+        if (request.contractId() == null) {
+            return null;
+        }
+        ContractVersion latest = contractVersionMapper.selectOne(
+                new LambdaQueryWrapper<ContractVersion>()
+                        .eq(ContractVersion::getContractId, request.contractId())
+                        .orderByDesc(ContractVersion::getCreatedAt)
+                        .last("LIMIT 1"));
+        return latest == null ? null : latest.getVersionId();
+    }
+
+    private String nextRiskReportNo(Long contractId, LocalDateTime now) {
+        LambdaQueryWrapper<RiskReport> wrapper = new LambdaQueryWrapper<>();
+        if (contractId == null) {
+            wrapper.isNull(RiskReport::getContractId);
+        } else {
+            wrapper.eq(RiskReport::getContractId, contractId);
+        }
+        Long existing = riskReportMapper.selectCount(wrapper);
+        long next = (existing == null ? 0 : existing) + 1;
+        return "RISK-V" + next + "-" + now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
     }
 
     private ContractVersion persistRiskAnnotatedDraft(RiskReport report, List<AiRiskVO> risks, LocalDateTime now) {

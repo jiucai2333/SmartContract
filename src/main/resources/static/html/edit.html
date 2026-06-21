@@ -88,7 +88,7 @@
                 <span id="draftCharCount" class="ocr-char-count"></span>
             </div>
             <div class="editor-action-buttons">
-                <button id="analyzeFieldsBtn" type="button" class="secondary">识别待填写字段</button>
+                <button id="analyzeFieldsBtn" type="button" class="secondary">识别待填写/风险字段</button>
                 <button id="downloadDraftBtn" type="button" class="secondary">下载 Word</button>
                 <button id="saveDraftBtn" type="button">保存草稿</button>
             </div>
@@ -104,11 +104,11 @@
             </div>
             <aside id="fieldPanel" class="contract-field-panel" hidden>
                 <div class="contract-field-head">
-                    <div><strong>待填写字段</strong><small id="fieldAnalysisSummary"></small></div>
+                    <div><strong id="fieldPanelTitle">待填写字段与风险修改点</strong><small id="fieldAnalysisSummary"></small></div>
                     <button id="closeFieldPanelBtn" type="button" class="secondary">收起</button>
                 </div>
                 <div id="contractFieldList" class="contract-field-list"></div>
-                <button id="fillContractFieldsBtn" type="button">回填正文</button>
+                <button id="fillContractFieldsBtn" type="button">回填待填写字段</button>
             </aside>
         </div>
     </div>

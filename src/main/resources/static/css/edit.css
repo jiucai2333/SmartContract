@@ -488,6 +488,20 @@
 .contract-field-head button { flex-shrink: 0; }
 .contract-field-head small { display: block; margin-top: 4px; color: var(--muted); }
 .contract-field-list { display: grid; gap: 10px; margin-bottom: 12px; }
+.contract-field-section {
+    display: grid;
+    gap: 10px;
+}
+.contract-field-section + .contract-field-section {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+}
+.contract-field-section h4 {
+    margin: 0;
+    color: var(--ink);
+    font-size: 13px;
+}
 .contract-field-card {
     min-width: 0;
     padding: 10px;
@@ -536,6 +550,26 @@
     word-break: break-word;
 }
 .contract-field-suggestion button { margin-top: 5px; }
+.contract-risk-report-ref {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+.contract-risk-card {
+    border-left: 3px solid #64748b;
+}
+.contract-risk-card.HIGH {
+    border-left-color: #dc2626;
+    background: #fff7f7;
+}
+.contract-risk-card.MEDIUM {
+    border-left-color: #d97706;
+    background: #fffbeb;
+}
+.contract-risk-card.LOW {
+    border-left-color: #2563eb;
+    background: #f8fbff;
+}
 
 .contract-placeholder-preview {
     display: inline-block;
