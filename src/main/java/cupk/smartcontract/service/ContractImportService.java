@@ -161,6 +161,11 @@ public class ContractImportService {
         }
         String editorHtml = ocrLayoutHtmlService.buildEditableHtml(
                 ocr.getOcrBlocksJson(), ocr.getQwenLayoutJson());
+        if (!StringUtils.hasText(editorHtml)
+                && !StringUtils.hasText(ocr.getOcrBlocksJson())
+                && StringUtils.hasText(ocr.getPreviewHtml())) {
+            editorHtml = ocr.getPreviewHtml();
+        }
         if (!StringUtils.hasText(editorHtml)) {
             editorHtml = ocrLayoutHtmlService.buildPlainTextHtml(ocr.getPlainText());
         }

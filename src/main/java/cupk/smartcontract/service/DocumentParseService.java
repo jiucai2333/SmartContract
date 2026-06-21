@@ -12,6 +12,7 @@ import org.jsoup.nodes.Entities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -186,6 +187,7 @@ public class DocumentParseService {
     }
 
     private String textToHtml(String text, boolean preserve) {
+        if (preserve) return contractTextToHtml(text);
         StringBuilder html = new StringBuilder();
         for (String line : text.replace("\r", "").split("\n", -1)) {
             if (line.isBlank()) {
@@ -197,6 +199,88 @@ public class DocumentParseService {
             }
         }
         return html.toString();
+    }
+
+    private String contractTextToHtml(String text) {
+        List<String> lines = normalizePdfTextLines(text);
+        StringBuilder html = new StringBuilder();
+        boolean titleWritten = false;
+        for (String line : lines) {
+            if (!StringUtils.hasText(line)) continue;
+            String cleaned = line.trim();
+            if (!titleWritten && looksLikeContractTitle(cleaned)) {
+                html.append("<h1>").append(escape(cleaned)).append("</h1>");
+                titleWritten = true;
+                continue;
+            }
+            if (looksLikeClauseStart(cleaned)) {
+                html.append("<p class=\"clause-title\" style=\"margin:12px 0 6px 0;font-weight:bold;\">")
+                        .append(escape(cleaned)).append("</p>");
+            } else {
+                html.append("<p style=\"margin:0 0 8px 0;text-indent:2em;\">")
+                        .append(preserveSpaces(escape(cleaned))).append("</p>");
+            }
+        }
+        return html.toString();
+    }
+
+    private List<String> normalizePdfTextLines(String text) {
+        String normalized = Objects.toString(text, "")
+                .replace("\r", "")
+                .replace('\f', '\n')
+                .replaceAll("[ \\t]+", " ")
+                .replaceAll("(?m)^\\s*第\\s*\\d+\\s*页\\s*$", "");
+        normalized = normalized.replaceAll("软件开发服务采购合同\\s+第\\s*\\d+\\s*页", "\n");
+
+        List<String> rawLines = Arrays.stream(normalized.split("\\n"))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .toList();
+        List<String> output = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (String raw : rawLines) {
+            String line = raw.replaceAll("\\s+", " ").trim();
+            if (line.matches(".*合同名称\\s+.*合同相对方\\s+.*合同类型\\s+.*")) {
+                line = line.substring(0, line.indexOf("合同名称")).trim();
+                if (!StringUtils.hasText(line)) continue;
+            }
+            if (looksLikeContractTitle(line) || looksLikeClauseStart(line)) {
+                flushLine(output, current);
+                current.append(line);
+            } else {
+                if (!current.isEmpty() && shouldContinuePrevious(current.toString(), line)) {
+                    current.append(line);
+                } else {
+                    flushLine(output, current);
+                    current.append(line);
+                }
+            }
+        }
+        flushLine(output, current);
+        return output;
+    }
+
+    private boolean shouldContinuePrevious(String current, String next) {
+        if (looksLikeClauseStart(next)) return false;
+        if (current.length() < 42) return true;
+        return !current.matches(".*[。；;：:]$");
+    }
+
+    private void flushLine(List<String> output, StringBuilder current) {
+        if (!current.isEmpty()) {
+            output.add(current.toString().trim());
+            current.setLength(0);
+        }
+    }
+
+    private boolean looksLikeContractTitle(String line) {
+        return line.length() <= 40 && line.contains("合同") && !line.matches(".*[，。；、：].*");
+    }
+
+    private boolean looksLikeClauseStart(String line) {
+        return line.matches("^[一二三四五六七八九十]+、.+")
+                || line.matches("^第[一二三四五六七八九十0-9]+条.+")
+                || line.matches("^\\d+[\\.、].+");
     }
 
     private String preserveSpaces(String text) {
