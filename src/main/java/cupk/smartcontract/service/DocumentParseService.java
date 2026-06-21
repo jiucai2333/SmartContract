@@ -39,20 +39,19 @@ public class DocumentParseService {
         if ("doc".equals(type)) return new ParseResult(parseDoc(filePath, preserveFormat), 1, "DOC_HWPF");
         if (!"pdf".equals(type)) throw new IllegalArgumentException("仅支持 PDF、DOC 或 DOCX 格式");
 
-        if (preserveFormat) {
-            OcrService.OcrProcessResult ocr = ocrService.process(filePath, "pdf");
-            return new ParseResult(ocr.formattedHtml() != null ? ocr.formattedHtml() : textToHtml(ocr.rawText(), true),
-                    ocr.pageCount(), "OCR_FORMATTED");
-        }
         try (PDDocument document = Loader.loadPDF(filePath.toFile())) {
             String text = new PDFTextStripper().getText(document);
             int pages = document.getNumberOfPages();
             if (text.replaceAll("\\s+", "").length() >= 50) {
-                return new ParseResult(textToHtml(text, false), pages, "PDFBOX");
+                return new ParseResult(textToHtml(text, preserveFormat), pages,
+                        preserveFormat ? "PDFBOX_FORMATTED_FALLBACK" : "PDFBOX");
             }
         }
         OcrService.OcrProcessResult ocr = ocrService.process(filePath, "pdf");
-        return new ParseResult(textToHtml(ocr.rawText(), false), ocr.pageCount(), "OCR");
+        return new ParseResult(
+                preserveFormat && ocr.formattedHtml() != null ? ocr.formattedHtml() : textToHtml(ocr.rawText(), preserveFormat),
+                ocr.pageCount(),
+                preserveFormat ? "OCR_FORMATTED" : "OCR");
     }
 
     private String parseDocx(Path filePath, boolean preserve) throws IOException {
