@@ -172,6 +172,10 @@ function fieldInputValue(fieldKey) {
     return document.querySelector(`[data-field-input="${fieldKey}"]`)?.value.trim() || '';
 }
 
+function riskInputValue(index) {
+    return document.querySelector(`[data-risk-input="${index}"]`)?.value.trim() || '';
+}
+
 function renderPlaceholderPreview(text) {
     const value = text || '正文中未定位到明确片段';
     const pattern = /_{2,}|＿{2,}|-{3,}|【\s*】|\[\s*]|\(\s*(?:填写)?\s*\)|（\s*(?:填写)?\s*）/g;
@@ -218,13 +222,20 @@ function renderContractRisks() {
     return `<section class="contract-field-section">
         <h4>风险修改点</h4>
         <p class="contract-risk-report-ref">${escapeHtml(renderRiskReportVersion(draftState.latestRiskReport))}</p>
-        ${draftState.analyzedRisks.map(risk => {
+        ${draftState.analyzedRisks.map((risk, index) => {
             const level = String(risk.level || risk.riskLevel || 'LOW').toUpperCase();
+            const suggestion = risk.suggestion || '';
             return `<div class="contract-field-card contract-risk-card ${escapeHtml(level)}">
                 <div class="contract-field-title"><strong>${escapeHtml(risk.clause || risk.clauseRef || '未定位原文')}</strong>
                     <span class="contract-field-level">${escapeHtml(riskLevelText(level))} · ${escapeHtml(riskCategoryText(risk.category || risk.riskType))}</span></div>
+                <textarea data-risk-input="${index}" placeholder="填写或采用建议修改内容">${escapeHtml(suggestion)}</textarea>
                 <p class="contract-field-source"><strong>风险原因：</strong>${escapeHtml(risk.reason || '风险报告未返回详细原因')}</p>
                 <p class="contract-field-suggestion"><strong>建议修改：</strong>${escapeHtml(risk.suggestion || '请法务复核该风险项')}</p>
+                <div class="risk-card-actions">
+                    <button type="button" class="secondary" data-locate-risk="${index}">定位原文</button>
+                    <button type="button" class="secondary" data-use-risk-suggestion="${index}">采用建议</button>
+                    <button type="button" data-apply-risk="${index}">回填修改</button>
+                </div>
             </div>`;
         }).join('')}
     </section>`;
@@ -610,6 +621,85 @@ function fillContractFields() {
     }
 }
 
+function plainTextOfHtml(html) {
+    const container = document.createElement('div');
+    container.innerHTML = html || '';
+    return (container.textContent || '').replace(/\s+/g, '');
+}
+
+function normalizeRiskClause(value) {
+    return String(value || '').replace(/\s+/g, '').trim();
+}
+
+function locateRiskText(risk) {
+    const clause = normalizeRiskClause(risk?.clause || risk?.clauseRef);
+    if (!clause) {
+        toast('风险报告中没有可定位的原文片段');
+        return false;
+    }
+    const editorRoot = $('#draftEditor [data-slate-editor]') || $('#draftEditor');
+    const blocks = Array.from(editorRoot.querySelectorAll('p, div, h1, h2, h3, td, li'));
+    let target = blocks.find(block => normalizeRiskClause(block.textContent).includes(clause));
+    if (!target && normalizeRiskClause(editorRoot.textContent).includes(clause)) target = editorRoot;
+    if (!target) {
+        toast('未在当前草稿中定位到该风险原文，可能草稿内容已变化');
+        return false;
+    }
+    document.querySelectorAll('.risk-located-block').forEach(node => node.classList.remove('risk-located-block'));
+    target.classList.add('risk-located-block');
+    target.scrollIntoView({behavior: 'smooth', block: 'center'});
+    return true;
+}
+
+function replaceRiskTextInHtml(html, risk, value) {
+    const source = String(risk?.clause || risk?.clauseRef || '').trim();
+    if (!source || !value) return {html, replaced: false, reason: '风险原文或修改内容为空'};
+    const container = document.createElement('div');
+    container.innerHTML = html || '';
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const matches = [];
+    let node;
+    while ((node = walker.nextNode())) {
+        const text = node.nodeValue || '';
+        let offset = text.indexOf(source);
+        while (offset >= 0) {
+            matches.push({node, offset, length: source.length});
+            offset = text.indexOf(source, offset + source.length);
+        }
+    }
+    if (matches.length !== 1) {
+        return {
+            html,
+            replaced: false,
+            reason: matches.length ? `风险原文重复 ${matches.length} 次，请手动确认后修改` : '未找到风险报告中的原文'
+        };
+    }
+    const match = matches[0];
+    match.node.nodeValue = match.node.nodeValue.slice(0, match.offset)
+        + value + match.node.nodeValue.slice(match.offset + match.length);
+    return {html: container.innerHTML, replaced: true};
+}
+
+function applyRiskSuggestion(index) {
+    const risk = draftState.analyzedRisks[index];
+    if (!risk) return toast('未找到该风险项');
+    const value = riskInputValue(index);
+    if (!value) return toast('请先填写修改内容或采用建议');
+    const result = replaceRiskTextInHtml(draftContent(), risk, value);
+    if (!result.replaced) {
+        toast(result.reason || '未能自动回填风险修改');
+        locateRiskText(risk);
+        return;
+    }
+    settingEditorContent = true;
+    editor.setHtml(result.html);
+    settingEditorContent = false;
+    draftState.dirty = true;
+    updateCharCount();
+    toast('已按风险报告建议回填修改');
+    setTimeout(() => locateRiskText({...risk, clause: value, clauseRef: value}), 80);
+}
+
 function currentMissingRequiredFields() {
     return draftState.analyzedFields
         .filter(field => field.requiredLevel === 'required' && field.status === 'unfilled')
@@ -883,10 +973,26 @@ $('#closeFieldPanelBtn').addEventListener('click', () => {
 $('#fillContractFieldsBtn').addEventListener('click', fillContractFields);
 $('#contractFieldList').addEventListener('click', event => {
     const button = event.target.closest('[data-use-suggestion]');
-    if (!button) return;
-    const field = draftState.analyzedFields.find(item => item.fieldKey === button.dataset.useSuggestion);
-    const input = document.querySelector(`[data-field-input="${button.dataset.useSuggestion}"]`);
-    if (field && input) input.value = field.suggestedValue || '';
+    if (button) {
+        const field = draftState.analyzedFields.find(item => item.fieldKey === button.dataset.useSuggestion);
+        const input = document.querySelector(`[data-field-input="${button.dataset.useSuggestion}"]`);
+        if (field && input) input.value = field.suggestedValue || '';
+        return;
+    }
+    const riskSuggestion = event.target.closest('[data-use-risk-suggestion]');
+    if (riskSuggestion) {
+        const index = Number(riskSuggestion.dataset.useRiskSuggestion);
+        const input = document.querySelector(`[data-risk-input="${index}"]`);
+        if (input && draftState.analyzedRisks[index]) input.value = draftState.analyzedRisks[index].suggestion || '';
+        return;
+    }
+    const locateButton = event.target.closest('[data-locate-risk]');
+    if (locateButton) {
+        locateRiskText(draftState.analyzedRisks[Number(locateButton.dataset.locateRisk)]);
+        return;
+    }
+    const applyButton = event.target.closest('[data-apply-risk]');
+    if (applyButton) applyRiskSuggestion(Number(applyButton.dataset.applyRisk));
 });
 versionBox.addEventListener('click', event => {
     const link = event.target.closest('[data-download-url]');

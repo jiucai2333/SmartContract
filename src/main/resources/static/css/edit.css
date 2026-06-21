@@ -570,6 +570,23 @@
     border-left-color: #2563eb;
     background: #f8fbff;
 }
+.risk-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+.risk-card-actions button {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+.rich-editor [data-slate-editor] .risk-located-block {
+    background: #fff7d6;
+    outline: 2px solid #f59e0b;
+    outline-offset: 3px;
+    transition: background .2s ease, outline-color .2s ease;
+}
 
 .contract-placeholder-preview {
     display: inline-block;
