@@ -1,14 +1,15 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>在线编辑 - 智能合同管理</title>
     <link rel="stylesheet" href="../css/styles.css">
-    <link rel="stylesheet" href="../css/edit.css">
+    <link rel="stylesheet" href="../vendor/wang-editor/style.css?v=20260621-restore">
+    <link rel="stylesheet" href="../css/edit.css?v=20260621-restore-fields">
 </head>
 <body>
-<script src="../js/common.js?v=20260618-empty-json"></script>
+<script src="../js/common.js"></script>
 <script>document.write(appShellHtml('edit'));</script>
 <section class="section edit-layout">
     <!-- 上方：元信息 + 上传 + 进度条 -->
@@ -39,14 +40,14 @@
                 <div class="source-cards">
                     <div class="upload-zone" id="uploadZone">
                         <input id="fileInput" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" hidden>
-                        <div class="upload-zone-icon">📄</div>
+                        <div class="upload-zone-icon"><i data-lucide="upload-cloud"></i></div>
                         <div class="upload-zone-text">上传合同材料</div>
                         <div class="upload-zone-sub">拖拽 Word / PDF / 图片到此处</div>
                         <button type="button" id="pickFileBtn" class="secondary">选择文件</button>
                         <span id="uploadFileName" class="upload-name">未选择文件</span>
                     </div>
                     <div class="template-picker" id="templatePicker">
-                        <div class="upload-zone-icon">📋</div>
+                        <div class="upload-zone-icon"><i data-lucide="file-text"></i></div>
                         <div class="upload-zone-text">从模板库选择</div>
                         <div class="upload-zone-sub">使用已有合同模板</div>
                         <select id="templateSelect">
@@ -64,11 +65,9 @@
                         <div class="ocr-head-actions">
                             <button type="button" id="retryOcrBtn" class="secondary" hidden>重新解析</button>
                             <button type="button" id="reuploadBtn" class="secondary" hidden>重新上传</button>
-                            <button type="button" id="ocrPreviewToggle" class="secondary" hidden>显示版式预览</button>
                         </div>
                     </div>
                     <p id="ocrHint" class="ocr-hint">正在等待识别结果。</p>
-                    <div id="ocrPreviewArea" class="ocr-preview-area" hidden></div>
                 </div>
                 <div class="draft-steps" aria-label="合同模板处理进度">
                     <div class="draft-step active" data-step="1"><span>1</span>上传文件</div>
@@ -84,27 +83,39 @@
     <!-- 下方：A4 编辑器 -->
     <div class="panel result-panel">
         <div class="result-actions">
-            <button id="downloadDraftBtn" type="button" class="secondary">下载 Word</button>
-            <button id="saveDraftBtn" type="button">保存草稿</button>
+            <div class="editor-heading">
+                <span>合同正文校对</span>
+                <span id="draftCharCount" class="ocr-char-count"></span>
+            </div>
+            <div class="editor-action-buttons">
+                <button id="analyzeFieldsBtn" type="button" class="secondary">识别待填写字段</button>
+                <button id="downloadDraftBtn" type="button" class="secondary">下载 Word</button>
+                <button id="saveDraftBtn" type="button">保存草稿</button>
+            </div>
         </div>
-        <div class="editor-toolbar">
-            <span class="hint">合同正文校对</span>
-            <span class="toolbar-btns">
-                <button type="button" data-cmd="bold" title="加粗"><b>B</b></button>
-                <button type="button" data-cmd="italic" title="斜体"><i>I</i></button>
-                <button type="button" data-cmd="underline" title="下划线"><u>U</u></button>
-                <button type="button" data-cmd="insertUnorderedList" title="无序列表">⋮</button>
-                <button type="button" data-cmd="undo" title="撤销">↩</button>
-                <button type="button" data-cmd="redo" title="重做">↪</button>
-            </span>
-            <span id="draftCharCount" class="ocr-char-count"></span>
-        </div>
-        <div class="a4-editor-wrapper">
-            <div id="draftEditor" class="rich-editor" contenteditable="true" spellcheck="true"></div>
+        <div class="editor-workspace">
+            <div class="editor-main">
+                <div class="editor-toolbar">
+                    <div id="editorToolbar" class="wang-editor-toolbar"></div>
+                </div>
+                <div class="a4-editor-wrapper">
+                    <div id="draftEditor" class="rich-editor"></div>
+                </div>
+            </div>
+            <aside id="fieldPanel" class="contract-field-panel" hidden>
+                <div class="contract-field-head">
+                    <div><strong>待填写字段</strong><small id="fieldAnalysisSummary"></small></div>
+                    <button id="closeFieldPanelBtn" type="button" class="secondary">收起</button>
+                </div>
+                <div id="contractFieldList" class="contract-field-list"></div>
+                <button id="fillContractFieldsBtn" type="button">回填正文</button>
+            </aside>
         </div>
     </div>
 </section>
 <script>document.write(closeAppShell());</script>
-<script src="../js/edit.js?v=20260621-auto-meta"></script>
+<script src="../vendor/wang-editor/index.js?v=20260621-restore"></script>
+<script src="../js/edit.js?v=20260621-restore-fields"></script>
 </body>
 </html>
+

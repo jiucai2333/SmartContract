@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    合同智能编辑页面样式
    ============================================================ */
 
@@ -39,8 +39,8 @@
 
 .field-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px 12px;
     margin-bottom: 0;
 }
 
@@ -73,17 +73,19 @@
 /* 拖拽上传区 + 模板选择区 */
 .source-cards {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 10px;
     flex-shrink: 0;
-    width: 220px;
+    width: 340px;
 }
 
 .upload-zone, .template-picker {
     flex: 1;
+    width: 160px;
+    min-height: 0;
     border: 2px dashed #cbd5e1;
     border-radius: var(--radius);
-    padding: 12px 14px;
+    padding: 8px 10px;
     background: var(--line-light);
     cursor: pointer;
     transition: all var(--transition);
@@ -96,8 +98,22 @@
 }
 
 .upload-zone-icon {
-    font-size: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    color: var(--accent);
     line-height: 1;
+}
+
+.upload-zone-icon svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
 }
 
 .upload-zone:hover, .template-picker:hover {
@@ -113,7 +129,7 @@
 
 .upload-zone-text {
     color: var(--ink);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     line-height: 1.3;
 }
@@ -128,7 +144,7 @@
 .template-picker .upload-name {
     font-size: 11px;
     color: var(--muted);
-    max-width: 180px;
+    max-width: 138px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -136,7 +152,7 @@
 
 .template-picker select {
     width: 100%;
-    height: 30px;
+    height: 28px;
     font-size: 12px;
     padding: 0 6px;
     border: 1px solid var(--line);
@@ -150,11 +166,19 @@
     margin-top: 2px;
 }
 
+.upload-zone button,
+.template-picker button {
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
 /* ── 第二行：进度条 + 状态 ── */
 .status-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    gap: 0;
+    gap: 12px;
     padding: 0 16px;
     background: var(--line-light);
     border: 1px solid var(--line);
@@ -165,6 +189,7 @@
 
 /* OCR 状态条：内联单行，左侧 */
 #ocrPanel.ocr-panel {
+    grid-column: 1;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -172,7 +197,6 @@
     padding: 0;
     border: none;
     background: transparent;
-    flex: 1;
     min-width: 0;
     height: 100%;
 }
@@ -214,11 +238,12 @@
 
 /* 进度步骤条：居中，pill 连接线风格 */
 .draft-steps {
+    grid-column: 2;
     display: flex;
     align-items: center;
     gap: 0;
     flex-shrink: 0;
-    margin: 0 auto;
+    margin: 0;
     padding: 0 8px;
     height: 100%;
 }
@@ -294,10 +319,12 @@
 
 /* 草稿状态：右侧小字 */
 #draftStatus.hint {
+    grid-column: 3;
     font-size: 12px;
     color: var(--muted);
     white-space: nowrap;
     flex-shrink: 0;
+    justify-self: end;
     padding-left: 8px;
 }
 
@@ -398,53 +425,178 @@
 
 .result-actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     gap: 12px;
     margin-bottom: 12px;
+    min-height: 36px;
+}
+
+.editor-heading,
+.editor-action-buttons {
+    display: flex;
+    align-items: center;
+}
+
+.editor-heading {
+    gap: 10px;
+    border-left: 3px solid var(--accent);
+    padding-left: 8px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.editor-action-buttons {
+    gap: 12px;
+}
+
+.editor-workspace {
+    display: block;
+    align-items: flex-start;
+    max-width: 100%;
+}
+.editor-workspace.has-field-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 330px);
+    gap: 16px;
+}
+.editor-main { flex: 1; min-width: 0; position: relative; }
+.contract-field-panel {
+    position: sticky;
+    top: 28px;
+    width: 100%;
+    max-width: 330px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    flex-shrink: 0;
+}
+.contract-field-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.contract-field-head > div { min-width: 0; }
+.contract-field-head button { flex-shrink: 0; }
+.contract-field-head small { display: block; margin-top: 4px; color: var(--muted); }
+.contract-field-list { display: grid; gap: 10px; margin-bottom: 12px; }
+.contract-field-card {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #f8fafc;
+}
+.contract-field-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 7px;
+    font-size: 13px;
+}
+.contract-field-title strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.contract-field-level {
+    color: var(--muted);
+    font-size: 11px;
+    white-space: nowrap;
+}
+.contract-field-card input,
+.contract-field-card textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff;
+    color: var(--ink);
+}
+.contract-field-card textarea { min-height: 68px; resize: vertical; }
+#fillContractFieldsBtn { width: 100%; }
+.contract-field-source,
+.contract-field-suggestion {
+    max-width: 100%;
+    margin: 7px 0 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.contract-field-suggestion button { margin-top: 5px; }
+
+.contract-placeholder-preview {
+    display: inline-block;
+    width: min(120px, 100%);
+    min-width: 48px;
+    max-width: 100%;
+    height: 1em;
+    margin: 0 2px;
+    border-bottom: 1px solid currentColor;
+    vertical-align: -0.12em;
+}
+
+.contract-fill-underline {
+    display: inline-block;
+    min-width: 4em;
+    max-width: 14em;
+    padding: 0 0.35em;
+    text-align: center;
+    border-bottom: 1px solid currentColor;
+    line-height: 1.2;
+    text-decoration: none;
+    vertical-align: baseline;
+}
+
+.contract-fill-underline[data-placeholder-empty="true"] {
+    color: transparent;
+    border-bottom-color: #111 !important;
+    caret-color: var(--ink);
 }
 
 .editor-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
     border: 1px solid var(--line);
     border-bottom: 0;
     border-radius: var(--radius) var(--radius) 0 0;
     background: #f8fafc;
-    padding: 8px 14px;
+    padding: 6px 8px;
+    position: relative;
+    z-index: 100;
+    overflow: visible;
 }
 
-.toolbar-btns {
-    display: flex;
-    gap: 3px;
-    align-items: center;
+.wang-editor-toolbar {
+    min-width: 0;
 }
 
-.toolbar-btns button {
-    font-size: 13px;
-    padding: 5px 9px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--ink-secondary);
-    cursor: pointer;
-    transition: all var(--transition);
-    min-width: 30px;
-    font-weight: 600;
-    line-height: 1;
+.wang-editor-toolbar .w-e-toolbar {
+    padding: 0;
+    background: transparent;
+    flex-wrap: wrap;
 }
 
-.toolbar-btns button:hover {
-    background: var(--accent-bg);
-    border-color: var(--accent-light);
-    color: var(--accent);
+.wang-editor-toolbar .w-e-bar-item {
+    height: 30px;
+    padding: 2px;
 }
 
-.toolbar-btns button.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
+.wang-editor-toolbar .w-e-select-list,
+.wang-editor-toolbar .w-e-drop-panel,
+.wang-editor-toolbar .w-e-modal,
+.wang-editor-toolbar .w-e-bar-item-menus-container {
+    z-index: 1000;
 }
 
 .a4-editor-wrapper {
@@ -453,28 +605,45 @@
     padding: 24px 0;
     display: flex;
     justify-content: center;
+    position: relative;
+    z-index: 1;
     overflow: auto;
     max-height: none;
 }
 
 .rich-editor {
+    box-sizing: border-box;
     width: 794px;
-    min-height: 1500px;
-    padding: 96px 80px;
+    min-height: 1123px;
     background: #ffffff;
     box-shadow: 0 2px 12px rgba(15, 23, 42, .12);
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: "SimSun", "宋体", serif;
-    font-size: 14px;
-    line-height: 1.8;
-    outline: none;
     transition: box-shadow var(--transition);
     flex-shrink: 0;
 }
 
-.rich-editor:focus {
+.rich-editor:focus-within {
     box-shadow: 0 2px 12px rgba(15, 23, 42, .12), 0 0 0 3px rgba(20,184,166,.12);
+}
+
+.rich-editor .w-e-text-container {
+    min-height: 1123px;
+    background: transparent;
+}
+
+.rich-editor [data-slate-editor] {
+    min-height: 1123px;
+    padding: 96px 120px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: "FangSong", "仿宋", serif;
+    font-size: 14pt;
+    line-height: 1.5;
+}
+
+.rich-editor [data-slate-editor] .ocr-editor-document {
+    font-family: "FangSong", "仿宋", serif;
+    font-size: 14pt;
+    line-height: 1.5;
 }
 
 .rich-editor.import-ready {
@@ -486,20 +655,116 @@
     35% { background: #ecfeff; box-shadow: 0 0 0 4px rgba(20, 184, 166, .2); }
 }
 
-.rich-editor:empty::before {
-    content: "AI 生成或手动编辑合同正文...";
-    color: var(--muted);
-    opacity: .5;
+.rich-editor [data-slate-editor] h1 {
+    font-family: "FangSong", "仿宋", serif;
+    font-size: 18pt;
+    font-weight: bold;
+    line-height: 1.5;
+    margin: 12px 0 24px;
 }
 
-.rich-editor h1 { text-align: center; font-size: 24px; margin: 12px 0 24px; }
-.rich-editor h2 { font-size: 18px; margin: 22px 0 10px; }
-.rich-editor h3 { font-size: 16px; margin: 16px 0 8px; }
-.rich-editor p { line-height: inherit; }
-.rich-editor p[style*="text-indent"] { text-indent: 2em; }
-.rich-editor .clause-title { text-indent: 0; font-weight: 600; }
-.rich-editor table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #fff; }
-.rich-editor td, .rich-editor th { border: 1px solid #94a3b8; padding: 8px 10px; min-width: 70px; }
+.rich-editor [data-slate-editor] h1:not([style*="text-align"]) {
+    text-align: center;
+}
+
+.rich-editor [data-slate-editor] h1:not([style*="text-indent"]) {
+    text-indent: 0;
+}
+.rich-editor [data-slate-editor] h2 { font-size: 14pt; margin: 22px 0 10px; }
+.rich-editor [data-slate-editor] h3 { font-size: 14pt; margin: 16px 0 8px; }
+.rich-editor [data-slate-editor] h3.sub-clause-title {
+    font-family: "FangSong", "仿宋", serif;
+    font-size: 14pt;
+    font-weight: bold;
+    line-height: 1.5;
+    margin: 12px 0 6px;
+}
+
+.rich-editor [data-slate-editor] h3.sub-clause-title:not([style*="text-indent"]) {
+    text-indent: 2em;
+}
+.rich-editor [data-slate-editor] p {
+    font-family: "FangSong", "仿宋", serif;
+    font-size: 14pt;
+    line-height: 1.5;
+}
+
+.rich-editor [data-slate-editor] p:not([style*="text-align"]) {
+    text-align: left;
+}
+.rich-editor [data-slate-editor] p[data-doc-style="CLAUSE_BODY"]:not([style*="text-indent"]) {
+    text-indent: 2em;
+}
+.rich-editor [data-slate-editor] .party-info,
+.rich-editor [data-slate-editor] p.signature-block,
+.rich-editor [data-slate-editor] [data-doc-style="SIGNATURE_BLOCK"]:not([style*="text-indent"]) {
+    text-indent: 0;
+}
+.rich-editor [data-slate-editor] [data-indent-chars="2"]:not([style*="text-indent"]) {
+    text-indent: 2em;
+}
+.rich-editor [data-slate-editor] [data-indent-chars="0"]:not([style*="text-indent"]) {
+    text-indent: 0;
+}
+.rich-editor [data-slate-editor] .clause-title {
+    font-family: "FangSong", "仿宋", serif;
+    font-size: 14pt;
+    font-weight: bold;
+    line-height: 1.5;
+}
+.rich-editor [data-slate-editor] .clause-title:not([style*="text-align"]) { text-align: left; }
+.rich-editor [data-slate-editor] .clause-title:not([style*="text-indent"]) { text-indent: 0; }
+.rich-editor [data-slate-editor] .signature-block {
+    font-family: "FangSong", "仿宋", serif;
+    font-size: 14pt;
+    line-height: 1.5;
+}
+.rich-editor [data-slate-editor] .signature-block:not([style*="text-indent"]) {
+    text-indent: 0;
+}
+.rich-editor [data-slate-editor] table {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin: 16px 0;
+    background: #fff;
+    font-family: "FangSong", "仿宋", serif;
+    font-size: 14pt;
+    line-height: 1.5;
+}
+.rich-editor [data-slate-editor] td,
+.rich-editor [data-slate-editor] th {
+    box-sizing: border-box;
+    border: 1px solid #94a3b8;
+    padding: 8px 10px;
+    min-width: 0;
+    text-indent: 0;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.rich-editor [data-slate-editor] .risk-overview-table td:first-child,
+.rich-editor [data-slate-editor] .risk-overview-table th:first-child {
+    width: 24%;
+}
+.rich-editor [data-slate-editor] .signature-block {
+    margin-top: 28px;
+}
+.rich-editor [data-slate-editor] .signature-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 36px;
+    line-height: 1.8;
+    text-indent: 0;
+}
+.rich-editor [data-slate-editor] .signature-row span {
+    min-width: 0;
+    text-indent: 0;
+    white-space: pre-wrap;
+}
 
 /* ── 其他组件 ── */
 .markdown-editor {
@@ -648,47 +913,62 @@
     line-height: 1.7;
 }
 
-/* ── OCR 坐标版式预览（只读，不会进入编辑器） ── */
-.ocr-preview-area {
-    margin-top: 8px;
-    max-height: 200px;
-    overflow: auto;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: #f8fafc;
-    padding: 0;
-}
-
-.ocr-preview-area .ocr-page {
-    transform-origin: top left;
-}
-
-.ocr-preview-area .ocr-block {
-    font-family: "SimSun", "宋体", serif;
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--ink-secondary);
-    white-space: pre-wrap;
-}
-
-#ocrPreviewToggle {
-    font-size: 11px;
-    padding: 2px 8px;
-}
-
 /* ── 响应式 ── */
 @media (max-width: 1200px) {
     .meta-upload-row { flex-direction: column; }
     .source-cards { width: 100%; flex-direction: row; }
-    .rich-editor { width: 100%; min-height: 800px; padding: 64px 48px; }
+    .rich-editor { width: 100%; min-height: 800px; }
+    .rich-editor .w-e-text-container,
+    .rich-editor [data-slate-editor] { min-height: 800px; }
+    .rich-editor [data-slate-editor] { padding: 64px 48px; }
+    .editor-workspace {
+        display: flex;
+        flex-direction: column;
+    }
+    .contract-field-panel {
+        position: static;
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 900px) {
+    .field-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 768px) {
     .field-list { grid-template-columns: 1fr; }
     .source-cards { flex-direction: column; }
-    .status-row { height: auto; flex-wrap: wrap; padding: 6px 12px; gap: 6px; }
-    .draft-steps { margin: 0; }
-    #draftStatus.hint { margin-left: 0; padding-left: 0; }
-    .rich-editor { padding: 40px 28px; min-height: 600px; }
+    .upload-zone,
+    .template-picker { width: 100%; }
+    .status-row {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        height: auto;
+        padding: 6px 12px;
+        gap: 6px;
+    }
+    #ocrPanel.ocr-panel {
+        grid-column: 1;
+        width: 100%;
+        min-height: 28px;
+    }
+    .draft-steps {
+        grid-column: 1;
+        margin: 0;
+    }
+    #draftStatus.hint {
+        grid-column: 1;
+        justify-self: center;
+        margin-left: 0;
+        padding-left: 0;
+    }
+    .rich-editor { min-height: 600px; }
+    .rich-editor .w-e-text-container,
+    .rich-editor [data-slate-editor] { min-height: 600px; }
+    .rich-editor [data-slate-editor] { padding: 40px 28px; }
     .a4-editor-wrapper { padding: 16px 0; }
 }
+

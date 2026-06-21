@@ -555,7 +555,7 @@ public class ContractManagementService {
     private String buildAnnotatedContractHtml(RiskReport report, List<AiRiskVO> risks) {
         StringBuilder html = new StringBuilder();
         html.append("<h1>AI风险标注合同草稿</h1>");
-        html.append("<h2>一、合同风险概览</h2><table>");
+        html.append("<h2>一、合同风险概览</h2><table class=\"risk-overview-table\">");
         htmlRow(html, "报告编号", report.getReportNo());
         htmlRow(html, "合同类型", report.getContractType());
         htmlRow(html, "甲方", report.getPartyA());
