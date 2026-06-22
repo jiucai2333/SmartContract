@@ -19,6 +19,9 @@ public class PaymentRecord extends BaseAuditEntity {
     private Long contractId;
     private BigDecimal paidAmount;
     private LocalDate paidDate;
+    private String bankSerialNo;
+    private String handlerName;
+    private Long voucherFileId;
     private String payer;
     private String receiver;
     private String remark;

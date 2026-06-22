@@ -9,7 +9,9 @@ public record FulfillmentPlanRequest(
         LocalDate dueDate,
         String status,
         Integer progress,
+        LocalDate actualCompletedDate,
         String ownerName,
+        String delayReason,
         String remark
 ) {
 }

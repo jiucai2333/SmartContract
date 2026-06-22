@@ -11,6 +11,11 @@ public record PaymentRecordVO(
         String phaseName,
         BigDecimal paidAmount,
         LocalDate paidDate,
+        String bankSerialNo,
+        String handlerName,
+        Long voucherFileId,
+        String voucherFileName,
+        String voucherDownloadUrl,
         String payer,
         String receiver,
         String remark

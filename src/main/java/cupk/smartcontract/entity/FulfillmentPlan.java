@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -24,6 +25,23 @@ public class FulfillmentPlan extends BaseAuditEntity {
     private String ownerName;
     private String sourceType;
     private String extractedRule;
+    private String sourceClause;
+    private BigDecimal aiConfidence;
+    private Integer aiExtracted;
+    private String confirmStatus;
+    private Integer overdueDays;
+    private LocalDateTime lastOverdueAt;
+    private LocalDate actualCompletedDate;
+    private String delayStatus;
+    private LocalDate delayRequestedDueDate;
+    private String delayReason;
+    private String delayRequestedBy;
+    private LocalDateTime delayRequestedAt;
+    private String delayConfirmedBy;
+    private LocalDateTime delayConfirmedAt;
+    private String delayRejectedBy;
+    private LocalDateTime delayRejectedAt;
+    private String delayRejectReason;
     private String remark;
     private LocalDateTime handledAt;
 

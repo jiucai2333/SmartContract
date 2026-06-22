@@ -197,7 +197,14 @@ async function downloadFile(url, fallbackName = 'download') {
         throw new Error('请先登录');
     }
     if (response.status === 403) throw new Error('权限不足');
-    if (!response.ok) throw new Error(`下载失败：${response.status}`);
+    if (!response.ok) {
+        let message = `下载失败：${response.status}`;
+        try {
+            const error = await response.json();
+            message = error.msg || error.message || message;
+        } catch {}
+        throw new Error(message);
+    }
     const blob = await response.blob();
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -206,7 +213,7 @@ async function downloadFile(url, fallbackName = 'download') {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(objectUrl);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
 async function api(url, options = {}) {
