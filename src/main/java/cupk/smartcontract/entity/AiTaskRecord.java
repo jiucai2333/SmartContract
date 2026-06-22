@@ -18,6 +18,11 @@ public class AiTaskRecord {
     private String promptHash;
     private Integer tokenUsage;
     private String status;
+    private String inputSummary;
+    private String outputSummary;
+    private String errorReason;
+    private Long durationMs;
     private String createdBy;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

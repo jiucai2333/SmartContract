@@ -151,6 +151,7 @@ public class ContractManagementService {
         long highRisk = contracts.stream().filter(c -> "HIGH".equals(c.getRiskLevel())).count();
         long dueSoon = plans.stream()
                 .filter(p -> !"FULFILLED".equals(p.getStatus()))
+                .filter(p -> p.getDueDate() != null)
                 .filter(p -> !p.getDueDate().isAfter(LocalDate.now().plusDays(30)))
                 .count();
         BigDecimal totalAmount = contracts.stream()

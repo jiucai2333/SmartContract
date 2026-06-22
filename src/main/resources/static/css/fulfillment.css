@@ -226,19 +226,37 @@
     background: var(--accent);
 }
 
-.tag.status-TODO {
+.tag.status-TODO,
+.tag.status-NOT_STARTED,
+.tag.status-PENDING_SUBMIT {
     color: var(--muted);
     background: var(--line-light);
 }
 
 .tag.status-IN_PROGRESS,
+.tag.status-SUBMITTED,
 .tag.warning-LEVEL1 {
     color: var(--accent-2);
     background: var(--accent-2-bg);
 }
 
+.tag.status-PENDING_CONFIRM,
+.tag.status-NEED_SUPPLEMENT {
+    color: var(--warn);
+    background: var(--warn-bg);
+}
+
+.tag.status-REJECTED {
+    color: var(--danger);
+    background: var(--danger-bg);
+}
+
+.tag.status-ACTIVE,
 .tag.status-COMPLETED,
+.tag.status-ACCEPTED,
+.tag.status-ACCEPTANCE_PASSED,
 .tag.status-HANDLED,
+.tag.status-CLOSED,
 .tag.warning-NONE,
 .tag.warning-NORMAL {
     color: var(--success);
@@ -267,6 +285,36 @@
 .tag.payment-PAID {
     color: var(--success);
     background: var(--success-bg);
+}
+
+.tag.voucher-PENDING_REVIEW {
+    color: var(--warn);
+    background: var(--warn-bg);
+}
+
+.tag.voucher-APPROVED,
+.tag.voucher-NOT_REQUIRED {
+    color: var(--success);
+    background: var(--success-bg);
+}
+
+.tag.voucher-REJECTED {
+    color: var(--danger);
+    background: var(--danger-bg);
+}
+
+.ai-meta {
+    min-width: 120px;
+}
+
+.ai-meta small {
+    display: block;
+    margin-top: 6px;
+}
+
+.ai-meta .ai-pending {
+    color: var(--warn);
+    font-weight: 800;
 }
 
 .payment-ratio-summary,
@@ -373,10 +421,44 @@
     accent-color: var(--accent);
 }
 
+.wide-modal {
+    width: min(1180px, calc(100vw - 36px));
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.detail-grid h4 {
+    margin: 0 0 10px;
+    color: var(--ink);
+    font-size: 15px;
+}
+
+.compact-table {
+    max-height: 360px;
+    overflow: auto;
+}
+
+.compact-table th,
+.compact-table td {
+    padding: 10px 12px;
+    font-size: 12.5px;
+}
+
+.danger-link {
+    color: var(--danger);
+    background: var(--danger-bg);
+}
+
 @media (max-width: 1100px) {
     .metric-grid,
     .feature-grid,
-    .feature-grid.member-e-grid {
+    .feature-grid.member-e-grid,
+    .detail-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -404,7 +486,8 @@
 @media (max-width: 640px) {
     .metric-grid,
     .feature-grid,
-    .feature-grid.member-e-grid {
+    .feature-grid.member-e-grid,
+    .detail-grid {
         grid-template-columns: 1fr;
     }
 
