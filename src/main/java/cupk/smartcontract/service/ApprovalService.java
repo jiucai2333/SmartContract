@@ -29,7 +29,8 @@ public class ApprovalService {
     private static final Map<String, Set<String>> NODE_ROLES = Map.of(
             "部门主管审批", Set.of("DEPT_LEADER", "ADMIN"),
             "法务专员审批", Set.of("LEGAL", "ADMIN"),
-            "企业高管审批", Set.of("EXECUTIVE", "ADMIN")
+            "企业高管审批", Set.of("EXECUTIVE", "ADMIN"),
+            "法务复核", Set.of("LEGAL", "ADMIN")
     );
 
     private final ApprovalInstanceMapper mapper;
@@ -56,24 +57,23 @@ public class ApprovalService {
     @Transactional
     public ApprovalVO agree(Long instanceId, String comment) {
         Approval approval = requireRunning(instanceId);
-        String currentNode = approval.getCurrentNode() == null ? "部门主管审批" : approval.getCurrentNode();
+        String rawNode = approval.getCurrentNode() == null
+                ? flowNodes(approval.getFlowType()).get(0)
+                : approval.getCurrentNode();
+        String currentNode = normalizeNodeName(rawNode);
         assertNodeRole(currentNode);
-
-        insertRecord(instanceId, currentNode, "AGREE", comment);
+        insertRecord(instanceId, rawNode, "AGREE", comment);
 
         List<String> nodes = flowNodes(approval.getFlowType());
-        int idx = nodes.indexOf(currentNode);
-        if (idx < 0) {
+        int currentIndex = nodes.indexOf(currentNode);
+        if (currentIndex < 0) {
             throw new IllegalStateException("未知审批节点：" + currentNode);
         }
-
-        if (idx < nodes.size() - 1) {
-            approval.setCurrentNode(nodes.get(idx + 1));
+        if (currentIndex < nodes.size() - 1) {
+            approval.setCurrentNode(nodes.get(currentIndex + 1));
             approval.setUpdatedBy(SecurityContext.username());
             approval.setUpdatedAt(LocalDateTime.now());
             mapper.updateById(approval);
-            statusTransitionService.writeLog(SecurityContext.userId(), "APPROVAL_AGREE",
-                    "CONTRACT", approval.getContractId(), "NODE_ADVANCED");
             return toVo(approval);
         }
 
@@ -86,8 +86,6 @@ public class ApprovalService {
         ContractMain contract = contractMapper.selectById(approval.getContractId());
         if (contract != null && "APPROVING".equals(contract.getStatus())) {
             statusTransitionService.transitionToApproved(contract);
-            statusTransitionService.writeLog(SecurityContext.userId(), "APPROVAL_PASS",
-                    "CONTRACT", approval.getContractId(), "SUCCESS");
         }
         return toVo(approval);
     }
@@ -95,11 +93,12 @@ public class ApprovalService {
     @Transactional
     public ApprovalVO reject(Long instanceId, String comment) {
         Approval approval = requireRunning(instanceId);
-        String currentNode = approval.getCurrentNode() == null ? "部门主管审批" : approval.getCurrentNode();
+        String rawNode = approval.getCurrentNode() == null
+                ? flowNodes(approval.getFlowType()).get(0)
+                : approval.getCurrentNode();
+        String currentNode = normalizeNodeName(rawNode);
         assertNodeRole(currentNode);
-
-        insertRecord(instanceId, currentNode, "REJECT",
-                comment == null || comment.isBlank() ? "驳回" : comment);
+        insertRecord(instanceId, rawNode, "REJECT", comment);
 
         approval.setStatus("REJECTED");
         approval.setEndedAt(LocalDateTime.now());
@@ -110,8 +109,6 @@ public class ApprovalService {
         ContractMain contract = contractMapper.selectById(approval.getContractId());
         if (contract != null && "APPROVING".equals(contract.getStatus())) {
             statusTransitionService.transitionToDraft(contract);
-            statusTransitionService.writeLog(SecurityContext.userId(), "APPROVAL_REJECT",
-                    "CONTRACT", approval.getContractId(), "SUCCESS");
         }
         return toVo(approval);
     }
@@ -128,14 +125,18 @@ public class ApprovalService {
     }
 
     private void assertNodeRole(String nodeName) {
-        Set<String> allowed = NODE_ROLES.get(nodeName);
-        if (allowed == null || !allowed.contains(SecurityContext.roleCode())) {
+        Set<String> allowedRoles = NODE_ROLES.get(nodeName);
+        if (allowedRoles == null || !allowedRoles.contains(SecurityContext.roleCode())) {
             throw new IllegalStateException("当前角色无权处理节点：" + nodeName);
         }
     }
 
     private List<String> flowNodes(String flowType) {
         return FLOW_NODES.getOrDefault(flowType, FLOW_NODES.get("NORMAL"));
+    }
+
+    private String normalizeNodeName(String nodeName) {
+        return "法务复核".equals(nodeName) ? "法务专员审批" : nodeName;
     }
 
     private void insertRecord(Long instanceId, String nodeName, String action, String comment) {
