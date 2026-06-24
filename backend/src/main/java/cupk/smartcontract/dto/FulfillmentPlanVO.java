@@ -1,0 +1,87 @@
+package cupk.smartcontract.dto;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+public record FulfillmentPlanVO(
+        Long planId,
+        Long contractId,
+        String contractNo,
+        String contractTitle,
+        String counterparty,
+        String nodeName,
+        String planType,
+        LocalDate dueDate,
+        String status,
+        Integer progress,
+        LocalDate actualCompletedDate,
+        String ownerName,
+        String sourceType,
+        String sourceClause,
+        BigDecimal aiConfidence,
+        Boolean aiExtracted,
+        String confirmStatus,
+        Integer overdueDays,
+        String delayStatus,
+        LocalDate delayRequestedDueDate,
+        String delayReason,
+        String delayRequestedBy,
+        LocalDateTime delayRequestedAt,
+        String delayConfirmedBy,
+        LocalDateTime delayConfirmedAt,
+        String delayRejectedBy,
+        LocalDateTime delayRejectedAt,
+        String delayRejectReason,
+        String warningLevel,
+        Long daysLeft,
+        String remark,
+        LocalDateTime updatedAt
+) {
+    public FulfillmentPlanVO(Long planId,
+                             Long contractId,
+                             String contractNo,
+                             String contractTitle,
+                             String counterparty,
+                             String nodeName,
+                             String planType,
+                             LocalDate dueDate,
+                             String status,
+                             Integer progress,
+                             LocalDate actualCompletedDate,
+                             String ownerName,
+                             String sourceType,
+                             String sourceClause,
+                             BigDecimal aiConfidence,
+                             Boolean aiExtracted,
+                             String confirmStatus,
+                             Integer overdueDays,
+                             String delayStatus,
+                             LocalDate delayRequestedDueDate,
+                             String delayReason,
+                             String delayRequestedBy,
+                             LocalDateTime delayRequestedAt,
+                             String delayConfirmedBy,
+                             LocalDateTime delayConfirmedAt,
+                             String warningLevel,
+                             Long daysLeft,
+                             String remark,
+                             LocalDateTime updatedAt) {
+        this(planId, contractId, contractNo, contractTitle, counterparty, nodeName, planType, dueDate,
+                status, progress, actualCompletedDate, ownerName, sourceType, sourceClause, aiConfidence,
+                aiExtracted, confirmStatus, overdueDays, delayStatus, delayRequestedDueDate, delayReason,
+                delayRequestedBy, delayRequestedAt, delayConfirmedBy, delayConfirmedAt, null, null, null,
+                warningLevel, daysLeft, remark, updatedAt);
+    }
+
+    public static String statusName(String status) {
+        return switch (status) {
+            case "PENDING", "NOT_STARTED" -> "待处理";
+            case "PROCESSING", "IN_PROGRESS" -> "进行中";
+            case "FULFILLED", "COMPLETED" -> "已完成";
+            case "OVERDUE" -> "已逾期";
+            case "CLOSED" -> "已关闭";
+            default -> status;
+        };
+    }
+}

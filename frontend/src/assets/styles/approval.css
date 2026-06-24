@@ -1,0 +1,183 @@
+/* ============================================================
+   审批流转页面样式
+   ============================================================ */
+
+/* ---- Flow Nodes ---- */
+.flowline {
+    display: grid;
+    gap: 14px;
+}
+
+.flow-node {
+    position: relative;
+    padding: 16px 16px 16px 42px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition), border-color var(--transition);
+}
+
+.flow-node:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.flow-node::before {
+    content: "";
+    position: absolute;
+    left: 16px;
+    top: 18px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    transition: box-shadow var(--transition);
+}
+
+.flow-node.current {
+    border-color: var(--accent-light);
+    background: linear-gradient(135deg, var(--accent-bg), #f0fdfa);
+}
+
+.flow-node.current::before {
+    background: var(--accent);
+    box-shadow: 0 0 0 6px rgba(20,184,166,.2);
+}
+
+.flow-node h3 { margin-bottom: 4px; }
+.flow-node p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+.approval-node-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.approval-node-head > strong {
+    min-width: 0;
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.approval-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+.approval-summary span + span::before {
+    content: "·";
+    margin-right: 8px;
+    color: var(--line-strong);
+}
+
+.approval-records {
+    display: grid;
+    gap: 9px;
+    margin-top: 14px;
+}
+
+.approval-record {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.approval-record-body {
+    min-width: 0;
+}
+
+.approval-record-body > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.approval-record-body strong {
+    color: var(--ink);
+    font-size: 12.5px;
+}
+
+.approval-record-body time {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.approval-record-body p,
+.approval-empty {
+    margin: 4px 0 0;
+    overflow-wrap: anywhere;
+}
+
+.approval-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+/* ---- Lists ---- */
+.list {
+    display: grid;
+    gap: 12px;
+}
+
+.list-item, .timeline-item {
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition);
+}
+
+.list-item:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.list-item strong, .timeline-item strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.list-item span, .timeline-item span {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* ---- Timeline ---- */
+.timeline {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.timeline-item {
+    border-left: 3px solid var(--accent-light);
+}
+
+@media (max-width: 640px) {
+    .timeline { grid-template-columns: 1fr; }
+    .flow-node { padding: 14px 14px 14px 36px; }
+    .approval-record {
+        grid-template-columns: 1fr;
+    }
+    .approval-record-body > div {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 3px;
+    }
+}

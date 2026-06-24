@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cupk.smartcontract.mapper.ContractAttachmentOcrMapper">
+    <resultMap id="ocrMap" type="cupk.smartcontract.entity.ContractAttachmentOcr">
+        <id property="ocrId" column="ocr_id"/>
+        <result property="attachmentId" column="attachment_id"/>
+        <result property="ocrStatus" column="ocr_status"/>
+        <result property="previewHtml" column="preview_html"/>
+        <result property="editorHtml" column="editor_html"/>
+        <result property="plainText" column="plain_text"/>
+        <result property="ocrBlocksJson" column="ocr_blocks_json"/>
+        <result property="ocrRawJson" column="ocr_raw_json"/>
+        <result property="qwenLayoutJson" column="qwen_layout_json"/>
+        <result property="parseSource" column="parse_source"/>
+        <result property="approximate" column="approximate"/>
+        <result property="parseWarnings" column="parse_warnings"/>
+        <result property="pageCount" column="page_count"/>
+        <result property="ocrModel" column="ocr_model"/>
+        <result property="qwenModel" column="qwen_model"/>
+        <result property="ocrDurationMs" column="ocr_duration_ms"/>
+        <result property="qwenDurationMs" column="qwen_duration_ms"/>
+        <result property="ocrError" column="ocr_error"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedBy" column="updated_by"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="deleted" column="is_deleted"/>
+        <result property="version" column="version"/>
+    </resultMap>
+
+    <sql id="columns">
+        ocr_id, attachment_id, ocr_status, preview_html, editor_html, plain_text, ocr_blocks_json,
+        ocr_raw_json, qwen_layout_json, parse_source, approximate, parse_warnings,
+        page_count, ocr_model, qwen_model, ocr_duration_ms, qwen_duration_ms,
+        ocr_error, created_by, created_at, updated_by, updated_at, is_deleted, version
+    </sql>
+
+    <select id="selectByAttachmentId" resultMap="ocrMap">
+        SELECT <include refid="columns"/>
+        FROM contract_attachment_ocr
+        WHERE attachment_id = #{attachmentId} AND is_deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="cupk.smartcontract.entity.ContractAttachmentOcr"
+            useGeneratedKeys="true" keyProperty="ocrId">
+        INSERT INTO contract_attachment_ocr (
+            attachment_id, ocr_status, preview_html, editor_html, plain_text, ocr_blocks_json,
+            ocr_raw_json, qwen_layout_json, parse_source, approximate, parse_warnings,
+            page_count, ocr_model, qwen_model, ocr_duration_ms, qwen_duration_ms,
+            ocr_error, created_by, created_at, updated_by, updated_at, is_deleted, version
+        ) VALUES (
+            #{attachmentId}, #{ocrStatus}, #{previewHtml}, #{editorHtml}, #{plainText}, #{ocrBlocksJson},
+            #{ocrRawJson}, #{qwenLayoutJson}, #{parseSource}, COALESCE(#{approximate}, 0), #{parseWarnings},
+            #{pageCount}, #{ocrModel}, #{qwenModel}, #{ocrDurationMs}, #{qwenDurationMs},
+            #{ocrError}, #{createdBy}, #{createdAt}, #{updatedBy}, #{updatedAt}, #{deleted}, #{version}
+        )
+    </insert>
+
+    <update id="updateByAttachmentId" parameterType="cupk.smartcontract.entity.ContractAttachmentOcr">
+        UPDATE contract_attachment_ocr
+        SET ocr_status = #{ocrStatus},
+            preview_html = #{previewHtml},
+            editor_html = #{editorHtml},
+            plain_text = #{plainText},
+            ocr_blocks_json = #{ocrBlocksJson},
+            ocr_raw_json = #{ocrRawJson},
+            qwen_layout_json = #{qwenLayoutJson},
+            parse_source = #{parseSource},
+            approximate = COALESCE(#{approximate}, 0),
+            parse_warnings = #{parseWarnings},
+            page_count = #{pageCount},
+            ocr_model = #{ocrModel},
+            qwen_model = #{qwenModel},
+            ocr_duration_ms = #{ocrDurationMs},
+            qwen_duration_ms = #{qwenDurationMs},
+            ocr_error = #{ocrError},
+            updated_by = #{updatedBy},
+            updated_at = #{updatedAt},
+            version = version + 1
+        WHERE attachment_id = #{attachmentId} AND is_deleted = 0
+    </update>
+
+    <insert id="upsertByAttachmentId" parameterType="cupk.smartcontract.entity.ContractAttachmentOcr"
+            useGeneratedKeys="true" keyProperty="ocrId">
+        INSERT INTO contract_attachment_ocr (
+            attachment_id, ocr_status, preview_html, editor_html, plain_text, ocr_blocks_json,
+            ocr_raw_json, qwen_layout_json, parse_source, approximate, parse_warnings,
+            page_count, ocr_model, qwen_model, ocr_duration_ms, qwen_duration_ms,
+            ocr_error, created_by, created_at, updated_by, updated_at, is_deleted, version
+        ) VALUES (
+            #{attachmentId}, #{ocrStatus}, #{previewHtml}, #{editorHtml}, #{plainText}, #{ocrBlocksJson},
+            #{ocrRawJson}, #{qwenLayoutJson}, #{parseSource}, COALESCE(#{approximate}, 0), #{parseWarnings},
+            #{pageCount}, #{ocrModel}, #{qwenModel}, #{ocrDurationMs}, #{qwenDurationMs},
+            #{ocrError}, #{createdBy}, #{createdAt}, #{updatedBy}, #{updatedAt}, #{deleted}, #{version}
+        )
+        ON DUPLICATE KEY UPDATE
+            ocr_status = VALUES(ocr_status),
+            preview_html = VALUES(preview_html),
+            editor_html = VALUES(editor_html),
+            plain_text = VALUES(plain_text),
+            ocr_blocks_json = VALUES(ocr_blocks_json),
+            ocr_raw_json = VALUES(ocr_raw_json),
+            qwen_layout_json = VALUES(qwen_layout_json),
+            parse_source = VALUES(parse_source),
+            approximate = COALESCE(VALUES(approximate), 0),
+            parse_warnings = VALUES(parse_warnings),
+            page_count = VALUES(page_count),
+            ocr_model = VALUES(ocr_model),
+            qwen_model = VALUES(qwen_model),
+            ocr_duration_ms = VALUES(ocr_duration_ms),
+            qwen_duration_ms = VALUES(qwen_duration_ms),
+            ocr_error = VALUES(ocr_error),
+            updated_by = VALUES(updated_by),
+            updated_at = VALUES(updated_at),
+            is_deleted = 0,
+            version = version + 1
+    </insert>
+
+    <update id="logicDeleteByAttachmentId">
+        UPDATE contract_attachment_ocr
+        SET is_deleted = 1,
+            updated_by = #{updatedBy},
+            updated_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE attachment_id = #{attachmentId} AND is_deleted = 0
+    </update>
+</mapper>

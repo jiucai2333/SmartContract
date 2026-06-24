@@ -1,0 +1,92 @@
+<template>
+  <div class="legacy-view">
+    <section class="section">
+        <div class="panel" id="reviewInputPanel">
+            <div class="panel-head"><div><p class="eyebrow">合同输入</p><h2>上传 PDF 合同</h2></div></div>
+            <div class="form-grid">
+                <div class="wide contract-picker-block">
+                    <div class="field-label">从现有合同选择</div>
+                    <div class="contract-picker-toolbar">
+                        <input id="contractSearch" type="search" placeholder="搜索合同编号、名称或相对方">
+                        <button id="refreshContractsBtn" type="button" class="secondary">刷新</button>
+                    </div>
+                    <div id="contractPicker" class="contract-picker-list">
+                        <div class="list-item"><span>正在加载合同列表...</span></div>
+                    </div>
+                </div>
+                <label class="wide">PDF 合同文件
+                    <input id="contractPdf" type="file" accept="application/pdf,.pdf">
+                    <span id="pdfStatus" class="upload-hint">选择 PDF 后点击开始审查，系统会自动提取合同正文。</span>
+                </label>
+                <label>合同类型
+                    <select id="contractType">
+                        <option value="">请选择</option>
+                        <option value="采购合同">采购合同</option>
+                        <option value="销售合同">销售合同</option>
+                        <option value="服务合同">服务合同</option>
+                        <option value="技术开发合同">技术开发合同</option>
+                        <option value="租赁合同">租赁合同</option>
+                        <option value="劳动合同">劳动合同</option>
+                        <option value="合作协议">合作协议</option>
+                    </select>
+                </label>
+                <label>业务范围
+                    <input id="businessScope" type="text" placeholder="如：IT基础设施运维服务">
+                </label>
+                <label>甲方名称
+                    <input id="partyA" type="text" placeholder="甲方公司全称">
+                </label>
+                <label>乙方名称
+                    <input id="partyB" type="text" placeholder="乙方公司全称">
+                </label>
+                <label class="wide">特殊条款（可选）
+                    <input id="specialTerms" type="text" placeholder="如：分三期付款、含保密附件等">
+                </label>
+                <label class="wide hidden-text-input">合同正文
+                    <textarea id="contractText" rows="10" placeholder="请粘贴合同全文，AI 将自动进行风险审查..."></textarea>
+                </label>
+            </div>
+            <div class="button-row">
+                <button id="reviewBtn" type="button">开始风险审查</button>
+                <button id="clearBtn" type="button" class="secondary">清空</button>
+            </div>
+        </div>
+    </section>
+    <section class="section report-layout">
+        <div class="panel">
+            <div class="panel-head"><div><p class="eyebrow">审查报告</p><h2>本次风险报告</h2></div></div>
+            <div id="reportSummary" class="report-summary empty">完成审查后，报告会自动保存并显示在这里。</div>
+        </div>
+        <div class="panel">
+            <div class="panel-head"><div><p class="eyebrow">历史记录</p><h2>历史风险报告</h2></div></div>
+            <div id="reportList" class="report-list">
+                <div class="list-item"><span>暂无风险报告</span></div>
+            </div>
+        </div>
+    </section>
+    <section class="section review-layout">
+        <div class="panel contract-preview">
+            <div class="panel-head"><div><p class="eyebrow">审查对照</p><h2>合同正文预览</h2></div></div>
+            <article id="contractBody">
+                <p class="hint">上传 PDF 合同后，此处将展示解析出的合同条款，点击右侧风险卡片可定位到对应条款。</p>
+            </article>
+        </div>
+        <div class="panel">
+            <div class="panel-head"><div><p class="eyebrow">风险明细</p><h2>AI 风险审查</h2></div></div>
+            <div id="riskList" class="list">
+                <div class="list-item"><span>请上传 PDF 合同文件，系统将自动解析并进行风险审查。</span></div>
+            </div>
+        </div>
+    </section>
+  </div>
+</template>
+
+<script setup>
+import { nextTick, onMounted } from 'vue';
+import { runLegacyPage } from '../legacy/pageLoader';
+
+onMounted(async () => {
+  await nextTick();
+  await runLegacyPage('risk');
+});
+</script>
