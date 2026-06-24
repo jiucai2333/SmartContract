@@ -1,0 +1,61 @@
+﻿<template>
+  <div class="legacy-view">
+<!-- 卡片 1：合同检索 -->
+<section class="section panel ledger-filter-panel">
+    <div class="panel-head">
+        <div><p class="eyebrow">合同检索</p><h2>搜索与筛选</h2></div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <button type="button" id="resetBtn" class="secondary">重置</button>
+        </div>
+    </div>
+    <div class="filters">
+        <div class="search-field">
+            <i data-lucide="search"></i>
+            <input id="keyword" placeholder="知识库多功能实时搜索">
+        </div>
+        <select id="statusFilter"><option value="">全部状态</option><option value="DRAFT">草稿</option><option value="APPROVING">审批中</option><option value="APPROVED">已审批</option><option value="SIGNING">已签章</option><option value="ARCHIVED">已归档</option><option value="EXECUTING">履约中</option><option value="COMPLETED">已完成</option><option value="EXPIRED">已到期</option><option value="TERMINATED">已终止</option></select>
+        <select id="riskFilter"><option value="">全部风险</option><option value="LOW">低</option><option value="MEDIUM">中</option><option value="HIGH">高</option></select>
+        <select id="typeFilter"><option value="">全部类型</option><option value="PURCHASE">采购</option><option value="SALES">销售</option><option value="TECH">技术</option><option value="LABOR">劳务</option><option value="CONFIDENTIAL">保密</option><option value="LOGISTICS">物流</option><option value="ENTERPRISE_SERVICE">企业服务</option><option value="INTELLECTUAL_PROPERTY">知识产权</option></select>
+    </div>
+    <div class="filters filters-row2">
+        <div class="filter-group">
+            <label>创建日期</label>
+            <div class="date-range"><input type="date" id="dateFrom" title="起始日期" lang="zh-CN"> <span>至</span> <input type="date" id="dateTo" title="截止日期" lang="zh-CN"></div>
+        </div>
+        <div class="filter-group">
+            <label>合同金额</label>
+            <div class="amount-range"><input type="number" id="amountMin" placeholder="最低" step="0.01"> <span>至</span> <input type="number" id="amountMax" placeholder="最高" step="0.01"></div>
+        </div>
+    </div>
+</section>
+
+<!-- 卡片 2：合同台账表 -->
+<section class="section panel" id="tableSection">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>编号</th><th>标题</th><th>相对方</th><th>金额</th><th>状态</th><th>风险</th><th>附件</th><th>到期</th><th>操作</th></tr></thead>
+            <tbody id="contractRows"></tbody>
+        </table>
+    </div>
+    <div id="pagination" style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:16px;font-size:13px"></div>
+</section>
+
+<!-- 附件 & 详情模态框 -->
+<div id="attachmentModal" class="modal" hidden>
+    <div class="modal-card"><div class="modal-head"><h3 id="attachmentModalTitle">合同附件</h3><button type="button" id="closeAttachmentModal" class="secondary">关闭</button></div><div id="attachmentModalBody" class="attachment-list"></div></div>
+</div>
+<div id="detailModal" class="modal" hidden>
+    <div class="modal-card"><div class="modal-head"><h3 id="detailModalTitle">合同详情</h3><button type="button" id="closeDetailModal" class="secondary">关闭</button></div><div id="detailModalBody"></div></div>
+</div>
+  </div>
+</template>
+
+<script setup>
+import { nextTick, onMounted } from 'vue';
+import { runLegacyPage } from '../legacy/pageLoader';
+
+onMounted(async () => {
+  await nextTick();
+  await runLegacyPage('ledger');
+});
+</script>

@@ -1,4 +1,5 @@
 HELP.md
+.agents/
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -32,7 +33,16 @@ build/
 ### VS Code ###
 .vscode/
 
-### Local runtime data ###
-.claude/
+### Build / Temp ###
+.compile-check/
 .draft-upload-repo/
-data/uploads/
+# data/uploads/  # 已取消忽略：上传的合同文件需要提交
+backend/data/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+
+### Runtime Logs & PID ###
+*.log
+*.pid
