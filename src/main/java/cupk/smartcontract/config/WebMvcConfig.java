@@ -21,10 +21,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(new AuthInterceptor(tokenService))
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
-                        "/api/users/login",
-                        "/api/users/register",
-                        "/api/users/notLogin",
-                        "/api/users/noPermission"
+                        "/api/user/login",
+                        "/api/user/register",
+                        "/api/user/notLogin",
+                        "/api/user/noPermission"
                 );
     }
 
@@ -35,6 +35,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addViewController("/draft/edit").setViewName("forward:/html/edit.html");
         registry.addViewController("/templates").setViewName("forward:/html/templates.html");
         registry.addViewController("/ledger").setViewName("forward:/html/ledger.html");
+        registry.addViewController("/fulfillment").setViewName("forward:/html/fulfillment.html");
     }
 
     @Override

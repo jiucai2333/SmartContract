@@ -90,25 +90,17 @@ const STATUS_TEXT = {
     DRAFT: '草稿', APPROVING: '审批中', APPROVED: '已审批',
     SIGNING: '已签章', ARCHIVED: '已归档',
     EXECUTING: '履约中', COMPLETED: '已完成',
-    EXPIRED: '已到期', TERMINATED: '已终止',
-    REVIEWING: '审核中'
+    EXPIRED: '已到期', TERMINATED: '已终止'
 };
 const statusTagClass = {
     DRAFT: 'tag-gray', APPROVING: 'tag-blue', APPROVED: 'tag-purple',
     SIGNING: 'tag-orange', ARCHIVED: 'tag-green',
     EXECUTING: 'tag-cyan', COMPLETED: 'tag-darkgreen',
-    EXPIRED: 'tag-red', TERMINATED: 'tag-red',
-    REVIEWING: 'tag-blue'
+    EXPIRED: 'tag-red', TERMINATED: 'tag-red'
 };
 const RISK_TEXT = {LOW: '低', MEDIUM: '中', HIGH: '高'};
 const APPROVAL_STATUS_TEXT = {RUNNING: '审批中', APPROVED: '已通过', REJECTED: '已驳回'};
-const FLOW_TYPE_TEXT = {NORMAL: '普通合同', MAJOR: '重大合同', SUPER: '超阈值合同'};
-const APPROVAL_NODE_ROLES = {
-    '部门主管审批': ['DEPT_LEADER', 'ADMIN'],
-    '法务专员审批': ['LEGAL', 'ADMIN'],
-    '企业高管审批': ['EXECUTIVE', 'ADMIN']
-};
-const SEAL_STATUS_TEXT = {ELECTRONIC: '电子签章', SIGNED: '已签署', SEALED: '已盖章'};
+const SEAL_STATUS_TEXT = {ELECTRONIC: '电子签章', SEALED: '已签章'};
 const FULFILLMENT_STATUS_TEXT = {
     PENDING: '待履约', PROCESSING: '履约中', FULFILLED: '已完成', OVERDUE: '已逾期'
 };
@@ -125,7 +117,7 @@ const NAV_ITEMS = [
     {id: 'ledger',      href: '/html/ledger.html',      label: '合同台账',   menu: 'ALL',                              group: 'contract'},
     {id: 'seal',        href: '/html/seal.html',        label: '签章登记',   menu: 'LEGAL,DEPT_LEADER,ADMIN',          group: 'contract'},
     {id: 'archive',     href: '/html/archive.html',     label: '归档确认',   menu: 'LEGAL,DEPT_LEADER,ADMIN',          group: 'contract'},
-    {id: 'blockchain',  href: '/html/blockchain.html',  label: '区块链存证',  menu: 'LEGAL,ADMIN',                      group: 'contract'},
+    {id: 'signature',   href: '/html/signature.html',   label: '电子签章',   menu: 'LEGAL,EXECUTIVE,ADMIN'},
     {id: 'fulfillment', href: '/html/fulfillment.html', label: '履约预警',   menu: 'ALL'},
     {id: 'users',       href: '/html/users.html',       label: '用户管理',   menu: 'ADMIN'}
 ];
@@ -150,9 +142,8 @@ function toast(message) {
 }
 
 function authHeaders(options = {}) {
-    const isFormData = options.body instanceof FormData;
     return {
-        ...(!isFormData ? {'Content-Type': 'application/json'} : {}),
+        'Content-Type': 'application/json',
         ...(state.accessToken ? {Authorization: `Bearer ${state.accessToken}`} : {}),
         ...(options.headers || {})
     };
@@ -206,7 +197,14 @@ async function downloadFile(url, fallbackName = 'download') {
         throw new Error('请先登录');
     }
     if (response.status === 403) throw new Error('权限不足');
-    if (!response.ok) throw new Error(`下载失败：${response.status}`);
+    if (!response.ok) {
+        let message = `下载失败：${response.status}`;
+        try {
+            const error = await response.json();
+            message = error.msg || error.message || message;
+        } catch {}
+        throw new Error(message);
+    }
     const blob = await response.blob();
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -215,7 +213,7 @@ async function downloadFile(url, fallbackName = 'download') {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(objectUrl);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
 async function api(url, options = {}) {
@@ -317,24 +315,13 @@ function renderWatermark() {
     const container = $('#wmContainer');
     if (!container) return;
     const username = state.username || 'anonymous';
-    const updateText = () => {
+    const render = () => {
         const text = `${username} · ${new Date().toLocaleString('zh-CN', {hour12: false})}`;
-        container.querySelectorAll('.watermark-text').forEach(item => {
-            item.textContent = text;
-        });
+        container.innerHTML = Array.from({length: 24}, () => `<div class="watermark-text">${escapeHtml(text)}</div>`).join('');
     };
-    if (!container.children.length) {
-        const fragment = document.createDocumentFragment();
-        for (let index = 0; index < 24; index++) {
-            const item = document.createElement('div');
-            item.className = 'watermark-text';
-            fragment.appendChild(item);
-        }
-        container.appendChild(fragment);
-    }
-    updateText();
+    render();
     if (_wmTimer) clearInterval(_wmTimer);
-    _wmTimer = setInterval(updateText, 60000);
+    _wmTimer = setInterval(render, 1000);
 }
 
 function renderNavItems(items, activeId) {
@@ -391,21 +378,6 @@ function renderSidebar(activeId) {
     nav.addEventListener('click', (e) => {
         const parent = e.target.closest('.nav-parent');
         if (parent) toggleNavParent(parent);
-        // 导航链接点击时加淡出动画
-        const link = e.target.closest('a[href]');
-        if (link) {
-            e.preventDefault();
-            const href = link.getAttribute('href');
-            const shell = document.querySelector('.app-shell');
-            if (shell) {
-                shell.style.transition = 'opacity .15s ease, transform .15s ease';
-                shell.style.opacity = '0';
-                shell.style.transform = 'translateY(-4px)';
-                setTimeout(() => { location.href = href; }, 150);
-            } else {
-                location.href = href;
-            }
-        }
     });
     applyIdentity();
     renderLucideIcons();
@@ -415,13 +387,13 @@ function renderNavInShell(activeId) {
     return renderNavItems(NAV_ITEMS, activeId);
 }
 
-function initAppShell(activeId, title, subtitle) {
+function initAppShell(activeId, title, eyebrow) {
     if (!requireAuth()) return false;
     renderSidebar(activeId);
     const titleEl = $('#pageTitle');
-    const subtitleEl = $('#pageSubtitle');
+    const eyebrowEl = $('#pageEyebrow');
     if (titleEl) titleEl.textContent = title;
-    if (subtitleEl) subtitleEl.textContent = subtitle;
+    if (eyebrowEl) eyebrowEl.textContent = eyebrow;
     const logoutBtn = $('#logoutBtn');
     if (logoutBtn) logoutBtn.addEventListener('click', () => logout());
     renderLucideIcons();
@@ -445,9 +417,9 @@ function appShellHtml(activeId) {
 </aside>
 <main class="app-shell">
     <header class="topbar">
-        <div class="topbar-heading">
-            <h1 class="topbar-title" id="pageTitle">工作台</h1>
-            <p class="topbar-subtitle" id="pageSubtitle">合同全生命周期概览，待办事项与数据统计</p>
+        <div>
+            <p class="eyebrow" id="pageEyebrow">基于通义千问 Qwen 的合同全生命周期管理</p>
+            <h1 id="pageTitle">工作台</h1>
         </div>
         <div class="topbar-right">
             <div class="user-chip" id="userChip"></div>

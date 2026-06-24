@@ -1,41 +1,38 @@
 package cupk.smartcontract.dto;
 
-import lombok.Data;
-
 import java.time.LocalDateTime;
 
-@Data
-public class DeliverableVO {
-    private Long deliverableId;
-    private Long planId;
-    private Long contractId;
-    private String deliverableType;
-    private String deliverableTypeName;
-    private String itemName;
-    private String contractStage;
-    private Integer isConfirmed;
-    private LocalDateTime confirmedAt;
-    private String confirmedBy;
-    private Integer sortOrder;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
-    public static String typeName(String deliverableType) {
-        return switch (deliverableType) {
-            case "DESIGN_DOC" -> "需求设计文档";
-            case "SOURCE_CODE" -> "源代码";
-            case "RUNNABLE_PROGRAM" -> "可运行程序";
-            case "ACCEPTANCE_REPORT" -> "验收报告";
-            default -> deliverableType;
-        };
-    }
-
-    public static String stageName(String contractStage) {
-        return switch (contractStage) {
-            case "SIGNING" -> "签订阶段";
-            case "MID_DELIVERY" -> "中期交付";
-            case "ACCEPTANCE" -> "验收阶段";
-            default -> contractStage;
-        };
-    }
+public record DeliverableVO(
+        Long deliverableId,
+        Long planId,
+        Long contractId,
+        String contractTitle,
+        String planName,
+        String planType,
+        String deliverableType,
+        String deliverableName,
+        String stageName,
+        String confirmMethod,
+        String deliverableStatus,
+        String confirmStatus,
+        String sourceClause,
+        java.math.BigDecimal aiConfidence,
+        Boolean aiExtracted,
+        Boolean confirmed,
+        String confirmer,
+        LocalDateTime confirmedAt,
+        Boolean acceptancePassed,
+        String acceptedBy,
+        LocalDateTime acceptedAt,
+        String submittedBy,
+        LocalDateTime submittedAt,
+        String reviewerName,
+        LocalDateTime reviewedAt,
+        String reviewComment,
+        Integer submissionVersion,
+        Long fileId,
+        String fileName,
+        String downloadUrl,
+        String remark
+) {
 }

@@ -170,11 +170,16 @@ public class MarkdownContractService {
             FulfillmentPlan plan = new FulfillmentPlan();
             plan.setContractId(contract.getContractId());
             plan.setDueDate(contract.getDueDate() != null ? contract.getDueDate() : LocalDate.now().plusDays(30));
-            plan.setOwnerId(contract.getOwnerId());
+            plan.setOwnerName(username);
             plan.setMilestoneName(d.getOrDefault("交付物", d.getOrDefault("name", "未命名节点")));
+            plan.setPlanType("DELIVERABLE");
             plan.setStatus("PENDING");
-            plan.setCreatedBy(username);
+            plan.setProgress(0);
+            plan.setSourceType("MARKDOWN");
+            plan.setExtractedRule("");
             plan.setCreatedAt(LocalDateTime.now());
+            plan.setUpdatedAt(LocalDateTime.now());
+            plan.setDeleted(0);
             planMapper.insert(plan);
         }
         return contract;
@@ -234,7 +239,7 @@ public class MarkdownContractService {
         int i = 1;
         for (FulfillmentPlan plan : plans) {
             md.append("| ").append(i++).append(" | ")
-                    .append(nvl(plan.getMilestoneName())).append(" | ")
+                    .append(nvl(plan.getNodeName())).append(" | ")
                     .append(plan.getDueDate() == null ? "待定" : plan.getDueDate().format(DATE_FMT)).append(" | ")
                     .append(nvl(plan.getStatus())).append(" |\n");
         }
