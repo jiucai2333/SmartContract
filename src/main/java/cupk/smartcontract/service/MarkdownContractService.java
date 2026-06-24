@@ -43,15 +43,18 @@ public class MarkdownContractService {
     private static final Pattern TABLE_SEPARATOR = Pattern.compile("^\\|?\\s*[-:]{3,}\\s*\\|", Pattern.MULTILINE);
 
     private final ContractMainMapper contractMapper;
+    private final ContractNumberService contractNumberService;
     private final RiskItemMapper riskMapper;
     private final FulfillmentPlanMapper planMapper;
     private final ContractVersionMapper versionMapper;
 
     public MarkdownContractService(ContractMainMapper contractMapper,
+                                   ContractNumberService contractNumberService,
                                    RiskItemMapper riskMapper,
                                    FulfillmentPlanMapper planMapper,
                                    ContractVersionMapper versionMapper) {
         this.contractMapper = contractMapper;
+        this.contractNumberService = contractNumberService;
         this.riskMapper = riskMapper;
         this.planMapper = planMapper;
         this.versionMapper = versionMapper;
@@ -133,9 +136,14 @@ public class MarkdownContractService {
 
     public ContractMain importAndCreateContract(String markdown, String username) {
         MarkdownImportVO result = importFromMarkdown(markdown);
+        return contractNumberService.withNextNumber(contractNo ->
+                insertImportedContract(result, username, contractNo));
+    }
+
+    private ContractMain insertImportedContract(MarkdownImportVO result, String username,
+                                                String contractNo) {
         ContractMain contract = new ContractMain();
-        contract.setContractNo(StringUtils.hasText(result.contractNo()) ? result.contractNo()
-                : "HT-" + LocalDate.now().getYear() + "-" + (System.currentTimeMillis() % 100000));
+        contract.setContractNo(contractNo);
         contract.setTitle(StringUtils.hasText(result.title()) ? result.title() : "Markdown导入合同");
         contract.setType(StringUtils.hasText(result.type()) ? result.type() : "OTHER");
         contract.setAmount(result.amount() == null ? BigDecimal.ZERO : result.amount());
@@ -170,16 +178,11 @@ public class MarkdownContractService {
             FulfillmentPlan plan = new FulfillmentPlan();
             plan.setContractId(contract.getContractId());
             plan.setDueDate(contract.getDueDate() != null ? contract.getDueDate() : LocalDate.now().plusDays(30));
-            plan.setOwnerName(username);
+            plan.setOwnerId(contract.getOwnerId());
             plan.setMilestoneName(d.getOrDefault("交付物", d.getOrDefault("name", "未命名节点")));
-            plan.setPlanType("DELIVERABLE");
             plan.setStatus("PENDING");
-            plan.setProgress(0);
-            plan.setSourceType("MARKDOWN");
-            plan.setExtractedRule("");
+            plan.setCreatedBy(username);
             plan.setCreatedAt(LocalDateTime.now());
-            plan.setUpdatedAt(LocalDateTime.now());
-            plan.setDeleted(0);
             planMapper.insert(plan);
         }
         return contract;
@@ -239,7 +242,7 @@ public class MarkdownContractService {
         int i = 1;
         for (FulfillmentPlan plan : plans) {
             md.append("| ").append(i++).append(" | ")
-                    .append(nvl(plan.getNodeName())).append(" | ")
+                    .append(nvl(plan.getMilestoneName())).append(" | ")
                     .append(plan.getDueDate() == null ? "待定" : plan.getDueDate().format(DATE_FMT)).append(" | ")
                     .append(nvl(plan.getStatus())).append(" |\n");
         }

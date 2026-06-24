@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ApprovalService {
@@ -27,20 +29,22 @@ public class ApprovalService {
     private static final Map<String, Set<String>> NODE_ROLES = Map.of(
             "部门主管审批", Set.of("DEPT_LEADER", "ADMIN"),
             "法务专员审批", Set.of("LEGAL", "ADMIN"),
-            "企业高管审批", Set.of("EXECUTIVE", "ADMIN"),
-            "法务复核", Set.of("LEGAL", "ADMIN")
+            "企业高管审批", Set.of("EXECUTIVE", "ADMIN")
     );
 
     private final ApprovalInstanceMapper mapper;
     private final ApprovalRecordMapper recordMapper;
     private final ContractMainMapper contractMapper;
+    private final StatusTransitionService statusTransitionService;
 
     public ApprovalService(ApprovalInstanceMapper mapper,
                            ApprovalRecordMapper recordMapper,
-                           ContractMainMapper contractMapper) {
+                           ContractMainMapper contractMapper,
+                           StatusTransitionService statusTransitionService) {
         this.mapper = mapper;
         this.recordMapper = recordMapper;
         this.contractMapper = contractMapper;
+        this.statusTransitionService = statusTransitionService;
     }
 
     public List<ApprovalVO> listApprovals() {
@@ -52,12 +56,11 @@ public class ApprovalService {
     @Transactional
     public ApprovalVO agree(Long instanceId, String comment) {
         Approval approval = requireRunning(instanceId);
-        String rawNode = approval.getCurrentNode() == null
+        String currentNode = approval.getCurrentNode() == null
                 ? flowNodes(approval.getFlowType()).get(0)
                 : approval.getCurrentNode();
-        String currentNode = normalizeNodeName(rawNode);
         assertNodeRole(currentNode);
-        insertRecord(instanceId, rawNode, "AGREE", comment);
+        insertRecord(instanceId, currentNode, "AGREE", comment);
 
         List<String> nodes = flowNodes(approval.getFlowType());
         int currentIndex = nodes.indexOf(currentNode);
@@ -88,12 +91,11 @@ public class ApprovalService {
     @Transactional
     public ApprovalVO reject(Long instanceId, String comment) {
         Approval approval = requireRunning(instanceId);
-        String rawNode = approval.getCurrentNode() == null
+        String currentNode = approval.getCurrentNode() == null
                 ? flowNodes(approval.getFlowType()).get(0)
                 : approval.getCurrentNode();
-        String currentNode = normalizeNodeName(rawNode);
         assertNodeRole(currentNode);
-        insertRecord(instanceId, rawNode, "REJECT", comment);
+        insertRecord(instanceId, currentNode, "REJECT", comment);
 
         approval.setStatus("REJECTED");
         approval.setEndedAt(LocalDateTime.now());
@@ -130,34 +132,15 @@ public class ApprovalService {
         return FLOW_NODES.getOrDefault(flowType, FLOW_NODES.get("NORMAL"));
     }
 
-    private String normalizeNodeName(String nodeName) {
-        return "法务复核".equals(nodeName) ? "法务专员审批" : nodeName;
-    }
-
     private void insertRecord(Long instanceId, String nodeName, String action, String comment) {
         ApprovalRecord record = new ApprovalRecord();
         record.setInstanceId(instanceId);
-        record.setNodeName(approval.getCurrentNode() == null ? "审批" : approval.getCurrentNode());
+        record.setNodeName(nodeName);
         record.setApproverId(SecurityContext.userId());
-        record.setAction("AGREE");
+        record.setAction(action);
         record.setComment(comment);
         record.setActionTime(LocalDateTime.now());
         recordMapper.insert(record);
-
-        approval.setStatus("APPROVED");
-        approval.setEndedAt(LocalDateTime.now());
-        approval.setUpdatedBy(SecurityContext.username());
-        approval.setUpdatedAt(LocalDateTime.now());
-        mapper.updateById(approval);
-
-        ContractMain contract = contractMapper.selectById(approval.getContractId());
-        if (contract != null && "APPROVING".equals(contract.getStatus())) {
-            contract.setStatus("APPROVED");
-            contract.setUpdatedBy(SecurityContext.username());
-            contract.setUpdatedAt(LocalDateTime.now());
-            contractMapper.updateById(contract);
-        }
-        return toVo(approval);
     }
 
     private ApprovalVO toVo(Approval approval) {

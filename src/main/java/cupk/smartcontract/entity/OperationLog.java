@@ -18,7 +18,5 @@ public class OperationLog {
     private Long targetId;
     private String ip;
     private String result;
-    private String beforeContent;
-    private String afterContent;
     private LocalDateTime createdAt;
 }

@@ -1,7 +1,7 @@
 package cupk.smartcontract.controller;
 
 import cupk.smartcontract.security.RequireRole;
-import cupk.smartcontract.security.SecurityContext;
+import cupk.smartcontract.security.AuditOperation;
 import cupk.smartcontract.entity.ContractMain;
 import cupk.smartcontract.dto.AuthUserVO;
 import cupk.smartcontract.dto.RoleVO;
@@ -38,6 +38,8 @@ public class AdminController {
      * Body: { "roleCode": "LEGAL" }
      */
     @PutMapping("/users/{userId}/role")
+    @AuditOperation(operation = "ADMIN_UPDATE_ROLE", targetType = "USER",
+            targetIdParameter = "userId")
     public AuthUserVO updateRole(@PathVariable Long userId,
                                   @RequestBody Map<String, String> body) {
         String roleCode = body.getOrDefault("roleCode", "USER");
@@ -50,6 +52,8 @@ public class AdminController {
     }
 
     @PutMapping("/contracts/{contractId}/fields")
+    @AuditOperation(operation = "ADMIN_EDIT", targetType = "CONTRACT",
+            targetIdParameter = "contractId")
     public ResponseEntity<?> updateContractFields(@PathVariable Long contractId,
                                                   @RequestBody Map<String, String> body) {
         try {
@@ -65,8 +69,6 @@ public class AdminController {
                 contract.setUpdatedAt(LocalDateTime.now());
                 contractService.getContractMapper().updateById(contract);
             }
-            contractService.getStatusTransitionService().writeLog(
-                    SecurityContext.userId(), "ADMIN_EDIT", "CONTRACT", contractId, "SUCCESS");
             return ResponseEntity.ok(Map.of("message", "更新成功"));
         } catch (IllegalStateException | IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));

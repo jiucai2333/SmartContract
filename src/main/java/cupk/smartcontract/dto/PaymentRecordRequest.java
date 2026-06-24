@@ -1,16 +1,17 @@
 package cupk.smartcontract.dto;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
-public record PaymentRecordRequest(
-        BigDecimal paidAmount,
-        LocalDate paidDate,
-        String bankSerialNo,
-        String handlerName,
-        Long voucherFileId,
-        String payer,
-        String receiver,
-        String remark
-) {
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+public class PaymentRecordRequest {
+    @NotNull private Long paymentPlanId;
+    @NotNull private Long contractId;
+    @NotNull private BigDecimal paidAmount;
+    @NotNull private LocalDateTime paidAt;
+    private String receiptNo;
+    private String notes;
 }

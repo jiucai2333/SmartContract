@@ -1,4 +1,4 @@
-if (!initAppShell('users', '用户管理', 'RBAC Admin')) {
+if (!initAppShell('users', '用户管理', '管理系统用户账号，配置角色权限与访问控制')) {
     throw new Error('auth required');
 }
 

@@ -1,6 +1,7 @@
 package cupk.smartcontract.controller;
 
 import cupk.smartcontract.security.RequireRole;
+import cupk.smartcontract.security.AuditOperation;
 import cupk.smartcontract.dto.SealCreateRequest;
 import cupk.smartcontract.service.ContractManagementService;
 import jakarta.validation.Valid;
@@ -28,6 +29,8 @@ public class SealController {
 
     @RequireRole({"LEGAL", "DEPT_LEADER", "ADMIN"})
     @PostMapping("/contracts/{contractId}/seal")
+    @AuditOperation(operation = "SEAL_REGISTER", targetType = "CONTRACT",
+            targetIdParameter = "contractId")
     public ResponseEntity<?> seal(@PathVariable Long contractId,
                                   @Valid @RequestBody SealCreateRequest request) {
         try {

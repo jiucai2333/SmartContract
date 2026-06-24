@@ -6,6 +6,7 @@ import cupk.smartcontract.dto.LoginRequest;
 import cupk.smartcontract.dto.RegisterRequest;
 import cupk.smartcontract.service.AuthService;
 import cupk.smartcontract.service.TokenService;
+import cupk.smartcontract.security.AuditOperation;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +27,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
+    @AuditOperation(operation = "LOGIN", targetType = "USER")
     public Result userLogin(@RequestBody LoginRequest request) {
         if (request == null || !StringUtils.hasText(request.username())) {
             return Result.error(400, "用户名不能为空");
@@ -44,6 +46,7 @@ public class UserController {
     }
 
     @PostMapping("/register")
+    @AuditOperation(operation = "REGISTER", targetType = "USER")
     public Result userRegister(@RequestBody RegisterRequest request) {
         if (request == null || !StringUtils.hasText(request.username())) {
             return Result.error(400, "用户名不能为空");

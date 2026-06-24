@@ -1,6 +1,7 @@
 package cupk.smartcontract.controller;
 
 import cupk.smartcontract.security.RequireRole;
+import cupk.smartcontract.security.AuditOperation;
 import cupk.smartcontract.dto.ArchiveCreateRequest;
 import cupk.smartcontract.service.ContractManagementService;
 import jakarta.validation.Valid;
@@ -28,6 +29,8 @@ public class ArchiveController {
 
     @RequireRole({"LEGAL", "DEPT_LEADER", "ADMIN"})
     @PostMapping("/contracts/{contractId}/archive")
+    @AuditOperation(operation = "ARCHIVE_CONFIRM", targetType = "CONTRACT",
+            targetIdParameter = "contractId")
     public ResponseEntity<?> archive(@PathVariable Long contractId,
                                      @Valid @RequestBody ArchiveCreateRequest request) {
         try {

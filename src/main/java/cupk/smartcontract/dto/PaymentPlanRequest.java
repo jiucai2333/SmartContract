@@ -1,21 +1,19 @@
 package cupk.smartcontract.dto;
 
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record PaymentPlanRequest(
-        Long contractId,
-        Long fulfillmentPlanId,
-        String phaseName,
-        BigDecimal percentage,
-        BigDecimal plannedAmount,
-        LocalDate dueDate,
-        String payee,
-        String paymentCondition,
-        String conditionType,
-        String prerequisiteDelivery,
-        BigDecimal penaltyRate,
-        String status,
-        String remark
-) {
+@Data
+public class PaymentPlanRequest {
+    private Long paymentPlanId;
+    @NotNull private Long planId;
+    @NotNull private Long contractId;
+    @NotNull private Integer installmentNo;
+    @NotNull private BigDecimal ratio;
+    @NotNull private BigDecimal amount;
+    @NotNull private LocalDate dueDate;
+    private Long prerequisiteDeliverableId;
 }

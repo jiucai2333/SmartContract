@@ -9,7 +9,10 @@ import cupk.smartcontract.dto.AiDraftVO;
 import cupk.smartcontract.dto.AiRiskReviewRequest;
 import cupk.smartcontract.dto.AiRiskVO;
 import cupk.smartcontract.dto.DraftTemplateVO.DraftField;
+import cupk.smartcontract.dto.QwenLayoutVO;
 import cupk.smartcontract.mapper.ContractTemplateMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -21,10 +24,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.time.Duration;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -33,92 +35,62 @@ import java.util.function.Consumer;
 
 @Service
 public class AiDraftService {
+    private static final Logger log = LoggerFactory.getLogger(AiDraftService.class);
     public static final String AI_NOTICE = "AI 辅助生成内容仅供参考，请由法务或业务负责人复核后使用";
 
-    private static final String RISK_SYSTEM_PROMPT = """
-            你是一名资深企业合同法务审查专家，负责对合同文本进行专业 AI 审核。
-            请只基于用户提供的合同文本和脱敏业务背景进行分析，不要编造合同未出现的事实。
+    private static final String LAYOUT_SYSTEM_PROMPT = """
+            你是合同文档版式结构分析助手。你只能根据输入的 OCR 结构化 JSON 判断文档结构，不能编造、改写、补充合同原文。
+            你的任务不是起草合同，也不是风险审查，而是把 OCR 文本块分类为标题、条款标题、正文、表格、甲乙方信息、签字区、盖章区、页脚、页码或未知类型。
+            你必须输出合法 JSON，不要输出 Markdown，不要输出解释性文字。对于无法判断的内容，block_type 必须使用 unknown。
+            你不能猜测精确字号、页边距、行距、空格数量，只能输出 large、normal、small、unknown 等粗粒度字号等级。
 
-            审查维度：
-            1. 合同条款是否符合法律法规和企业审批合规要求。
-            2. 是否缺少验收、付款、违约责任、争议解决、保密、知识产权、解除、不可抗力等关键条款。
-            3. 是否存在表述模糊、权利义务不对等、单方免责、付款条件不清、履约边界不清等风险。
-            4. 如果合同文本明确写有“未约定、未明确、缺少、缺失、无”等表述，并关联付款、验收、违约责任、知识产权、保密或争议解决等关键事项，必须输出对应风险项，不能返回空数组。
+            合同结构判断规则：
+            1. 首页顶部较短的“采购合同、物资采购合同、设备采购合同、技术咨询合同、委托开发合同、软件技术服务合同、服务协议”等通常是 title。
+            2. 含甲方、乙方、委托方、受托方、研究开发方、采购方、供货方、出租方、承租方、托运方、承运方、法定代表人、负责人、住所、地址、联系人、联系电话、统一社会信用代码等主体字段的内容优先为 party_info。
+            3. 含“根据《中华人民共和国民法典》及有关法律法规、平等自愿协商一致、诚实信用、订立本合同、以资共同遵守”等引言是 paragraph，不是 heading。
+            4. 以“第一条、第二条、第X条”开头的短文本通常是 heading。
+            5. 以“一、二、三、四、五、六、七、八、九、十”开头且概括后续内容的短文本通常是 heading。
+            6. 以“1.、1、1．、1.1、1.1.1、（1）”开头的内容通常是 paragraph，除非明显是短标题。
+            7. 多列对齐且含名称、型号、数量、单价、金额、阶段、主要工作内容、阶段成果、完成时间、开户银行、账户名称、银行账号等字段的区域可判为 table，但优先服从 PaddleOCR 的 table 结果。
+            8. 文档末尾含甲方（盖章）、乙方（签字）、法定代表人、委托代理人、授权代表、年 月 日、签订日期、盖章、签字等内容时判为 signature；明确独立的印章区域可判为 stamp。
+            9. 页面底部单独数字通常是 page_number；重复出现在页面底部的说明性文字可判为 footer。
+            10. 无法确定时使用 unknown。
+            11. 不得根据合同类型新增条款，不得补出 OCR 中没有的名称、金额、日期或项目，不得改写原文。
+            12. 只判断结构类型、阅读顺序、对齐倾向和粗粒度字号等级。
+            """;
+
+    private static final String RISK_SYSTEM_PROMPT = """
+            你是一名企业合同法务审查专家，负责识别合同文本中的五类风险。
+            请只基于用户提供的合同文本进行分析，不要输出与合同无关的内容。
+
+            风险分类只能使用以下五类 category：
+            - SUBJECT_INFO：主体信息风险，审查甲乙方名称、统一社会信用代码、授权代表、地址、联系方式、签署主体是否完整明确。
+            - PAYMENT：付款风险，审查金额、付款节点、比例、发票、付款条件、逾期付款责任是否明确。
+            - LIABILITY：违约风险，审查违约情形、违约金、损害赔偿、免责条款、责任上限是否合理。
+            - TERM：期限风险，审查生效日期、履行期限、交付/验收期限、续期、解除期限、通知期限是否明确。
+            - DISPUTE_RESOLUTION：争议解决风险，审查管辖法院、仲裁机构、适用法律、争议处理流程是否明确有效。
 
             输出要求：
             - 仅返回 JSON，不要包含 Markdown 代码块或解释性文字。
-            - JSON 格式为 {"risks":[{"level":"HIGH|MEDIUM|LOW","clause":"条款位置或标题；缺失条款写'缺失：条款名称'","reason":"风险原因","suggestion":"修改建议"}]}。
-            - 只有在合同文本已清楚覆盖关键条款且没有明显缺失、模糊或不平衡内容时，才可以返回 {"risks":[]}。
+            - JSON 格式为 {"risks":[{"level":"HIGH|MEDIUM|LOW","category":"SUBJECT_INFO|PAYMENT|LIABILITY|TERM|DISPUTE_RESOLUTION","clause":"条款位置或标题","reason":"风险原因","suggestion":"修改建议"}]}。
+            - 如果没有发现明显风险，返回 {"risks":[]}。
             - 最多返回 10 条风险，优先返回高风险和影响审批的事项。
+            - 每一条风险必须落入上述五类之一，不要自创新分类。
             """;
-
-    private static final List<MissingRiskRule> MISSING_RISK_RULES = List.of(
-            new MissingRiskRule(
-                    "缺失：付款时间",
-                    List.of("付款时间", "付款期限", "付款节点", "付款安排", "支付时间"),
-                    "HIGH",
-                    "合同明确存在付款安排缺失或不清，可能导致收款周期、付款条件和履约对价无法执行。",
-                    "补充付款节点、付款条件、付款期限、开票要求和逾期付款责任。"
-            ),
-            new MissingRiskRule(
-                    "缺失：验收标准",
-                    List.of("验收标准", "验收条件", "验收流程", "验收方式", "交付验收"),
-                    "HIGH",
-                    "合同明确存在验收标准缺失或不清，可能导致交付是否合格无法判断。",
-                    "补充可量化的验收标准、验收流程、验收期限和整改复验机制。"
-            ),
-            new MissingRiskRule(
-                    "缺失：违约责任",
-                    List.of("违约责任", "违约金", "赔偿责任", "违约处理"),
-                    "HIGH",
-                    "合同明确存在违约责任缺失或不清，违约后难以追责并可能影响审批。",
-                    "补充逾期交付、逾期付款、质量不合格、提前解除等场景下的违约责任。"
-            ),
-            new MissingRiskRule(
-                    "缺失：知识产权归属",
-                    List.of("知识产权", "成果归属", "著作权", "专利权", "软件著作权"),
-                    "HIGH",
-                    "合同明确存在知识产权归属缺失或不清，可能导致开发成果、源代码或资料权属争议。",
-                    "明确合同成果、背景知识产权、衍生成果、源代码和使用授权的归属及限制。"
-            ),
-            new MissingRiskRule(
-                    "缺失：保密义务",
-                    List.of("保密义务", "保密条款", "保密责任", "商业秘密", "保密"),
-                    "MEDIUM",
-                    "合同明确存在保密义务缺失或不清，商业秘密、技术资料和客户信息保护不足。",
-                    "补充保密范围、保密期限、例外情形、资料返还销毁和泄密责任。"
-            ),
-            new MissingRiskRule(
-                    "缺失：争议解决方式",
-                    List.of("争议解决", "管辖法院", "仲裁", "诉讼", "适用法律"),
-                    "MEDIUM",
-                    "合同明确存在争议解决方式缺失或不清，发生纠纷时管辖和处理路径不明确。",
-                    "补充适用法律、协商期限、仲裁机构或管辖法院，并保持表述唯一明确。"
-            )
-    );
-
-    private record MissingRiskRule(
-            String clause,
-            List<String> terms,
-            String level,
-            String reason,
-            String suggestion
-    ) {
-    }
 
     private final QwenProperties qwenProperties;
     private final ObjectMapper objectMapper;
-    private final ContractAttachmentService attachmentService;
+    private final ContractImportService importService;
     private final ContractTemplateMapper templateMapper;
     private final HttpClient httpClient;
 
     public AiDraftService(QwenProperties qwenProperties,
                           ObjectMapper objectMapper,
-                          @Lazy ContractAttachmentService attachmentService,
+                          @Lazy ContractImportService importService,
                           ContractTemplateMapper templateMapper) {
         this.qwenProperties = qwenProperties;
         this.objectMapper = objectMapper;
-        this.attachmentService = attachmentService;
+        this.importService = importService;
         this.templateMapper = templateMapper;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(qwenProperties.resolvedTimeoutSeconds()))
@@ -159,86 +131,18 @@ public class AiDraftService {
         }
         String sanitizedContext = buildSanitizedContext(request);
         try {
-            Map<String, Object> payload = baseChatPayload(
-                    List.of(
+            Map<String, Object> payload = Map.of(
+                    "model", qwenProperties.resolvedModel(),
+                    "response_format", Map.of("type", "json_object"),
+                    "messages", List.of(
                             Map.of("role", "system", "content", RISK_SYSTEM_PROMPT),
                             Map.of("role", "user", "content", buildRiskUserPrompt(contractText, sanitizedContext))
-                    ),
-                    false,
-                    true
+                    )
             );
             String content = chatCompletion(payload);
-            return mergeRuleBasedMissingRisks(contractText, parseRiskItems(content));
+            return parseRiskItems(content);
         } catch (Exception ex) {
             throw new IllegalStateException("AI 风险审查失败：" + rootMessage(ex), ex);
-        }
-    }
-
-    public String modelName() {
-        return qwenProperties.resolvedModel();
-    }
-
-    public record FulfillmentNode(
-            String nodeName,
-            String nodeType,
-            LocalDate plannedDate,
-            String responsibleParty,
-            String sourceClause,
-            Double confidence,
-            boolean aiExtracted,
-            boolean dateConfirmed
-    ) {
-    }
-
-    public List<FulfillmentNode> extractFulfillmentNodes(String contractText, LocalDate contractDueDate) {
-        return extractFulfillmentNodes(contractText, contractDueDate, null, null);
-    }
-
-    public List<FulfillmentNode> extractFulfillmentNodes(String contractText,
-                                                         LocalDate contractDueDate,
-                                                         LocalDate signDate,
-                                                         LocalDate archiveDate) {
-        if (contractText == null || contractText.isBlank()) {
-            return List.of();
-        }
-        assertQwenReady();
-        String baseDateContext = "合同签署日：" + (signDate == null ? "未知" : signDate)
-                + "\n归档日：" + (archiveDate == null ? "未知" : archiveDate)
-                + "\n合同到期日：" + (contractDueDate == null ? "未知" : contractDueDate)
-                + "\n";
-        String prompt = """
-                请从下面的合同正文中抽取履约跟踪节点。
-
-                抽取范围：
-                1. 付款、回款、发票、交付、验收、质保、续签、终止、保密期限等具有时间要求或履约动作的条款。
-                2. 每个节点必须尽量给出节点名称、节点类型、计划完成日期、责任方、来源条款位置或原文摘要、置信度。
-                3. plannedDate 请使用 yyyy-MM-dd；如果合同只写了相对日期，请结合合同到期日推算；确实无法确定日期时返回 null。
-                4. 只基于合同正文抽取，不要编造合同中不存在的履约事项。
-
-                输出要求：
-                - 只返回 JSON，不要返回 Markdown 代码块或解释文字。
-                - JSON 格式如下：
-                  {"nodes":[{"nodeName":"首付款支付","nodeType":"PAYMENT|DELIVERY|ACCEPTANCE|WARRANTY|RENEWAL|TERMINATION|INVOICE|CONFIDENTIALITY|OTHER","plannedDate":"2026-07-01","responsibleParty":"甲方/乙方/合同负责人/未知","sourceClause":"第x条或原文摘要","confidence":0.9}]}
-                - 最多返回 12 个节点，按计划日期从早到晚排序。
-
-                合同到期日：%s
-                合同正文：
-                ---
-                %s
-                ---
-                """.formatted(contractDueDate == null ? "未知" : contractDueDate, clipText(baseDateContext + contractText, 12000));
-        try {
-            Map<String, Object> payload = baseChatPayload(
-                    List.of(
-                            Map.of("role", "system", "content", "你是企业合同履约节点抽取助手，只输出结构化 JSON。"),
-                            Map.of("role", "user", "content", prompt)
-                    ),
-                    false,
-                    true
-            );
-            return parseFulfillmentNodes(chatCompletion(payload));
-        } catch (Exception ex) {
-            throw new IllegalStateException("AI 履约节点抽取失败：" + rootMessage(ex), ex);
         }
     }
 
@@ -261,13 +165,13 @@ public class AiDraftService {
                 ---
                 """.formatted(clipText(markdown, 12000));
         try {
-            Map<String, Object> payload = baseChatPayload(
-                    List.of(
+            Map<String, Object> payload = Map.of(
+                    "model", qwenProperties.resolvedModel(),
+                    "response_format", Map.of("type", "json_object"),
+                    "messages", List.of(
                             Map.of("role", "system", "content", "你是合同模板字段识别助手，只输出结构化 JSON。"),
                             Map.of("role", "user", "content", prompt)
-                    ),
-                    false,
-                    true
+                    )
             );
             JsonNode root = objectMapper.readTree(chatCompletion(payload));
             JsonNode fields = root.path("fields");
@@ -278,6 +182,147 @@ public class AiDraftService {
         } catch (Exception ex) {
             throw new IllegalStateException("AI 模板字段识别失败：" + rootMessage(ex), ex);
         }
+    }
+
+    public LayoutAnalysisResult analyzeOcrLayout(String ocrBlocksJson) {
+        assertQwenReady();
+        long startedAt = System.currentTimeMillis();
+        log.info("[QwenLayout] Starting layout analysis");
+        QwenOcrInputBuilder.BuildResult qwenInput =
+                new QwenOcrInputBuilder(objectMapper).build(ocrBlocksJson);
+        log.info("[QwenLayout] Input prepared: ocr_blocks_json length={}, qwen_input_json length={}, "
+                        + "truncated={}, blocks={}/{}",
+                qwenInput.originalLength(), qwenInput.compactLength(), qwenInput.truncated(),
+                qwenInput.includedBlocks(), qwenInput.totalBlocks());
+        qwenInput.warnings().forEach(warning -> log.warn("[QwenLayout] {}", warning));
+        String prompt = """
+                请根据以下 OCR 统一解析 JSON 中的 pages 和 blocks，对每个 block 进行版式结构判断。
+
+                要求：
+                1. 保留原 block_id。
+                2. 不要改变原文含义，不要补充原文没有的信息。
+                3. 不要根据合同类型新增条款。
+                4. 如果无法判断类型，block_type 使用 unknown。
+                5. order 表示推荐阅读顺序，从 1 开始。
+                6. font_size_level 只能使用 large、normal、small、unknown。
+                7. align 只能使用 left、center、right、unknown。
+                8. block_type 只能使用 title、heading、paragraph、table、party_info、signature、stamp、footer、page_number、unknown。
+                9. normalized_text 必须忠实保留 OCR 原文，不得改写。
+                10. 输出必须是合法 JSON，不要输出 Markdown 包裹或解释文字。
+
+                输出格式：
+                {"blocks":[{"block_id":"p1_b1","block_type":"unknown","normalized_text":"","order":1,"align":"unknown","font_size_level":"unknown","reason":""}],"warnings":[]}
+
+                OCR 统一解析 JSON：
+                %s
+                """.formatted(qwenInput.json());
+        try {
+            Map<String, Object> payload = Map.of(
+                    "model", qwenProperties.resolvedLayoutModel(),
+                    "response_format", Map.of("type", "json_object"),
+                    "messages", List.of(
+                            Map.of("role", "system", "content", LAYOUT_SYSTEM_PROMPT),
+                            Map.of("role", "user", "content", prompt)
+                    )
+            );
+            String content = cleanJsonContent(chatCompletion(payload));
+            QwenLayoutVO layout = objectMapper.readValue(content, QwenLayoutVO.class);
+            layout = preserveOriginalOcrText(layout, ocrBlocksJson);
+            validateLayout(layout);
+            String json = objectMapper.writeValueAsString(layout);
+            long duration = System.currentTimeMillis() - startedAt;
+            log.info("[QwenLayout] Layout analysis completed in {} ms, blocks: {}",
+                    duration, layout.blocks() == null ? 0 : layout.blocks().size());
+            return new LayoutAnalysisResult(json, qwenProperties.resolvedLayoutModel(), duration);
+        } catch (Exception ex) {
+            log.warn("[QwenLayout] Layout analysis failed: {}", rootMessage(ex));
+            throw new IllegalStateException("Qwen 版式结构分析失败：" + rootMessage(ex), ex);
+        }
+    }
+
+    public record LayoutAnalysisResult(String json, String model, long durationMs) {
+    }
+
+    private String cleanJsonContent(String content) {
+        String cleaned = content == null ? "" : content.trim();
+        if (cleaned.startsWith("```json")) cleaned = cleaned.substring(7);
+        else if (cleaned.startsWith("```")) cleaned = cleaned.substring(3);
+        if (cleaned.endsWith("```")) cleaned = cleaned.substring(0, cleaned.length() - 3);
+        return cleaned.trim();
+    }
+
+    private void validateLayout(QwenLayoutVO layout) {
+        if (layout == null || layout.blocks() == null) {
+            throw new IllegalArgumentException("Qwen layout JSON does not contain blocks");
+        }
+        var blockTypes = java.util.Set.of("title", "heading", "paragraph", "table", "party_info",
+                "signature", "stamp", "footer", "page_number", "unknown");
+        var aligns = java.util.Set.of("left", "center", "right", "unknown");
+        var sizes = java.util.Set.of("large", "normal", "small", "unknown");
+        for (QwenLayoutVO.Block block : layout.blocks()) {
+            if (block == null || block.blockId() == null || block.blockId().isBlank()) {
+                throw new IllegalArgumentException("Qwen layout JSON contains an invalid block_id");
+            }
+            if (!blockTypes.contains(block.blockType())
+                    || !aligns.contains(block.align())
+                    || !sizes.contains(block.fontSizeLevel())) {
+                throw new IllegalArgumentException("Qwen layout JSON contains an unsupported enum value");
+            }
+        }
+    }
+
+    private QwenLayoutVO preserveOriginalOcrText(QwenLayoutVO layout, String ocrBlocksJson) throws IOException {
+        JsonNode root = objectMapper.readTree(ocrBlocksJson);
+        Map<String, String> originalBlocks = new LinkedHashMap<>();
+        JsonNode pages = root.path("pages");
+        if (pages.isArray()) {
+            for (JsonNode page : pages) {
+                JsonNode blocks = page.path("blocks");
+                if (!blocks.isArray()) continue;
+                for (JsonNode block : blocks) {
+                    String blockId = block.path("block_id").asText("");
+                    if (!blockId.isBlank()) {
+                        originalBlocks.put(blockId, block.path("text").asText(""));
+                    }
+                }
+            }
+        }
+        Map<String, QwenLayoutVO.Block> analyzed = new LinkedHashMap<>();
+        if (layout != null && layout.blocks() != null) {
+            for (QwenLayoutVO.Block block : layout.blocks()) {
+                if (block != null && originalBlocks.containsKey(block.blockId())) {
+                    analyzed.put(block.blockId(), block);
+                }
+            }
+        }
+
+        List<QwenLayoutVO.Block> safeBlocks = new ArrayList<>();
+        int fallbackOrder = 1;
+        for (Map.Entry<String, String> original : originalBlocks.entrySet()) {
+            QwenLayoutVO.Block block = analyzed.get(original.getKey());
+            if (block == null) {
+                safeBlocks.add(new QwenLayoutVO.Block(
+                        original.getKey(), "unknown", original.getValue(), fallbackOrder++,
+                        "unknown", "unknown", "Qwen did not return this OCR block."));
+                continue;
+            }
+            safeBlocks.add(new QwenLayoutVO.Block(
+                    block.blockId(),
+                    block.blockType(),
+                    original.getValue(),
+                    block.order() > 0 ? block.order() : fallbackOrder,
+                    block.align(),
+                    block.fontSizeLevel(),
+                    block.reason()
+            ));
+            fallbackOrder++;
+        }
+        List<String> warnings = layout == null || layout.warnings() == null
+                ? new ArrayList<>() : new ArrayList<>(layout.warnings());
+        if (analyzed.size() < originalBlocks.size()) {
+            warnings.add("Some OCR blocks were missing from Qwen output and were retained as unknown.");
+        }
+        return new QwenLayoutVO(safeBlocks, warnings);
     }
 
     private String buildSanitizedContext(AiRiskReviewRequest request) {
@@ -303,8 +348,7 @@ public class AiDraftService {
     private String buildRiskUserPrompt(String contractText, String sanitizedContext) {
         String contextBlock = sanitizedContext.isBlank() ? "" : "\n业务背景：" + sanitizedContext + "\n";
         return """
-                请审查以下合同文本并返回风险 JSON。
-                注意：如果文本中出现“未约定、未明确、缺少、缺失、无”等缺失提示，并指向付款、验收、违约责任、知识产权、保密或争议解决等事项，必须逐项列为风险。
+                请审查以下合同文本并返回五类风险 JSON。请特别覆盖主体信息、付款、违约、期限、争议解决五类风险；如果某类没有明显风险则不要强行编造。
                 %s
                 合同文本：
                 ---
@@ -313,7 +357,7 @@ public class AiDraftService {
                 """.formatted(contextBlock, clipText(contractText, 8000));
     }
 
-    private List<AiRiskVO> parseRiskItems(String content) {
+    List<AiRiskVO> parseRiskItems(String content) {
         if (content == null || content.isBlank()) {
             return List.of();
         }
@@ -345,156 +389,6 @@ public class AiDraftService {
         }
     }
 
-    private List<FulfillmentNode> parseFulfillmentNodes(String content) {
-        if (content == null || content.isBlank()) {
-            return List.of();
-        }
-        try {
-            String cleaned = content.trim();
-            if (cleaned.startsWith("```json")) {
-                cleaned = cleaned.substring(7);
-            } else if (cleaned.startsWith("```")) {
-                cleaned = cleaned.substring(3);
-            }
-            if (cleaned.endsWith("```")) {
-                cleaned = cleaned.substring(0, cleaned.length() - 3);
-            }
-            cleaned = cleaned.trim();
-
-            JsonNode root = objectMapper.readTree(cleaned);
-            JsonNode nodes = root.isArray() ? root : root.path("nodes");
-            if (!nodes.isArray()) {
-                nodes = root.path("items");
-            }
-            if (!nodes.isArray()) {
-                nodes = root.path("milestones");
-            }
-            if (!nodes.isArray()) {
-                return List.of();
-            }
-
-            List<FulfillmentNode> result = new ArrayList<>();
-            for (JsonNode node : nodes) {
-                String nodeName = firstText(node, "nodeName", "name", "title", "milestoneName");
-                if (nodeName.isBlank()) {
-                    continue;
-                }
-                LocalDate plannedDate = parseDate(firstText(node, "plannedDate", "dueDate", "date", "planDate"));
-                result.add(new FulfillmentNode(
-                        nodeName,
-                        firstText(node, "nodeType", "type", "planType"),
-                        plannedDate,
-                        firstText(node, "responsibleParty", "owner", "ownerName", "responsible"),
-                        firstText(node, "sourceClause", "clause", "source", "sourceText"),
-                        firstDouble(node, "confidence", "aiConfidence", "confidenceScore", "score"),
-                        true,
-                        plannedDate != null
-                ));
-                if (result.size() >= 12) {
-                    break;
-                }
-            }
-            return result;
-        } catch (Exception ex) {
-            throw new IllegalStateException("AI 履约节点抽取结果解析失败：" + ex.getMessage(), ex);
-        }
-    }
-
-    private String firstText(JsonNode node, String... fields) {
-        for (String field : fields) {
-            JsonNode value = node.get(field);
-            if (value != null && !value.isNull() && !value.asText("").isBlank()) {
-                return value.asText("").trim();
-            }
-        }
-        return "";
-    }
-
-    private Double firstDouble(JsonNode node, String... fields) {
-        for (String field : fields) {
-            JsonNode value = node.get(field);
-            if (value == null || value.isNull()) {
-                continue;
-            }
-            Double parsed = parseDouble(value);
-            if (parsed != null) {
-                return parsed;
-            }
-        }
-        return null;
-    }
-
-    private Double parseDouble(JsonNode value) {
-        double number;
-        boolean percent = false;
-        if (value.isNumber()) {
-            number = value.asDouble();
-        } else {
-            String text = value.asText("").trim();
-            if (text.isBlank()) {
-                return null;
-            }
-            percent = text.endsWith("%");
-            text = text.replace("%", "").trim();
-            try {
-                number = Double.parseDouble(text);
-            } catch (NumberFormatException ex) {
-                return null;
-            }
-        }
-        if (Double.isNaN(number) || Double.isInfinite(number)) {
-            return null;
-        }
-        if (percent || (number > 1D && number <= 100D)) {
-            number = number / 100D;
-        }
-        return number;
-    }
-
-    private LocalDate parseDate(String value) {
-        if (value == null || value.isBlank() || "null".equalsIgnoreCase(value.trim())) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(value.trim());
-        } catch (DateTimeParseException ignored) {
-            return null;
-        }
-    }
-
-    List<AiRiskVO> mergeRuleBasedMissingRisks(String contractText, List<AiRiskVO> aiRisks) {
-        List<AiRiskVO> merged = new ArrayList<>(aiRisks == null ? List.of() : aiRisks);
-        for (MissingRiskRule rule : MISSING_RISK_RULES) {
-            if (merged.size() >= 10) {
-                break;
-            }
-            if (mentionsMissingRisk(contractText, rule.terms()) && !hasRelatedRisk(merged, rule.terms())) {
-                merged.add(new AiRiskVO(rule.level(), rule.clause(), rule.reason(), rule.suggestion()));
-            }
-        }
-        return merged;
-    }
-
-    private boolean mentionsMissingRisk(String contractText, List<String> terms) {
-        String text = compact(contractText);
-        if (!containsAny(text, List.of("未约定", "未明确", "缺少", "缺失", "未载明", "未说明", "没有约定", "无约定", "未规定", "不明确"))) {
-            return false;
-        }
-        return containsAny(text, terms);
-    }
-
-    private boolean hasRelatedRisk(List<AiRiskVO> risks, List<String> terms) {
-        return risks.stream().anyMatch(risk -> containsAny(compact(risk.clause() + risk.reason()), terms));
-    }
-
-    private boolean containsAny(String text, List<String> terms) {
-        return terms.stream().anyMatch(text::contains);
-    }
-
-    private String compact(String value) {
-        return Objects.toString(value, "").replaceAll("\\s+", "");
-    }
-
     private String chatCompletion(Map<String, Object> payload) throws IOException {
         try {
             HttpRequest request = HttpRequest.newBuilder()
@@ -521,21 +415,6 @@ public class AiDraftService {
         }
     }
 
-    private Map<String, Object> baseChatPayload(List<Map<String, String>> messages, boolean stream, boolean jsonObject) {
-        Map<String, Object> payload = new java.util.LinkedHashMap<>();
-        payload.put("model", qwenProperties.resolvedModel());
-        payload.put("messages", messages);
-        if (stream) {
-            payload.put("stream", true);
-        }
-        if (jsonObject) {
-            payload.put("response_format", Map.of("type", "json_object"));
-        }
-        payload.put("enable_thinking", qwenProperties.resolvedEnableThinking());
-        payload.put("thinking_budget", qwenProperties.resolvedThinkingBudget());
-        return payload;
-    }
-
     public String sanitizedPrompt(AiDraftRequest request) {
         return """
                 合同类型：%s; 甲方：[COMPANY_A]; 乙方：[COMPANY_B]; 金额：[AMOUNT_X]; 业务范围：%s; 特殊条款：%s
@@ -549,13 +428,13 @@ public class AiDraftService {
     private void streamFromQwen(AiDraftRequest request, Consumer<String> tokenConsumer) {
         try {
             assertQwenReady();
-            Map<String, Object> payload = baseChatPayload(
-                    List.of(
+            Map<String, Object> payload = Map.of(
+                    "model", qwenProperties.resolvedModel(),
+                    "stream", true,
+                    "messages", List.of(
                             Map.of("role", "system", "content", resolveSystemPrompt(request)),
                             Map.of("role", "user", "content", buildPrompt(request))
-                    ),
-                    true,
-                    false
+                    )
             );
             HttpRequest httpRequest = HttpRequest.newBuilder()
                     .uri(URI.create(qwenProperties.resolvedBaseUrl()))
@@ -614,7 +493,7 @@ public class AiDraftService {
         if (request.ocrReferenceText() != null && !request.ocrReferenceText().isBlank()) {
             return request.ocrReferenceText();
         }
-        return attachmentService.resolveOcrReferenceText(request.attachmentId());
+        return importService.resolveOcrReferenceText(request.attachmentId());
     }
 
     private String clipOcr(String text, int max) {

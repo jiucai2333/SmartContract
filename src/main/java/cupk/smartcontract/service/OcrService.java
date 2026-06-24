@@ -3,10 +3,12 @@ package cupk.smartcontract.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cupk.smartcontract.config.OcrProperties;
+import cupk.smartcontract.dto.OcrDocumentVO;
 import cupk.smartcontract.dto.OcrExtractVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -17,12 +19,16 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import javax.imageio.ImageIO;
 
 @Service
 public class OcrService {
@@ -33,61 +39,88 @@ public class OcrService {
 
     private final OcrProperties ocrProperties;
     private final ObjectMapper objectMapper;
+    private final LayoutFeatureService layoutFeatureService;
     private final HttpClient httpClient;
 
-    public OcrService(OcrProperties ocrProperties, ObjectMapper objectMapper) {
+    public OcrService(OcrProperties ocrProperties, ObjectMapper objectMapper,
+                      LayoutFeatureService layoutFeatureService) {
         this.ocrProperties = ocrProperties;
         this.objectMapper = objectMapper;
+        this.layoutFeatureService = layoutFeatureService;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
     }
 
-    public record OcrProcessResult(String rawText, int pageCount, OcrExtractVO extract) {}
+    public record OcrProcessResult(
+            String rawText, String formattedHtml, int pageCount, OcrExtractVO extract,
+            String rawJson, String parseJson, List<String> warnings,
+            String source, String model, long durationMs, String legacyMarkdownHtml
+    ) {}
 
     /**
      * 根据文件类型和配置的 provider 调用不同 OCR 处理逻辑。
      */
     public OcrProcessResult process(Path filePath, String fileType) throws IOException {
+        long startedAt = System.currentTimeMillis();
         String normalized = fileType == null ? "" : fileType.toLowerCase(Locale.ROOT);
         String provider = ocrProperties.resolvedProvider();
 
-        if (!"pdf".equals(normalized) && !"docx".equals(normalized)) {
-            throw new IllegalArgumentException("仅支持 PDF 或 DOCX 文件");
+        if (!List.of("pdf", "docx", "jpg", "jpeg", "png", "webp").contains(normalized)) {
+            throw new IllegalArgumentException("仅支持 PDF、DOCX、JPG、JPEG、PNG 或 WEBP 文件");
         }
 
         String rawText;
         int pageCount;
+        String rawJson = null;
+        String parseJson = null;
+        List<String> warnings = new ArrayList<>();
+        String source;
+        String model = null;
 
         if ("docx".equals(normalized)) {
             rawText = extractDocxText(filePath);
             pageCount = 1;
+            source = "docx";
         } else if ("paddle".equals(provider)) {
-            PaddleResult result = callPaddleOcr(filePath);
+            PaddleResult result = callPaddleOcr(filePath, normalized);
             rawText = result.text;
             pageCount = result.pages;
+            rawJson = result.rawJson;
+            parseJson = result.parseJson;
+            warnings.addAll(result.warnings);
+            source = "paddleocr";
+            model = ocrProperties.resolvedPaddleModel();
         } else if ("aliyun-openapi".equals(provider)) {
             rawText = callAliyunOpenApi(filePath);
             pageCount = 1;
+            source = "aliyun-openapi";
         } else {
             rawText = callAliyunOcrApi(filePath);
             pageCount = 1;
+            source = "aliyun";
         }
 
-        if (rawText == null || rawText.isBlank()) {
+        String legacyMarkdownHtml = "paddle".equals(provider) && rawJson != null
+                ? legacyMarkdownHtml(rawJson) : null;
+        if ((rawText == null || rawText.isBlank()) && !StringUtils.hasText(legacyMarkdownHtml)) {
             throw new IllegalStateException("OCR 未返回有效识别内容，请检查文件是否清晰或服务配置是否正确");
         }
 
-        String clipped = clip(rawText, MAX_TEXT_CHARS);
-        return new OcrProcessResult(clipped, pageCount, null);
+        String clipped = clip(rawText == null ? "" : rawText, MAX_TEXT_CHARS);
+        return new OcrProcessResult(clipped, ocrTextToHtml(clipped), pageCount, null,
+                rawJson, parseJson, warnings, source, model, System.currentTimeMillis() - startedAt,
+                legacyMarkdownHtml);
     }
 
-    private record PaddleResult(String text, int pages) {}
+    private record PaddleResult(
+            String text, int pages, String rawJson, String parseJson, List<String> warnings
+    ) {}
 
     /**
      * 调用 PaddleOCR 服务，提交文件后轮询任务结果，并解析返回的 JSONL/Markdown 文本。
      */
-    private PaddleResult callPaddleOcr(Path filePath) throws IOException {
+    private PaddleResult callPaddleOcr(Path filePath, String fileType) throws IOException {
         String token = ocrProperties.resolvedPaddleToken();
         if (token.isBlank()) {
             throw new IllegalStateException("未配置 PaddleOCR Token，请设置 ai.ocr.paddle-token");
@@ -135,12 +168,19 @@ public class OcrService {
                 .GET()
                 .build();
         HttpResponse<String> resultResp = send(resultReq);
+        if (resultResp.statusCode() >= 300) {
+            throw new IOException("PaddleOCR 结果下载失败，HTTP " + resultResp.statusCode());
+        }
 
-        String[] lines = resultResp.body().split("\n");
-        StringBuilder allText = new StringBuilder();
+        String rawJson = resultResp.body();
+        String[] lines = rawJson.split("\n");
         int pageNum = 0;
+        List<OcrDocumentVO.Page> pages = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        PageSize imagePageSize = imageFileType(fileType) ? readImagePageSize(filePath) : PageSize.EMPTY;
 
-        for (String line : lines) {
+        for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            String line = lines[lineIndex];
             line = line.trim();
             if (line.isBlank()) continue;
             try {
@@ -149,21 +189,359 @@ public class OcrService {
                 if (layoutResults.isArray()) {
                     for (JsonNode res : layoutResults) {
                         pageNum++;
-                        String mdText = res.path("markdown").path("text").asText("");
-                        if (!mdText.isBlank()) {
-                            if (!allText.isEmpty()) allText.append("\n\f\n");
-                            allText.append(mdText);
-                        }
+                        pages.add(toPage(res, pageNum, imagePageSize, warnings));
                     }
                 }
             } catch (Exception e) {
                 log.warn("[PaddleOCR] Failed to parse JSONL line: {}", e.getMessage());
+                warnings.add("JSONL line " + (lineIndex + 1) + " parse failed: " + briefMessage(e));
             }
         }
 
-        String text = allText.toString().trim();
+        if (pages.isEmpty()) {
+            warnings.add("Paddle block 数据缺失，未生成结构化 block，已进入纯文本/legacy 降级。");
+        }
+        String text = blocksToText(pages);
+        OcrDocumentVO document = new OcrDocumentVO(
+                imageFileType(fileType) ? "image" : fileType,
+                "paddleocr",
+                true,
+                pages,
+                null,
+                warnings
+        );
+        document = layoutFeatureService.generate(document, warnings);
+        String parseJson = objectMapper.writeValueAsString(document);
         log.info("[PaddleOCR] Done. pages: {}, text length: {}", pageNum, text.length());
-        return new PaddleResult(text, pageNum > 0 ? pageNum : 1);
+        warnings.forEach(warning -> log.warn("[PaddleOCR] {}", warning));
+        return new PaddleResult(text, pageNum > 0 ? pageNum : 1, rawJson, parseJson, warnings);
+    }
+
+    private OcrDocumentVO.Page toPage(JsonNode result, int pageNo, PageSize fallbackPageSize,
+                                      List<String> warnings) {
+        PageSize pageSize = readPageSize(result);
+        Integer width = pageSize.width() != null ? pageSize.width() : fallbackPageSize.width();
+        Integer height = pageSize.height() != null ? pageSize.height() : fallbackPageSize.height();
+        List<OcrDocumentVO.Block> blocks = new ArrayList<>();
+        Map<String, Integer> bboxSources = new LinkedHashMap<>();
+        int bboxMissingCount = 0;
+        int bboxInvalidCount = 0;
+        JsonNode candidates = firstArray(result, "parsing_res_list", "blocks", "layoutResults", "layout_results");
+
+        if (candidates != null) {
+            int order = 1;
+            for (JsonNode candidate : candidates) {
+                String text = firstText(candidate, "block_content", "text", "content");
+                String type = normalizeBlockType(firstText(candidate,
+                        "block_label", "region_type", "layout_type", "type", "label"));
+                BboxResult bboxResult = readBbox(candidate);
+                if (bboxResult.bbox().isEmpty()) {
+                    if (bboxResult.invalid()) bboxInvalidCount++;
+                    else bboxMissingCount++;
+                } else {
+                    bboxSources.merge(bboxResult.source(), 1, Integer::sum);
+                }
+                Double confidence = firstDouble(candidate, "score", "confidence", "prob",
+                        "probability", "rec_score", "det_score", "cls_score");
+                blocks.add(new OcrDocumentVO.Block(
+                        "p" + pageNo + "_b" + order,
+                        type,
+                        text,
+                        bboxResult.bbox(),
+                        bboxResult.bbox().isEmpty() ? null : bboxResult.source(),
+                        inferAlign(candidate),
+                        "unknown",
+                        confidence,
+                        order++,
+                        "paddleocr",
+                        true,
+                        "table".equals(type) ? candidate : null,
+                        null
+                ));
+            }
+        }
+
+        if (blocks.isEmpty()) {
+            warnings.add("Page " + pageNo
+                    + " Paddle block 数据缺失，未生成结构化 block，已进入纯文本/legacy 降级。");
+        }
+        if (blocks.stream().allMatch(block -> block.bbox() == null || block.bbox().isEmpty())) {
+            warnings.add("Page " + pageNo + " has no bbox data.");
+        }
+        bboxSources.forEach((source, count) ->
+                warnings.add("Page " + pageNo + " bbox_source=" + source + ", count=" + count));
+        if (bboxMissingCount > 0) {
+            warnings.add("Page " + pageNo + " bbox_missing_count=" + bboxMissingCount);
+        }
+        if (bboxInvalidCount > 0) {
+            warnings.add("Page " + pageNo + " bbox_parse_failed_count=" + bboxInvalidCount);
+        }
+        if (width == null || height == null) {
+            warnings.add("Page " + pageNo + " page_size_unavailable");
+        } else if (pageSize.source() != null) {
+            warnings.add("Page " + pageNo + " page_size_source=" + pageSize.source());
+        }
+        if (blocks.stream().allMatch(block -> block.confidence() == null)) {
+            warnings.add("Page " + pageNo + " has no confidence data.");
+        }
+        return new OcrDocumentVO.Page(pageNo, width, height, blocks);
+    }
+
+    private String blocksToText(List<OcrDocumentVO.Page> pages) {
+        StringBuilder text = new StringBuilder();
+        for (OcrDocumentVO.Page page : pages) {
+            if (page.blocks() == null) continue;
+            page.blocks().stream()
+                    .sorted(java.util.Comparator.comparingInt(OcrDocumentVO.Block::order))
+                    .map(OcrDocumentVO.Block::text)
+                    .filter(value -> value != null && !value.isBlank())
+                    .forEach(value -> {
+                        if (!text.isEmpty()) text.append('\n');
+                        text.append(value.trim());
+                    });
+        }
+        return text.toString();
+    }
+
+    private JsonNode firstArray(JsonNode node, String... names) {
+        for (String name : names) {
+            JsonNode value = findField(node, name);
+            if (value != null && value.isArray()) return value;
+        }
+        return null;
+    }
+
+    private JsonNode findField(JsonNode node, String name) {
+        if (node == null || node.isValueNode()) return null;
+        JsonNode direct = node.get(name);
+        if (direct != null) return direct;
+        if (node.isObject()) {
+            var fields = node.fields();
+            while (fields.hasNext()) {
+                JsonNode found = findField(fields.next().getValue(), name);
+                if (found != null) return found;
+            }
+        } else if (node.isArray()) {
+            for (JsonNode child : node) {
+                JsonNode found = findField(child, name);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private String firstText(JsonNode node, String... names) {
+        for (String name : names) {
+            JsonNode value = node.get(name);
+            if (value != null && value.isValueNode()) return value.asText("");
+        }
+        return "";
+    }
+
+    private Integer firstInteger(JsonNode node, String... names) {
+        for (String name : names) {
+            JsonNode value = findField(node, name);
+            if (value != null && value.canConvertToInt()) return value.asInt();
+        }
+        return null;
+    }
+
+    private Double firstDouble(JsonNode node, String... names) {
+        for (String name : names) {
+            JsonNode value = node.get(name);
+            if (value != null && value.isNumber()) return value.asDouble();
+        }
+        return null;
+    }
+
+    private BboxResult readBbox(JsonNode node) {
+        String invalidSource = null;
+        for (String name : List.of("block_bbox", "bbox", "box", "boxes", "coordinate",
+                "coordinates", "rect", "points", "poly", "polygon", "text_region",
+                "layout_bbox")) {
+            JsonNode value = node.get(name);
+            if (value == null || value.isNull()) continue;
+            List<Double> bbox = normalizeBbox(value);
+            if (!bbox.isEmpty()) {
+                return new BboxResult(bbox, name, false);
+            }
+            if (invalidSource == null) invalidSource = name;
+        }
+        return new BboxResult(List.of(), invalidSource == null ? "none" : invalidSource,
+                invalidSource != null);
+    }
+
+    private List<Double> normalizeBbox(JsonNode value) {
+        if (value.isObject()) {
+            List<Double> edges = objectBbox(value);
+            if (!edges.isEmpty()) return edges;
+        }
+        List<Double> values = new ArrayList<>();
+        flattenNumbers(value, values);
+        if (values.size() == 4) {
+            double x0 = values.get(0);
+            double y0 = values.get(1);
+            double x1 = values.get(2);
+            double y1 = values.get(3);
+            if (x1 < x0 || y1 < y0) return List.of();
+            return List.of(x0, y0, x1, y1);
+        }
+        if (values.size() == 8) {
+            double minX = Double.POSITIVE_INFINITY;
+            double minY = Double.POSITIVE_INFINITY;
+            double maxX = Double.NEGATIVE_INFINITY;
+            double maxY = Double.NEGATIVE_INFINITY;
+            for (int i = 0; i < values.size(); i += 2) {
+                minX = Math.min(minX, values.get(i));
+                minY = Math.min(minY, values.get(i + 1));
+                maxX = Math.max(maxX, values.get(i));
+                maxY = Math.max(maxY, values.get(i + 1));
+            }
+            return List.of(minX, minY, maxX, maxY);
+        }
+        return List.of();
+    }
+
+    private List<Double> objectBbox(JsonNode value) {
+        Double left = firstNumber(value, "left");
+        Double top = firstNumber(value, "top");
+        Double right = firstNumber(value, "right");
+        Double bottom = firstNumber(value, "bottom");
+        if (left != null && top != null && right != null && bottom != null
+                && right >= left && bottom >= top) {
+            return List.of(left, top, right, bottom);
+        }
+        Double x = firstNumber(value, "x");
+        Double y = firstNumber(value, "y");
+        Double width = firstNumber(value, "width", "w");
+        Double height = firstNumber(value, "height", "h");
+        if (x != null && y != null && width != null && height != null
+                && width >= 0 && height >= 0) {
+            return List.of(x, y, x + width, y + height);
+        }
+        return List.of();
+    }
+
+    private Double firstNumber(JsonNode node, String... names) {
+        for (String name : names) {
+            JsonNode value = node.get(name);
+            if (value != null && value.isNumber()) return value.asDouble();
+        }
+        return null;
+    }
+
+    private void flattenNumbers(JsonNode node, List<Double> values) {
+        if (node.isNumber()) {
+            values.add(node.asDouble());
+        } else if (node.isArray()) {
+            node.forEach(child -> flattenNumbers(child, values));
+        }
+    }
+
+    private PageSize readPageSize(JsonNode result) {
+        JsonNode prunedResult = result == null ? null : result.get("prunedResult");
+        Integer width = directInteger(prunedResult, "width");
+        Integer height = directInteger(prunedResult, "height");
+        String source = width != null || height != null ? "prunedResult.width_height" : null;
+
+        if (width == null) {
+            width = directInteger(result, "width", "pageWidth", "image_width", "img_width");
+        }
+        if (height == null) {
+            height = directInteger(result, "height", "pageHeight", "image_height", "img_height");
+        }
+        if (source == null && (width != null || height != null)) source = "layout_result";
+
+        JsonNode inputImage = result == null ? null : result.get("input_img");
+        if (inputImage != null && inputImage.isObject()) {
+            if (width == null) width = directInteger(inputImage, "width", "image_width", "img_width");
+            if (height == null) height = directInteger(inputImage, "height", "image_height", "img_height");
+            if (source == null && (width != null || height != null)) source = "input_img";
+        }
+
+        JsonNode shape = result == null ? null : result.get("shape");
+        if ((width == null || height == null) && shape != null && shape.isArray()) {
+            List<Double> values = new ArrayList<>();
+            flattenNumbers(shape, values);
+            if (values.size() >= 2) {
+                if (height == null) height = positiveInteger(values.get(0));
+                if (width == null) width = positiveInteger(values.get(1));
+                if (source == null && (width != null || height != null)) source = "shape";
+            }
+        }
+        return new PageSize(width, height, source);
+    }
+
+    private Integer directInteger(JsonNode node, String... names) {
+        if (node == null || !node.isObject()) return null;
+        for (String name : names) {
+            JsonNode value = node.get(name);
+            Integer parsed = positiveInteger(value);
+            if (parsed != null) return parsed;
+        }
+        return null;
+    }
+
+    private Integer positiveInteger(JsonNode value) {
+        if (value == null || value.isNull()) return null;
+        if (value.isNumber()) return positiveInteger(value.asDouble());
+        if (value.isTextual()) {
+            try {
+                return positiveInteger(Double.parseDouble(value.asText().trim()));
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private Integer positiveInteger(Double value) {
+        if (value == null || !Double.isFinite(value) || value <= 0 || value > Integer.MAX_VALUE) return null;
+        return value.intValue();
+    }
+
+    private PageSize readImagePageSize(Path filePath) {
+        try {
+            var image = ImageIO.read(filePath.toFile());
+            return image == null ? PageSize.EMPTY
+                    : new PageSize(image.getWidth(), image.getHeight(), "image_file");
+        } catch (Exception ex) {
+            log.warn("[PaddleOCR] Image size could not be read: {}", briefMessage(ex));
+            return PageSize.EMPTY;
+        }
+    }
+
+    private String briefMessage(Exception ex) {
+        String message = ex.getMessage();
+        if (message == null || message.isBlank()) return ex.getClass().getSimpleName();
+        return message.length() <= 160 ? message : message.substring(0, 160);
+    }
+
+    private record BboxResult(List<Double> bbox, String source, boolean invalid) {
+    }
+
+    private record PageSize(Integer width, Integer height, String source) {
+        private static final PageSize EMPTY = new PageSize(null, null, null);
+    }
+
+    private String normalizeBlockType(String type) {
+        String value = type == null ? "" : type.toLowerCase(Locale.ROOT);
+        if (value.contains("title")) return "title";
+        if (value.contains("header") || value.contains("heading")) return "heading";
+        if (value.contains("table")) return "table";
+        if (value.contains("footer")) return "footer";
+        if (value.contains("page_number") || value.contains("page number")) return "page_number";
+        if (value.contains("text") || value.contains("paragraph")) return "paragraph";
+        return "unknown";
+    }
+
+    private String inferAlign(JsonNode node) {
+        String align = firstText(node, "align", "alignment").toLowerCase(Locale.ROOT);
+        return List.of("left", "center", "right").contains(align) ? align : "unknown";
+    }
+
+    private boolean imageFileType(String fileType) {
+        return List.of("jpg", "jpeg", "png", "webp").contains(fileType);
     }
 
     private String extractDocxText(Path filePath) throws IOException {
@@ -244,8 +622,17 @@ public class OcrService {
 
     private byte[] buildMultipartBody(String boundary, byte[] fileBytes, Path filePath) {
         String filename = filePath.getFileName().toString();
-        String model = "PaddleOCR-VL-1.6";
-        String optionalPayload = "{\"useDocOrientationClassify\":false,\"useDocUnwarping\":false,\"useChartRecognition\":false}";
+        String model = ocrProperties.resolvedPaddleModel();
+        String optionalPayload;
+        try {
+            optionalPayload = objectMapper.writeValueAsString(Map.of(
+                    "useDocOrientationClassify", ocrProperties.useDocOrientationClassify(),
+                    "useDocUnwarping", ocrProperties.useDocUnwarping(),
+                    "useChartRecognition", ocrProperties.useChartRecognition()
+            ));
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to build PaddleOCR optional payload", ex);
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append("--").append(boundary).append("\r\n");
@@ -404,5 +791,64 @@ public class OcrService {
 
     private String clip(String text, int max) {
         return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    private String legacyMarkdownHtml(String rawJson) {
+        StringBuilder markdown = new StringBuilder();
+        for (String line : rawJson.split("\n")) {
+            if (line.isBlank()) continue;
+            try {
+                JsonNode layoutResults = objectMapper.readTree(line)
+                        .path("result").path("layoutParsingResults");
+                if (!layoutResults.isArray()) continue;
+                for (JsonNode result : layoutResults) {
+                    String value = result.path("markdown").path("text").asText("");
+                    if (!value.isBlank()) {
+                        if (!markdown.isEmpty()) markdown.append("\n\f\n");
+                        markdown.append(value);
+                    }
+                }
+            } catch (Exception ex) {
+                log.warn("[PaddleOCR] Legacy markdown extraction failed: {}", ex.getMessage());
+            }
+        }
+        return markdown.isEmpty() ? null : ocrTextToHtml(markdown.toString());
+    }
+
+    /**
+     * Legacy fallback for historical Paddle markdown responses.
+     * Normal OCR import must build editor HTML from ocr_blocks_json blocks.
+     */
+    private String ocrTextToHtml(String text) {
+        StringBuilder html = new StringBuilder();
+        String[] lines = text.replace("\r", "").replace("\f", "\n").split("\n", -1);
+        boolean previousBlank = false;
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isBlank() || trimmed.matches("^[-| :]+$")) {
+                previousBlank = true;
+                continue;
+            }
+            String value = org.jsoup.nodes.Entities.escape(trimmed.replaceFirst("^#{1,6}\\s*", ""))
+                    .replace("  ", "&nbsp;&nbsp;");
+            if (trimmed.startsWith("# ")) {
+                html.append("<h1 style=\"text-align:center\">").append(value).append("</h1>");
+                previousBlank = false;
+                continue;
+            }
+            if (trimmed.matches("^#{2,6}\\s+.*")) {
+                html.append("<h2 style=\"text-align:left\">").append(value).append("</h2>");
+                previousBlank = false;
+                continue;
+            }
+            int leading = line.length() - line.stripLeading().length();
+            String align = leading >= 4 ? "right" : leading >= 2 ? "center" : "left";
+            String margin = previousBlank ? "8px 0" : "4px 0";
+            html.append("<p style=\"text-align:").append(align)
+                    .append(";margin:").append(margin).append(";line-height:1.8\">")
+                    .append(value).append("</p>");
+            previousBlank = false;
+        }
+        return html.toString();
     }
 }

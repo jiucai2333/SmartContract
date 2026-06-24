@@ -1,22 +1,19 @@
 /* ============================================================
-   合同台账统一检索卡片
+   合同台账筛选栏：与模板/草稿页完全对齐
+   搜索框 260px × 44px；下拉框 150px × 44px；重置按钮 44px；间距 10px
    ============================================================ */
 
 .ledger-filter-panel {
-    padding: 18px 24px 20px;
+    padding: 18px 22px;
     border-radius: 14px;
     box-shadow: 0 3px 12px rgba(33, 55, 85, .06);
-}
-
-.ledger-filter-panel .panel-head {
-    margin-bottom: 14px;
 }
 
 .ledger-filter-panel .filters {
     display: flex;
     flex-direction: row;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 10px;
     margin: 0;
     padding: 0;
@@ -26,8 +23,8 @@
 
 .ledger-filter-panel .search-field {
     position: relative;
-    flex: 1 1 280px;
-    min-width: 200px;
+    width: 260px;
+    flex: 0 0 260px;
 }
 
 .ledger-filter-panel .search-field input {
@@ -39,7 +36,6 @@
     color: var(--ink);
     background: #fff;
     font-size: 13.5px;
-    box-sizing: border-box;
 }
 
 .ledger-filter-panel .search-field > :is(i, svg) {
@@ -54,129 +50,85 @@
     pointer-events: none;
 }
 
+.ledger-filter-panel .search-field > svg,
+.ledger-filter-panel #resetBtn svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ledger-filter-panel .search-field > svg {
+    width: 17px;
+    height: 17px;
+}
+
 .ledger-filter-panel select {
+    width: 150px;
+    min-width: 150px;
     height: 44px;
-    min-width: 130px;
     padding: 0 34px 0 14px;
     border: 1px solid #dce5ef;
     border-radius: 10px;
     color: var(--ink);
     background-color: #fff;
     font-size: 13.5px;
-    box-sizing: border-box;
-}
-
-.ledger-filter-panel button {
-    height: 44px;
-    padding: 0 16px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all var(--transition);
 }
 
 .ledger-filter-panel #resetBtn {
+    height: 44px;
+    padding: 0 16px;
     color: #31415a;
     background: #f4f7fb;
     border: 1px solid #dce5ef;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    border-radius: 10px;
+    font-size: 13px;
 }
 
 .ledger-filter-panel #resetBtn:hover {
     background: #edf2f7;
     border-color: #cbd5e1;
+    color: var(--ink-secondary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
 }
 
-/* 第二行：日期 + 金额 + 提示 */
-.filters-row2 {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line-light);
-    align-items: flex-end;
-}
-
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.filter-group label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-}
-
-.date-range, .amount-range {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.date-range input,
-.amount-range input {
-    height: 44px;
-    padding: 0 10px;
-    border: 1px solid #dce5ef;
-    border-radius: 10px;
-    font-size: 13px;
-    color: var(--ink);
-    background: #fff;
-    box-sizing: border-box;
-}
-
-.date-range input { width: 140px; flex: 0 0 140px; }
-.date-range input::-webkit-datetime-edit-year-field,
-.date-range input::-webkit-datetime-edit-month-field,
-.date-range input::-webkit-datetime-edit-day-field { color: var(--ink); }
-.date-range input::-webkit-datetime-edit-text { color: var(--muted); }
-.amount-range input { width: 120px; flex: 0 0 120px; }
-
-.date-range span, .amount-range span {
-    color: var(--muted);
-    font-size: 12px;
-    flex: 0 0 auto;
-}
-
-.filter-hint {
-    flex: 1 1 200px;
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.5;
-    padding: 4px 0 0;
-    align-self: flex-end;
-}
-
-.filter-hint strong {
-    color: var(--accent);
-}
-
-/* 响应式 */
 @media (max-width: 900px) {
-    .ledger-filter-panel { padding: 14px 18px 16px; }
-    .ledger-filter-panel .search-field { flex: 1 1 100%; }
-    .ledger-filter-panel select { flex: 1 1 auto; }
-    .date-range input, .amount-range input { flex: 1 1 auto; width: auto; min-width: 100px; }
-    .date-range, .amount-range { flex-wrap: wrap; }
+    .ledger-filter-panel .filters {
+        flex-wrap: wrap;
+    }
+
+    .ledger-filter-panel .search-field {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .ledger-filter-panel select {
+        width: auto;
+        flex: 1 1 150px;
+    }
 }
 
 @media (max-width: 640px) {
-    .ledger-filter-panel .filters { gap: 8px; }
-    .ledger-filter-panel select { flex: 1 1 100%; }
-    .date-range input { flex: 1 1 100%; width: 100%; }
-    .amount-range input { flex: 1 1 100%; width: 100%; }
-    .filter-hint { flex: 1 1 100%; }
-}
+    .ledger-filter-panel {
+        padding: 14px 16px;
+    }
 
-/* ============================================================
-   表格 & 详情 (保留原有样式)
-   ============================================================ */
+    .ledger-filter-panel .filters {
+        gap: 8px;
+    }
+
+    .ledger-filter-panel .search-field,
+    .ledger-filter-panel select,
+    .ledger-filter-panel #resetBtn {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+}
 
 .table-wrap { border-radius: var(--radius); }
 .action-cell { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }

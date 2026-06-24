@@ -1,7 +1,6 @@
 package cupk.smartcontract.dto;
 
 import lombok.Data;
-
 import java.math.BigDecimal;
 
 @Data
