@@ -49,7 +49,7 @@ public class TokenService {
             )));
             return header + "." + payload + "." + sign(header + "." + payload);
         } catch (Exception ex) {
-            throw new IllegalStateException("创建JWT失败", ex);
+            throw new IllegalStateException("创建 JWT 失败", ex);
         }
     }
 
@@ -57,17 +57,17 @@ public class TokenService {
         try {
             String[] parts = token.split("\\.");
             if (parts.length != 3 || !sign(parts[0] + "." + parts[1]).equals(parts[2])) {
-                throw new IllegalArgumentException("JWT签名无效");
+                throw new IllegalArgumentException("JWT 签名无效");
             }
             Map<String, Object> payload = objectMapper.readValue(
                     Base64.getUrlDecoder().decode(parts[1]), new TypeReference<>() {});
             Number exp = (Number) payload.get("exp");
             if (exp == null || exp.longValue() < Instant.now().getEpochSecond()) {
-                throw new IllegalArgumentException("JWT已过期");
+                throw new IllegalArgumentException("JWT宸茶繃鏈?");
             }
             return payload;
         } catch (Exception ex) {
-            throw new IllegalArgumentException("JWT无效", ex);
+            throw new IllegalArgumentException("JWT 无效", ex);
         }
     }
 

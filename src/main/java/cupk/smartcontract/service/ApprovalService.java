@@ -14,8 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 @Service
 public class ApprovalService {
@@ -36,16 +34,13 @@ public class ApprovalService {
     private final ApprovalInstanceMapper mapper;
     private final ApprovalRecordMapper recordMapper;
     private final ContractMainMapper contractMapper;
-    private final StatusTransitionService statusTransitionService;
 
     public ApprovalService(ApprovalInstanceMapper mapper,
                            ApprovalRecordMapper recordMapper,
-                           ContractMainMapper contractMapper,
-                           StatusTransitionService statusTransitionService) {
+                           ContractMainMapper contractMapper) {
         this.mapper = mapper;
         this.recordMapper = recordMapper;
         this.contractMapper = contractMapper;
-        this.statusTransitionService = statusTransitionService;
     }
 
     public List<ApprovalVO> listApprovals() {
@@ -142,12 +137,27 @@ public class ApprovalService {
     private void insertRecord(Long instanceId, String nodeName, String action, String comment) {
         ApprovalRecord record = new ApprovalRecord();
         record.setInstanceId(instanceId);
-        record.setNodeName(nodeName);
+        record.setNodeName(approval.getCurrentNode() == null ? "审批" : approval.getCurrentNode());
         record.setApproverId(SecurityContext.userId());
-        record.setAction(action);
+        record.setAction("AGREE");
         record.setComment(comment);
         record.setActionTime(LocalDateTime.now());
         recordMapper.insert(record);
+
+        approval.setStatus("APPROVED");
+        approval.setEndedAt(LocalDateTime.now());
+        approval.setUpdatedBy(SecurityContext.username());
+        approval.setUpdatedAt(LocalDateTime.now());
+        mapper.updateById(approval);
+
+        ContractMain contract = contractMapper.selectById(approval.getContractId());
+        if (contract != null && "APPROVING".equals(contract.getStatus())) {
+            contract.setStatus("APPROVED");
+            contract.setUpdatedBy(SecurityContext.username());
+            contract.setUpdatedAt(LocalDateTime.now());
+            contractMapper.updateById(contract);
+        }
+        return toVo(approval);
     }
 
     private ApprovalVO toVo(Approval approval) {
