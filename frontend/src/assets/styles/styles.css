@@ -353,6 +353,18 @@ nav a.nav-child.active::before {
     letter-spacing: -.02em;
 }
 
+.topbar-heading {
+    min-width: 0;
+}
+
+.topbar-title {
+    color: var(--ink);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -.02em;
+}
+
 .topbar-right {
     display: flex;
     align-items: center;
@@ -371,7 +383,7 @@ nav a.nav-child.active::before {
 
 .topbar-subtitle {
     margin-top: 6px;
-    color: var(--muted);
+    color: var(--accent);
     font-size: 13px;
     font-weight: 500;
     line-height: 1.5;

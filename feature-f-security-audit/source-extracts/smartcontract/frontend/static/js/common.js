@@ -104,15 +104,11 @@ const RISK_TEXT = {LOW: '低', MEDIUM: '中', HIGH: '高'};
 const APPROVAL_STATUS_TEXT = {RUNNING: '审批中', APPROVED: '已通过', REJECTED: '已驳回'};
 const FLOW_TYPE_TEXT = {NORMAL: '普通合同', MAJOR: '重大合同', SUPER: '超阈值合同'};
 const APPROVAL_NODE_ROLES = {
-    '部门主管审批': ['DEPT_LEADER'],
-    '法务专员审批': ['LEGAL'],
-    '财务专员审批': ['FINANCE'],
-    '财务审批': ['FINANCE'],
-    '企业高管审批': ['EXECUTIVE'],
-    '高管审批': ['EXECUTIVE'],
-    '法务复核': ['LEGAL']
+    '部门主管审批': ['DEPT_LEADER', 'ADMIN'],
+    '法务专员审批': ['LEGAL', 'ADMIN'],
+    '企业高管审批': ['EXECUTIVE', 'ADMIN']
 };
-const SEAL_STATUS_TEXT = {ELECTRONIC: '电子签章', SIGNED: '已签署', SEALED: '已盖章'};
+const SEAL_STATUS_TEXT = {ELECTRONIC: '电子签章', SEALED: '已签章'};
 const FULFILLMENT_STATUS_TEXT = {
     PENDING: '待履约', PROCESSING: '履约中', FULFILLED: '已完成', OVERDUE: '已逾期'
 };
@@ -120,55 +116,23 @@ const FULFILLMENT_STATUS_TEXT = {
 const GROUP_LABELS = {drafting: '合同编制', contract: '合同业务'};
 
 const NAV_ITEMS = [
-    {id: 'dashboard',   href: '/dashboard',   label: '工作台',     menu: 'ALL'},
-    {id: 'draft',       href: '/draft',       label: '合同草稿',   menu: 'ALL', group: 'drafting'},
-    {id: 'templates',   href: '/templates',   label: '合同模板',   menu: 'ALL', group: 'drafting'},
-    {id: 'edit',        href: '/edit',        label: '在线编辑',   menu: 'ALL', group: 'drafting'},
-    {id: 'risk',        href: '/risk',        label: '风险审查',   menu: 'ALL'},
-    {id: 'approval',    href: '/approval',    label: '审批中心',   menu: 'ALL'},
-    {id: 'ledger',      href: '/ledger',      label: '合同台账',   menu: 'ALL',                              group: 'contract'},
-    {id: 'seal',        href: '/seal',        label: '签章登记',   menu: 'ALL', group: 'contract'},
-    {id: 'archive',     href: '/archive',     label: '归档确认',   menu: 'ALL', group: 'contract'},
-    {id: 'blockchain',  href: '/blockchain',  label: '区块链存证', menu: 'LEGAL,DEPT_LEADER,ADMIN', group: 'contract'},
-    {id: 'fulfillment', href: '/fulfillment', label: '履约预警',   menu: 'ALL'},
-    {id: 'users',       href: '/users',       label: '用户管理',   menu: 'ADMIN'},
-    {id: 'audit',       href: '/audit',       label: '审计日志',   menu: 'ADMIN'}
+    {id: 'dashboard',   href: '/html/dashboard.html',   label: '工作台',     menu: 'ALL'},
+    {id: 'draft',       href: '/html/draft.html',       label: '合同草稿',   menu: 'USER,DEPT_LEADER,LEGAL,ADMIN', group: 'drafting'},
+    {id: 'templates',   href: '/html/templates.html',   label: '合同模板',   menu: 'ALL',                              group: 'drafting'},
+    {id: 'edit',        href: '/html/edit.html',        label: '在线编辑',   menu: 'USER,DEPT_LEADER,LEGAL,ADMIN', group: 'drafting'},
+    {id: 'risk',        href: '/html/risk.html',        label: '风险审查',   menu: 'ALL'},
+    {id: 'approval',    href: '/html/approval.html',    label: '审批中心',   menu: 'DEPT_LEADER,LEGAL,EXECUTIVE,ADMIN'},
+    {id: 'ledger',      href: '/html/ledger.html',      label: '合同台账',   menu: 'ALL',                              group: 'contract'},
+    {id: 'seal',        href: '/html/seal.html',        label: '签章登记',   menu: 'LEGAL,DEPT_LEADER,ADMIN',          group: 'contract'},
+    {id: 'archive',     href: '/html/archive.html',     label: '归档确认',   menu: 'LEGAL,DEPT_LEADER,ADMIN',          group: 'contract'},
+    {id: 'fulfillment', href: '/html/fulfillment.html', label: '履约预警',   menu: 'ALL'},
+    {id: 'users',       href: '/html/users.html',       label: '用户管理',   menu: 'ADMIN'}
 ];
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, ch => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[ch]));
-}
-
-let toastTimer = null;
-
-function confirmDialog(message, {title = '操作确认', confirmText = '确认', cancelText = '取消', type = 'warn'} = {}) {
-    return new Promise(resolve => {
-        const overlay = document.createElement('div');
-        overlay.className = 'confirm-overlay';
-        const iconSvg = type === 'danger'
-            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>'
-            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>';
-        const iconClass = type === 'danger' ? 'confirm-icon-danger' : 'confirm-icon-warn';
-        const btnClass = type === 'danger' ? 'danger' : '';
-        overlay.innerHTML = `
-            <div class="confirm-card">
-                <div class="confirm-icon ${iconClass}">${iconSvg}</div>
-                <h3 class="confirm-title">${escapeHtml(title)}</h3>
-                <p class="confirm-message">${escapeHtml(message)}</p>
-                <div class="confirm-actions">
-                    <button class="confirm-cancel secondary" type="button">${escapeHtml(cancelText)}</button>
-                    <button class="confirm-ok ${btnClass}" type="button">${escapeHtml(confirmText)}</button>
-                </div>
-            </div>`;
-        document.body.appendChild(overlay);
-        const close = result => { overlay.classList.add('closing'); setTimeout(() => { overlay.remove(); resolve(result); }, 160); };
-        overlay.querySelector('.confirm-cancel').addEventListener('click', () => close(false));
-        overlay.querySelector('.confirm-ok').addEventListener('click', () => close(true));
-        overlay.addEventListener('click', e => { if (e.target === overlay) close(false); });
-        overlay.querySelector('.confirm-ok').focus();
-    });
 }
 
 function toast(message) {
@@ -181,71 +145,7 @@ function toast(message) {
     }
     el.textContent = message;
     el.classList.add('show');
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-        el.classList.remove('show');
-        toastTimer = null;
-    }, 2800);
-}
-
-function setButtonBusy(button, busy, text) {
-    if (!button) return;
-    if (busy) {
-        button.dataset.originalText = button.textContent;
-        button.disabled = true;
-        button.setAttribute('aria-busy', 'true');
-        if (text) button.textContent = text;
-        return;
-    }
-    button.disabled = false;
-    button.removeAttribute('aria-busy');
-    if (button.dataset.originalText) {
-        button.textContent = button.dataset.originalText;
-        delete button.dataset.originalText;
-    }
-}
-
-function renderTableState(tbody, colspan, { type = 'empty', title = '暂无数据', message = '', actionHtml = '' } = {}) {
-    if (!tbody) return;
-    const icon = type === 'loading' ? 'clock' : type === 'error' ? 'shield-alert' : 'file';
-    tbody.innerHTML = `<tr><td colspan="${colspan}" class="empty-cell state-cell state-${escapeHtml(type)}">
-        <i data-lucide="${icon}"></i>
-        <p>${escapeHtml(title)}</p>
-        ${message ? `<small>${escapeHtml(message)}</small>` : ''}
-        ${actionHtml}
-    </td></tr>`;
-    renderLucideIcons();
-}
-
-function renderListState(container, { type = 'empty', title = '暂无数据', message = '', actionHtml = '' } = {}) {
-    if (!container) return;
-    const icon = type === 'loading' ? 'clock' : type === 'error' ? 'shield-alert' : 'file';
-    container.innerHTML = `<div class="empty-state state-${escapeHtml(type)}">
-        <i data-lucide="${icon}"></i>
-        <strong>${escapeHtml(title)}</strong>
-        ${message ? `<p>${escapeHtml(message)}</p>` : ''}
-        ${actionHtml}
-    </div>`;
-    renderLucideIcons();
-}
-
-function clearFieldError(field) {
-    if (!field) return;
-    field.removeAttribute('aria-invalid');
-    const label = field.closest('label') || field.parentElement;
-    label?.querySelector('.field-error')?.remove();
-}
-
-function showFieldError(field, message) {
-    if (!field) return;
-    clearFieldError(field);
-    field.setAttribute('aria-invalid', 'true');
-    const label = field.closest('label') || field.parentElement;
-    if (!label) return;
-    const error = document.createElement('small');
-    error.className = 'field-error';
-    error.textContent = message;
-    label.appendChild(error);
+    setTimeout(() => el.classList.remove('show'), 2800);
 }
 
 function authHeaders(options = {}) {
@@ -269,9 +169,7 @@ async function request(url, options = {}) {
 
 async function readJson(response, fallback) {
     try {
-        const text = await response.text();
-        if (!text.trim()) return null;
-        const res = JSON.parse(text);
+        const res = await response.json();
         return typeof res === 'string' ? JSON.parse(res) : res;
     } catch {
         throw new Error(`${fallback}：${response.status}`);
@@ -375,7 +273,7 @@ async function register(username, password) {
     persistUser(res.data);
 }
 
-async function logout(redirect = '/login') {
+async function logout(redirect = '/html/login.html') {
     try { await request('/api/users/logout', {method: 'POST'}); } catch {}
     ['user', 'accessToken', 'refreshToken', 'roleCode', 'dataScope', 'userId', 'deptId'].forEach(key => localStorage.removeItem(key));
     Object.assign(state, {user: null, username: '', userId: null, deptId: null, roleCode: 'USER', dataScope: 'SELF', accessToken: '', refreshToken: ''});
@@ -384,13 +282,13 @@ async function logout(redirect = '/login') {
 
 function requireAuth() {
     if (!state.accessToken) {
-        location.href = '/login';
+        location.href = '/html/login.html';
         return false;
     }
     return true;
 }
 
-function redirectIfAuthed(target = '/dashboard') {
+function redirectIfAuthed(target = '/html/dashboard.html') {
     if (state.accessToken) location.href = target;
 }
 
@@ -398,19 +296,7 @@ function hasMenuPermission(item) {
     const allowed = item.menu.split(',').map(r => r.trim().toUpperCase());
     return allowed.includes('ALL') || allowed.includes(state.roleCode);
 }
-const CAPABILITY_ROLES = {
-    CONTRACT_EDIT: ['USER', 'DEPT_LEADER', 'LEGAL', 'FINANCE', 'EXECUTIVE', 'ADMIN'],
-    TEMPLATE_MANAGE: ['LEGAL', 'ADMIN'],
-    RISK_REVIEW: ['USER', 'DEPT_LEADER', 'LEGAL', 'FINANCE', 'EXECUTIVE', 'ADMIN'],
-    SEAL_ARCHIVE: ['LEGAL', 'DEPT_LEADER', 'ADMIN'],
-    BLOCKCHAIN_ANCHOR: ['LEGAL', 'DEPT_LEADER', 'ADMIN'],
-    FULFILLMENT_OPERATE: ['USER', 'DEPT_LEADER', 'ADMIN'],
-    LEDGER_ADMIN: ['ADMIN']
-};
-function canOperate(capability) {
-    return (CAPABILITY_ROLES[capability] || []).includes(state.roleCode);
-}
-function canOperateSealArchive() { return canOperate('SEAL_ARCHIVE'); }
+function canOperateSealArchive() { return ['LEGAL', 'DEPT_LEADER', 'ADMIN'].includes(state.roleCode); }
 
 function applyIdentity() {
     renderWatermark();
@@ -548,7 +434,7 @@ function appShellHtml(activeId) {
 <aside class="sidebar">
     <div class="brand">
         <span class="brand-mark">合</span>
-        <div><strong>智能合同管理</strong></div>
+        <div><strong>智能合同管理</strong><small>Qwen ContractOps</small></div>
     </div>
     <nav id="mainNav">${navLinks}</nav>
     <div class="security-note">
@@ -572,60 +458,3 @@ function appShellHtml(activeId) {
 function closeAppShell() {
     return '</main><div id="toast" class="toast"></div>';
 }
-
-Object.assign(window, {
-    $,
-    $$,
-    LOCAL_LUCIDE_ICONS,
-    renderLucideIcons,
-    ROLE_LABELS,
-    readUser,
-    tokenPayload,
-    state,
-    STATUS_TEXT,
-    statusTagClass,
-    RISK_TEXT,
-    APPROVAL_STATUS_TEXT,
-    FLOW_TYPE_TEXT,
-    APPROVAL_NODE_ROLES,
-    CAPABILITY_ROLES,
-    SEAL_STATUS_TEXT,
-    FULFILLMENT_STATUS_TEXT,
-    GROUP_LABELS,
-    NAV_ITEMS,
-    escapeHtml,
-    confirmDialog,
-    toast,
-    setButtonBusy,
-    renderTableState,
-    renderListState,
-    clearFieldError,
-    showFieldError,
-    authHeaders,
-    request,
-    readJson,
-    uploadApi,
-    downloadFilename,
-    downloadFile,
-    api,
-    handleApiResponse,
-    persistUser,
-    login,
-    register,
-    logout,
-    requireAuth,
-    redirectIfAuthed,
-    hasMenuPermission,
-    canOperateSealArchive,
-    canOperate,
-    applyIdentity,
-    renderWatermark,
-    renderNavItems,
-    initNavGroups,
-    toggleNavParent,
-    renderSidebar,
-    renderNavInShell,
-    initAppShell,
-    appShellHtml,
-    closeAppShell
-});
