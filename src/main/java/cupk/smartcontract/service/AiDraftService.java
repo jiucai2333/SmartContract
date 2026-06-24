@@ -21,7 +21,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.Duration;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -176,6 +178,70 @@ public class AiDraftService {
         return qwenProperties.resolvedModel();
     }
 
+    public record FulfillmentNode(
+            String nodeName,
+            String nodeType,
+            LocalDate plannedDate,
+            String responsibleParty,
+            String sourceClause,
+            Double confidence,
+            boolean aiExtracted,
+            boolean dateConfirmed
+    ) {
+    }
+
+    public List<FulfillmentNode> extractFulfillmentNodes(String contractText, LocalDate contractDueDate) {
+        return extractFulfillmentNodes(contractText, contractDueDate, null, null);
+    }
+
+    public List<FulfillmentNode> extractFulfillmentNodes(String contractText,
+                                                         LocalDate contractDueDate,
+                                                         LocalDate signDate,
+                                                         LocalDate archiveDate) {
+        if (contractText == null || contractText.isBlank()) {
+            return List.of();
+        }
+        assertQwenReady();
+        String baseDateContext = "合同签署日：" + (signDate == null ? "未知" : signDate)
+                + "\n归档日：" + (archiveDate == null ? "未知" : archiveDate)
+                + "\n合同到期日：" + (contractDueDate == null ? "未知" : contractDueDate)
+                + "\n";
+        String prompt = """
+                请从下面的合同正文中抽取履约跟踪节点。
+
+                抽取范围：
+                1. 付款、回款、发票、交付、验收、质保、续签、终止、保密期限等具有时间要求或履约动作的条款。
+                2. 每个节点必须尽量给出节点名称、节点类型、计划完成日期、责任方、来源条款位置或原文摘要、置信度。
+                3. plannedDate 请使用 yyyy-MM-dd；如果合同只写了相对日期，请结合合同到期日推算；确实无法确定日期时返回 null。
+                4. 只基于合同正文抽取，不要编造合同中不存在的履约事项。
+
+                输出要求：
+                - 只返回 JSON，不要返回 Markdown 代码块或解释文字。
+                - JSON 格式如下：
+                  {"nodes":[{"nodeName":"首付款支付","nodeType":"PAYMENT|DELIVERY|ACCEPTANCE|WARRANTY|RENEWAL|TERMINATION|INVOICE|CONFIDENTIALITY|OTHER","plannedDate":"2026-07-01","responsibleParty":"甲方/乙方/合同负责人/未知","sourceClause":"第x条或原文摘要","confidence":0.9}]}
+                - 最多返回 12 个节点，按计划日期从早到晚排序。
+
+                合同到期日：%s
+                合同正文：
+                ---
+                %s
+                ---
+                """.formatted(contractDueDate == null ? "未知" : contractDueDate, clipText(baseDateContext + contractText, 12000));
+        try {
+            Map<String, Object> payload = baseChatPayload(
+                    List.of(
+                            Map.of("role", "system", "content", "你是企业合同履约节点抽取助手，只输出结构化 JSON。"),
+                            Map.of("role", "user", "content", prompt)
+                    ),
+                    false,
+                    true
+            );
+            return parseFulfillmentNodes(chatCompletion(payload));
+        } catch (Exception ex) {
+            throw new IllegalStateException("AI 履约节点抽取失败：" + rootMessage(ex), ex);
+        }
+    }
+
     public List<DraftField> analyzeDraftFields(String markdown) {
         assertQwenReady();
         if (markdown == null || markdown.isBlank()) {
@@ -276,6 +342,123 @@ public class AiDraftService {
             return List.of();
         } catch (Exception ex) {
             throw new IllegalStateException("AI 风险审查结果解析失败：" + ex.getMessage(), ex);
+        }
+    }
+
+    private List<FulfillmentNode> parseFulfillmentNodes(String content) {
+        if (content == null || content.isBlank()) {
+            return List.of();
+        }
+        try {
+            String cleaned = content.trim();
+            if (cleaned.startsWith("```json")) {
+                cleaned = cleaned.substring(7);
+            } else if (cleaned.startsWith("```")) {
+                cleaned = cleaned.substring(3);
+            }
+            if (cleaned.endsWith("```")) {
+                cleaned = cleaned.substring(0, cleaned.length() - 3);
+            }
+            cleaned = cleaned.trim();
+
+            JsonNode root = objectMapper.readTree(cleaned);
+            JsonNode nodes = root.isArray() ? root : root.path("nodes");
+            if (!nodes.isArray()) {
+                nodes = root.path("items");
+            }
+            if (!nodes.isArray()) {
+                nodes = root.path("milestones");
+            }
+            if (!nodes.isArray()) {
+                return List.of();
+            }
+
+            List<FulfillmentNode> result = new ArrayList<>();
+            for (JsonNode node : nodes) {
+                String nodeName = firstText(node, "nodeName", "name", "title", "milestoneName");
+                if (nodeName.isBlank()) {
+                    continue;
+                }
+                LocalDate plannedDate = parseDate(firstText(node, "plannedDate", "dueDate", "date", "planDate"));
+                result.add(new FulfillmentNode(
+                        nodeName,
+                        firstText(node, "nodeType", "type", "planType"),
+                        plannedDate,
+                        firstText(node, "responsibleParty", "owner", "ownerName", "responsible"),
+                        firstText(node, "sourceClause", "clause", "source", "sourceText"),
+                        firstDouble(node, "confidence", "aiConfidence", "confidenceScore", "score"),
+                        true,
+                        plannedDate != null
+                ));
+                if (result.size() >= 12) {
+                    break;
+                }
+            }
+            return result;
+        } catch (Exception ex) {
+            throw new IllegalStateException("AI 履约节点抽取结果解析失败：" + ex.getMessage(), ex);
+        }
+    }
+
+    private String firstText(JsonNode node, String... fields) {
+        for (String field : fields) {
+            JsonNode value = node.get(field);
+            if (value != null && !value.isNull() && !value.asText("").isBlank()) {
+                return value.asText("").trim();
+            }
+        }
+        return "";
+    }
+
+    private Double firstDouble(JsonNode node, String... fields) {
+        for (String field : fields) {
+            JsonNode value = node.get(field);
+            if (value == null || value.isNull()) {
+                continue;
+            }
+            Double parsed = parseDouble(value);
+            if (parsed != null) {
+                return parsed;
+            }
+        }
+        return null;
+    }
+
+    private Double parseDouble(JsonNode value) {
+        double number;
+        boolean percent = false;
+        if (value.isNumber()) {
+            number = value.asDouble();
+        } else {
+            String text = value.asText("").trim();
+            if (text.isBlank()) {
+                return null;
+            }
+            percent = text.endsWith("%");
+            text = text.replace("%", "").trim();
+            try {
+                number = Double.parseDouble(text);
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+        if (Double.isNaN(number) || Double.isInfinite(number)) {
+            return null;
+        }
+        if (percent || (number > 1D && number <= 100D)) {
+            number = number / 100D;
+        }
+        return number;
+    }
+
+    private LocalDate parseDate(String value) {
+        if (value == null || value.isBlank() || "null".equalsIgnoreCase(value.trim())) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (DateTimeParseException ignored) {
+            return null;
         }
     }
 

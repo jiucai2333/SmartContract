@@ -13,6 +13,7 @@ import cupk.smartcontract.dto.OcrExtractVO;
 import cupk.smartcontract.mapper.ContractAttachmentMapper;
 import cupk.smartcontract.mapper.ContractMainMapper;
 import cupk.smartcontract.mapper.FileInfoMapper;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.FileSystemResource;
@@ -20,6 +21,9 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,6 +39,8 @@ import java.util.Map;
 
 @Service
 public class ContractAttachmentService {
+    private static final Logger log = LoggerFactory.getLogger(ContractAttachmentService.class);
+
     private final FileInfoMapper fileInfoMapper;
     private final ContractAttachmentMapper attachmentMapper;
     private final ContractMainMapper contractMainMapper;
@@ -42,6 +48,8 @@ public class ContractAttachmentService {
     private final DocumentParseService documentParseService;
     private final ContractManagementService contractManagementService;
     private final ObjectMapper objectMapper;
+    private final JdbcTemplate jdbcTemplate;
+    private volatile boolean schemaReady;
 
     public ContractAttachmentService(FileInfoMapper fileInfoMapper,
                                      ContractAttachmentMapper attachmentMapper,
@@ -49,7 +57,8 @@ public class ContractAttachmentService {
                                      FileStorageService fileStorageService,
                                      DocumentParseService documentParseService,
                                      @Lazy ContractManagementService contractManagementService,
-                                     ObjectMapper objectMapper) {
+                                     ObjectMapper objectMapper,
+                                     JdbcTemplate jdbcTemplate) {
         this.fileInfoMapper = fileInfoMapper;
         this.attachmentMapper = attachmentMapper;
         this.contractMainMapper = contractMainMapper;
@@ -57,9 +66,53 @@ public class ContractAttachmentService {
         this.documentParseService = documentParseService;
         this.contractManagementService = contractManagementService;
         this.objectMapper = objectMapper;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @PostConstruct
+    public void ensureAttachmentSchemaOnStartup() {
+        try {
+            ensureAttachmentSchemaReady();
+        } catch (Exception ex) {
+            log.warn("Contract attachment schema initialization skipped: {}", ex.getMessage());
+        }
+    }
+
+    private synchronized void ensureAttachmentSchemaReady() {
+        if (schemaReady) {
+            return;
+        }
+        ensureColumn("contract_attachment", "ocr_status",
+                "`ocr_status` varchar(40) NOT NULL DEFAULT 'PENDING' COMMENT 'OCR status'");
+        ensureColumn("contract_attachment", "ocr_text",
+                "`ocr_text` longtext DEFAULT NULL COMMENT 'OCR parsed text'");
+        ensureColumn("contract_attachment", "ocr_error",
+                "`ocr_error` varchar(500) DEFAULT NULL COMMENT 'OCR error message'");
+        ensureColumn("contract_attachment", "page_count",
+                "`page_count` int unsigned DEFAULT NULL COMMENT 'OCR page count'");
+        schemaReady = true;
+    }
+
+    private void ensureColumn(String tableName, String columnName, String definition) {
+        if (columnExists(tableName, columnName)) {
+            return;
+        }
+        jdbcTemplate.execute("ALTER TABLE `" + tableName + "` ADD COLUMN " + definition);
+    }
+
+    private boolean columnExists(String tableName, String columnName) {
+        Long count = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = ?
+                  AND COLUMN_NAME = ?
+                """, Long.class, tableName, columnName);
+        return count != null && count > 0;
     }
 
     public AttachmentVO upload(MultipartFile file, Long contractId, boolean runOcr, String attachType, String createdBy) throws Exception {
+        ensureAttachmentSchemaReady();
         String safeAttachType = normalizeAttachType(attachType);
         boolean signedFile = "SIGNED_FILE".equals(safeAttachType);
         boolean shouldRunOcr = signedFile ? false : runOcr;
@@ -87,6 +140,7 @@ public class ContractAttachmentService {
     }
 
     public AttachmentVO runOcr(Long attachmentId) throws Exception {
+        ensureAttachmentSchemaReady();
         ContractAttachment attachment = requireAccessibleAttachment(attachmentId);
         FileInfo fileInfo = requireFile(attachment.getFileId());
         attachment.setOcrStatus("PROCESSING");
@@ -98,6 +152,7 @@ public class ContractAttachmentService {
     }
 
     public AttachmentVO get(Long attachmentId) {
+        ensureAttachmentSchemaReady();
         ContractAttachment attachment = requireAccessibleAttachment(attachmentId);
         FileInfo fileInfo = requireFile(attachment.getFileId());
         ContractMain contract = attachment.getContractId() != null ? findContract(attachment.getContractId()) : null;
@@ -105,6 +160,7 @@ public class ContractAttachmentService {
     }
 
     public List<AttachmentVO> list(Long contractId, String ocrStatus) {
+        ensureAttachmentSchemaReady();
         if (contractId != null) {
             contractManagementService.assertCanAccess(contractId);
         }
@@ -120,6 +176,7 @@ public class ContractAttachmentService {
     }
 
     public AttachmentVO link(Long attachmentId, Long contractId) {
+        ensureAttachmentSchemaReady();
         ContractAttachment attachment = requireAccessibleAttachment(attachmentId);
         findContract(contractId);
         contractManagementService.assertCanAccess(contractId);
@@ -181,6 +238,7 @@ public class ContractAttachmentService {
     }
 
     public int countByContract(Long contractId) {
+        ensureAttachmentSchemaReady();
         contractManagementService.assertCanAccess(contractId);
         Long count = attachmentMapper.selectCount(
                 new LambdaQueryWrapper<ContractAttachment>().eq(ContractAttachment::getContractId, contractId));
