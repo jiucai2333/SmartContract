@@ -1,49 +1,13 @@
-/* ============================================================
-   电子签章页面样式
-   ============================================================ */
-
-/* ---- Integration Grid ---- */
-.integration-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-}
-
-.embed-box, .integration-grid iframe {
-    min-height: 280px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--line-light);
-    transition: border-color var(--transition);
-}
-
-.embed-box {
-    display: grid;
-    place-items: center;
-    color: var(--muted);
-    font-size: 13.5px;
-    text-align: center;
-    padding: 24px;
-}
-
-.embed-box:hover {
-    border-color: #cbd5e1;
-}
-
-.embed-box::before {
-    content: "📄";
-    font-size: 48px;
-    display: block;
-    margin-bottom: 16px;
-    opacity: .4;
-}
-
-.integration-grid iframe {
-    width: 100%;
-    border-radius: var(--radius);
-}
-
-@media (max-width: 640px) {
-    .integration-grid { grid-template-columns: 1fr; }
-    .embed-box, .integration-grid iframe { min-height: 200px; }
-}
+.sig-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+@media(max-width:900px){.sig-layout{grid-template-columns:1fr}}
+.sig-left{display:flex;flex-direction:column;gap:16px}
+.sig-right{display:flex;flex-direction:column;gap:16px}
+.pos-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:480px){.pos-row{grid-template-columns:1fr}}
+.pulse-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite;margin-right:6px}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+.sig-info{display:flex;flex-direction:column;gap:10px}
+.sig-info-row{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-light)}
+.sig-info-row:last-child{border-bottom:0}
+.sig-info-label{width:100px;flex-shrink:0;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.sig-info-value{font-size:13.5px;color:var(--ink-secondary);font-weight:500}

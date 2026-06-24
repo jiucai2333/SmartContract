@@ -90,17 +90,25 @@ const STATUS_TEXT = {
     DRAFT: '草稿', APPROVING: '审批中', APPROVED: '已审批',
     SIGNING: '已签章', ARCHIVED: '已归档',
     EXECUTING: '履约中', COMPLETED: '已完成',
-    EXPIRED: '已到期', TERMINATED: '已终止'
+    EXPIRED: '已到期', TERMINATED: '已终止',
+    REVIEWING: '审核中'
 };
 const statusTagClass = {
     DRAFT: 'tag-gray', APPROVING: 'tag-blue', APPROVED: 'tag-purple',
     SIGNING: 'tag-orange', ARCHIVED: 'tag-green',
     EXECUTING: 'tag-cyan', COMPLETED: 'tag-darkgreen',
-    EXPIRED: 'tag-red', TERMINATED: 'tag-red'
+    EXPIRED: 'tag-red', TERMINATED: 'tag-red',
+    REVIEWING: 'tag-blue'
 };
 const RISK_TEXT = {LOW: '低', MEDIUM: '中', HIGH: '高'};
 const APPROVAL_STATUS_TEXT = {RUNNING: '审批中', APPROVED: '已通过', REJECTED: '已驳回'};
-const SEAL_STATUS_TEXT = {ELECTRONIC: '电子签章', SEALED: '已签章'};
+const FLOW_TYPE_TEXT = {NORMAL: '普通合同', MAJOR: '重大合同', SUPER: '超阈值合同'};
+const APPROVAL_NODE_ROLES = {
+    '部门主管审批': ['DEPT_LEADER', 'ADMIN'],
+    '法务专员审批': ['LEGAL', 'ADMIN'],
+    '企业高管审批': ['EXECUTIVE', 'ADMIN']
+};
+const SEAL_STATUS_TEXT = {ELECTRONIC: '电子签章', SIGNED: '已签署', SEALED: '已盖章'};
 const FULFILLMENT_STATUS_TEXT = {
     PENDING: '待履约', PROCESSING: '履约中', FULFILLED: '已完成', OVERDUE: '已逾期'
 };
@@ -117,7 +125,7 @@ const NAV_ITEMS = [
     {id: 'ledger',      href: '/html/ledger.html',      label: '合同台账',   menu: 'ALL',                              group: 'contract'},
     {id: 'seal',        href: '/html/seal.html',        label: '签章登记',   menu: 'LEGAL,DEPT_LEADER,ADMIN',          group: 'contract'},
     {id: 'archive',     href: '/html/archive.html',     label: '归档确认',   menu: 'LEGAL,DEPT_LEADER,ADMIN',          group: 'contract'},
-    {id: 'signature',   href: '/html/signature.html',   label: '电子签章',   menu: 'LEGAL,EXECUTIVE,ADMIN'},
+    {id: 'blockchain',  href: '/html/blockchain.html',  label: '区块链存证',  menu: 'LEGAL,ADMIN',                      group: 'contract'},
     {id: 'fulfillment', href: '/html/fulfillment.html', label: '履约预警',   menu: 'ALL'},
     {id: 'users',       href: '/html/users.html',       label: '用户管理',   menu: 'ADMIN'}
 ];
@@ -142,8 +150,9 @@ function toast(message) {
 }
 
 function authHeaders(options = {}) {
+    const isFormData = options.body instanceof FormData;
     return {
-        'Content-Type': 'application/json',
+        ...(!isFormData ? {'Content-Type': 'application/json'} : {}),
         ...(state.accessToken ? {Authorization: `Bearer ${state.accessToken}`} : {}),
         ...(options.headers || {})
     };
@@ -308,13 +317,24 @@ function renderWatermark() {
     const container = $('#wmContainer');
     if (!container) return;
     const username = state.username || 'anonymous';
-    const render = () => {
+    const updateText = () => {
         const text = `${username} · ${new Date().toLocaleString('zh-CN', {hour12: false})}`;
-        container.innerHTML = Array.from({length: 24}, () => `<div class="watermark-text">${escapeHtml(text)}</div>`).join('');
+        container.querySelectorAll('.watermark-text').forEach(item => {
+            item.textContent = text;
+        });
     };
-    render();
+    if (!container.children.length) {
+        const fragment = document.createDocumentFragment();
+        for (let index = 0; index < 24; index++) {
+            const item = document.createElement('div');
+            item.className = 'watermark-text';
+            fragment.appendChild(item);
+        }
+        container.appendChild(fragment);
+    }
+    updateText();
     if (_wmTimer) clearInterval(_wmTimer);
-    _wmTimer = setInterval(render, 1000);
+    _wmTimer = setInterval(updateText, 60000);
 }
 
 function renderNavItems(items, activeId) {
@@ -371,6 +391,21 @@ function renderSidebar(activeId) {
     nav.addEventListener('click', (e) => {
         const parent = e.target.closest('.nav-parent');
         if (parent) toggleNavParent(parent);
+        // 导航链接点击时加淡出动画
+        const link = e.target.closest('a[href]');
+        if (link) {
+            e.preventDefault();
+            const href = link.getAttribute('href');
+            const shell = document.querySelector('.app-shell');
+            if (shell) {
+                shell.style.transition = 'opacity .15s ease, transform .15s ease';
+                shell.style.opacity = '0';
+                shell.style.transform = 'translateY(-4px)';
+                setTimeout(() => { location.href = href; }, 150);
+            } else {
+                location.href = href;
+            }
+        }
     });
     applyIdentity();
     renderLucideIcons();
@@ -380,13 +415,13 @@ function renderNavInShell(activeId) {
     return renderNavItems(NAV_ITEMS, activeId);
 }
 
-function initAppShell(activeId, title, eyebrow) {
+function initAppShell(activeId, title, subtitle) {
     if (!requireAuth()) return false;
     renderSidebar(activeId);
     const titleEl = $('#pageTitle');
-    const eyebrowEl = $('#pageEyebrow');
+    const subtitleEl = $('#pageSubtitle');
     if (titleEl) titleEl.textContent = title;
-    if (eyebrowEl) eyebrowEl.textContent = eyebrow;
+    if (subtitleEl) subtitleEl.textContent = subtitle;
     const logoutBtn = $('#logoutBtn');
     if (logoutBtn) logoutBtn.addEventListener('click', () => logout());
     renderLucideIcons();
@@ -410,9 +445,9 @@ function appShellHtml(activeId) {
 </aside>
 <main class="app-shell">
     <header class="topbar">
-        <div>
-            <p class="eyebrow" id="pageEyebrow">基于通义千问 Qwen 的合同全生命周期管理</p>
-            <h1 id="pageTitle">工作台</h1>
+        <div class="topbar-heading">
+            <h1 class="topbar-title" id="pageTitle">工作台</h1>
+            <p class="topbar-subtitle" id="pageSubtitle">合同全生命周期概览，待办事项与数据统计</p>
         </div>
         <div class="topbar-right">
             <div class="user-chip" id="userChip"></div>

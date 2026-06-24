@@ -18,7 +18,6 @@ public class ArchiveRecord extends BaseAuditEntity {
     private LocalDateTime archiveTime;
     private Long archiverId;
     private Boolean isLocked;
-    private Long knowledgeId;
     private String merkleRoot;
     @TableField("created_by")
     private String createdBy;
