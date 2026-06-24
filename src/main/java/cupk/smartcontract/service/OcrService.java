@@ -3,7 +3,7 @@ package cupk.smartcontract.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cupk.smartcontract.config.OcrProperties;
-import cupk.smartcontract.dto.OcrExtractResult;
+import cupk.smartcontract.dto.OcrExtractVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,6 @@ public class OcrService {
     private static final Logger log = LoggerFactory.getLogger(OcrService.class);
     private static final int MAX_TEXT_CHARS = 50000;
     private static final int POLL_INTERVAL_MS = 5000;
-    private static final int MAX_POLL_TIME_SECONDS = 120;
 
     private final OcrProperties ocrProperties;
     private final ObjectMapper objectMapper;
@@ -44,17 +43,17 @@ public class OcrService {
                 .build();
     }
 
-    public record OcrProcessResult(String rawText, int pageCount, OcrExtractResult extract) {}
+    public record OcrProcessResult(String rawText, int pageCount, OcrExtractVO extract) {}
 
     /**
-     * 主入口：根据 provider 调用不同的 OCR 服务
+     * 根据文件类型和配置的 provider 调用不同 OCR 处理逻辑。
      */
     public OcrProcessResult process(Path filePath, String fileType) throws IOException {
         String normalized = fileType == null ? "" : fileType.toLowerCase(Locale.ROOT);
         String provider = ocrProperties.resolvedProvider();
 
         if (!"pdf".equals(normalized) && !"docx".equals(normalized)) {
-            throw new IllegalArgumentException("仅支持 PDF 或 DOCX 格式");
+            throw new IllegalArgumentException("仅支持 PDF 或 DOCX 文件");
         }
 
         String rawText;
@@ -64,47 +63,40 @@ public class OcrService {
             rawText = extractDocxText(filePath);
             pageCount = 1;
         } else if ("paddle".equals(provider)) {
-            // PaddleOCR 云服务，原生支持 PDF，直接传整个文件
             PaddleResult result = callPaddleOcr(filePath);
             rawText = result.text;
             pageCount = result.pages;
         } else if ("aliyun-openapi".equals(provider)) {
-            // 阿里云 OpenAPI
             rawText = callAliyunOpenApi(filePath);
             pageCount = 1;
         } else {
-            // 阿里云云市场 APPCODE（旧）
             rawText = callAliyunOcrApi(filePath);
             pageCount = 1;
         }
 
         if (rawText == null || rawText.isBlank()) {
-            throw new IllegalStateException("未能从文件中识别出文字，请上传更清晰的扫描件");
+            throw new IllegalStateException("OCR 未返回有效识别内容，请检查文件是否清晰或服务配置是否正确");
         }
 
         String clipped = clip(rawText, MAX_TEXT_CHARS);
         return new OcrProcessResult(clipped, pageCount, null);
     }
 
-    // ==================== PaddleOCR 云服务 ====================
-
     private record PaddleResult(String text, int pages) {}
 
     /**
-     * 调用 PaddleOCR 云服务（paddleocr.aistudio-app.com）
-     * 流程：提交任务 → 轮询等待 → 下载 JSONL 结果 → 提取 markdown 文本
+     * 调用 PaddleOCR 服务，提交文件后轮询任务结果，并解析返回的 JSONL/Markdown 文本。
      */
     private PaddleResult callPaddleOcr(Path filePath) throws IOException {
         String token = ocrProperties.resolvedPaddleToken();
         if (token.isBlank()) {
-            throw new IllegalStateException("缺少 PaddleOCR Token，请配置 ai.ocr.paddle-token");
+            throw new IllegalStateException("未配置 PaddleOCR Token，请设置 ai.ocr.paddle-token");
         }
 
         String jobUrl = ocrProperties.resolvedPaddleJobUrl();
         String authHeader = "bearer " + token;
         byte[] fileBytes = Files.readAllBytes(filePath);
 
-        // Step 1: 提交 OCR 任务（multipart 上传文件）
         log.info("[PaddleOCR] Submitting job, file size: {} bytes", fileBytes.length);
 
         String boundary = "----PaddleOcr" + UUID.randomUUID().toString().replace("-", "");
@@ -120,7 +112,7 @@ public class OcrService {
         try {
             submitResp = send(submitReq);
         } catch (Exception e) {
-            throw new IOException("PaddleOCR 任务提交失败: " + e.getMessage(), e);
+            throw new IOException("PaddleOCR 任务提交失败：" + e.getMessage(), e);
         }
 
         if (submitResp.statusCode() != 200) {
@@ -134,10 +126,8 @@ public class OcrService {
         }
         log.info("[PaddleOCR] Job submitted, jobId: {}", jobId);
 
-        // Step 2: 轮询等待结果
         String jsonlUrl = pollUntilDone(jobUrl, jobId, authHeader);
 
-        // Step 3: 下载 JSONL 结果
         log.info("[PaddleOCR] Downloading result from: {}", jsonlUrl);
         HttpRequest resultReq = HttpRequest.newBuilder()
                 .uri(URI.create(jsonlUrl))
@@ -146,7 +136,6 @@ public class OcrService {
                 .build();
         HttpResponse<String> resultResp = send(resultReq);
 
-        // Step 4: 解析 JSONL，提取 markdown 文本
         String[] lines = resultResp.body().split("\n");
         StringBuilder allText = new StringBuilder();
         int pageNum = 0;
@@ -197,7 +186,7 @@ public class OcrService {
                 }
             }
         }
-        throw new IOException("DOCX 文件缺少正文内容");
+        throw new IOException("DOCX 文件中未找到 word/document.xml");
     }
 
     private String pollUntilDone(String jobUrl, String jobId, String authHeader) throws IOException {
@@ -226,7 +215,7 @@ public class OcrService {
 
             HttpResponse<String> pollResp = send(pollReq);
             if (pollResp.statusCode() != 200) {
-                throw new IOException("PaddleOCR 查询任务失败，HTTP " + pollResp.statusCode());
+                throw new IOException("PaddleOCR 轮询失败，HTTP " + pollResp.statusCode());
             }
 
             JsonNode pollJson = objectMapper.readTree(pollResp.body());
@@ -237,7 +226,7 @@ public class OcrService {
                 case "done" -> {
                     String jsonUrl = pollJson.path("data").path("resultUrl").path("jsonUrl").asText();
                     if (jsonUrl.isBlank()) {
-                        throw new IOException("PaddleOCR 任务完成但未返回结果 URL");
+                        throw new IOException("PaddleOCR 完成但未返回结果 URL");
                     }
                     return jsonUrl;
                 }
@@ -246,14 +235,14 @@ public class OcrService {
                     throw new IOException("PaddleOCR 任务失败: " + error);
                 }
                 case "pending", "running" -> {
-                    // 继续轮询
+                    // 继续等待。
                 }
-                default -> throw new IOException("PaddleOCR 未知状态: " + state);
+                default -> throw new IOException("PaddleOCR 返回未知状态: " + state);
             }
         }
     }
 
-    private byte[] buildMultipartBody(String boundary, byte[] fileBytes, Path filePath) throws IOException {
+    private byte[] buildMultipartBody(String boundary, byte[] fileBytes, Path filePath) {
         String filename = filePath.getFileName().toString();
         String model = "PaddleOCR-VL-1.6";
         String optionalPayload = "{\"useDocOrientationClassify\":false,\"useDocUnwarping\":false,\"useChartRecognition\":false}";
@@ -276,11 +265,8 @@ public class OcrService {
         System.arraycopy(header, 0, body, 0, header.length);
         System.arraycopy(fileBytes, 0, body, header.length, fileBytes.length);
         System.arraycopy(footer, 0, body, header.length + fileBytes.length, footer.length);
-
         return body;
     }
-
-    // ==================== 阿里云 OpenAPI（保留，备用） ====================
 
     private String callAliyunOpenApi(Path filePath) throws IOException {
         byte[] bytes = Files.readAllBytes(filePath);
@@ -319,22 +305,20 @@ public class OcrService {
 
         HttpResponse<String> resp = send(request);
         if (resp.statusCode() >= 300) {
-            throw new IOException("阿里云 OCR 调用失败，HTTP " + resp.statusCode() + ": " + resp.body());
+            throw new IOException("阿里云 OCR 请求失败，HTTP " + resp.statusCode() + ": " + resp.body());
         }
 
         JsonNode root = objectMapper.readTree(resp.body());
         JsonNode code = root.get("Code");
         if (code != null && !code.isNull()) {
-            throw new IOException("阿里云 OCR 错误: " + code.asText() + " - " + root.path("Message").asText(""));
+            throw new IOException("阿里云 OCR 返回错误 " + code.asText() + " - " + root.path("Message").asText(""));
         }
         return root.path("Data").path("content").asText("");
     }
 
-    // ==================== 阿里云云市场 APPCODE（保留，备用） ====================
-
     private String callAliyunOcrApi(Path filePath) throws IOException {
         if (!ocrProperties.enabled() || ocrProperties.appCode() == null || ocrProperties.appCode().isBlank()) {
-            throw new IllegalStateException("阿里云 OCR 未配置 APPCODE");
+            throw new IllegalStateException("未配置阿里云 OCR APPCODE");
         }
         byte[] bytes = Files.readAllBytes(filePath);
         String base64Image = Base64.getEncoder().encodeToString(bytes);
@@ -351,7 +335,7 @@ public class OcrService {
 
         HttpResponse<String> resp = send(request);
         if (resp.statusCode() >= 300) {
-            throw new IOException("阿里云 OCR 调用失败，HTTP " + resp.statusCode());
+            throw new IOException("阿里云 OCR 请求失败，HTTP " + resp.statusCode());
         }
 
         JsonNode root = objectMapper.readTree(resp.body());
@@ -367,8 +351,6 @@ public class OcrService {
         return text.toString().trim();
     }
 
-    // ==================== 阿里云签名工具 ====================
-
     private String aliyunSign(Map<String, String> params, String secret, String method) {
         try {
             String[] keys = params.keySet().toArray(new String[0]);
@@ -383,7 +365,7 @@ public class OcrService {
             mac.init(new javax.crypto.spec.SecretKeySpec((secret + "&").getBytes(StandardCharsets.UTF_8), "HmacSHA1"));
             return Base64.getEncoder().encodeToString(mac.doFinal(stringToSign.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
-            throw new RuntimeException("签名失败", e);
+            throw new RuntimeException("阿里云签名失败", e);
         }
     }
 
@@ -392,7 +374,7 @@ public class OcrService {
             return java.net.URLEncoder.encode(value, StandardCharsets.UTF_8)
                     .replace("+", "%20").replace("*", "%2A").replace("%7E", "~");
         } catch (Exception e) {
-            throw new RuntimeException("编码失败", e);
+            throw new RuntimeException("URL 编码失败", e);
         }
     }
 
@@ -410,8 +392,6 @@ public class OcrService {
         sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
         return sdf.format(new java.util.Date());
     }
-
-    // ==================== 工具方法 ====================
 
     private HttpResponse<String> send(HttpRequest request) throws IOException {
         try {

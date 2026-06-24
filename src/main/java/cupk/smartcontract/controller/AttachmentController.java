@@ -37,11 +37,13 @@ public class AttachmentController {
 
     @PostMapping("/attachments/upload")
     @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
-    public AttachmentVO upload(@RequestParam("file") MultipartFile file,
+    public AttachmentVO uploadAttachment(@RequestParam("file") MultipartFile file,
                                @RequestParam(required = false) Long contractId,
                                @RequestParam(defaultValue = "true") boolean runOcr,
+                               @RequestParam(defaultValue = "CONTRACT_FILE") String attachType,
                                HttpServletRequest request) throws Exception {
-        return attachmentService.upload(file, contractId, runOcr, ContractAttachmentService.currentUsername(request));
+        return attachmentService.upload(file, contractId, runOcr, attachType,
+                ContractAttachmentService.currentCreatedBy(request));
     }
 
     @GetMapping("/attachments")
@@ -57,7 +59,7 @@ public class AttachmentController {
 
     @PostMapping("/attachments/{attachmentId}/ocr")
     @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
-    public AttachmentVO rerunOcr(@PathVariable Long attachmentId) throws Exception {
+    public AttachmentVO ocrAttachment(@PathVariable Long attachmentId) throws Exception {
         return attachmentService.runOcr(attachmentId);
     }
 
@@ -79,7 +81,7 @@ public class AttachmentController {
 
     @PostMapping("/attachments/{attachmentId}/link")
     @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
-    public AttachmentVO link(@PathVariable Long attachmentId, @Valid @RequestBody LinkAttachmentRequest request) {
+    public AttachmentVO linkAttachment(@PathVariable Long attachmentId, @Valid @RequestBody LinkAttachmentRequest request) {
         return attachmentService.link(attachmentId, request.contractId());
     }
 
@@ -90,7 +92,7 @@ public class AttachmentController {
     }
 
     @GetMapping("/attachments/{attachmentId}/download")
-    public ResponseEntity<Resource> download(@PathVariable Long attachmentId) {
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long attachmentId) {
         return attachmentService.download(attachmentId);
     }
 

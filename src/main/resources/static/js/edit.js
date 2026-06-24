@@ -312,6 +312,7 @@ loadTemplateOptions();
 $('#retryOcrBtn').addEventListener('click', () => retryOcr().catch(error => toast(error.message)));
 $('#reuploadBtn').addEventListener('click', () => input.click());
 $('#saveDraftBtn').addEventListener('click', () => saveDraft().catch(error => toast(error.message)));
+$('#aiReviewBtn').addEventListener('click', () => launchAiReview().catch(error => toast(error.message)));
 versionBox.addEventListener('click', event => {
     const link = event.target.closest('[data-download-url]');
     if (!link) return;

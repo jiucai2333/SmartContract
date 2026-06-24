@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local runtime data ###
+.claude/
+.draft-upload-repo/
+data/uploads/
