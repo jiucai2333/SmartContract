@@ -1,8 +1,10 @@
-if (!initAppShell('archive', '归档确认', 'Archive Confirmation')) throw new Error('auth required');
+if (!initAppShell('archive', '归档确认', '确认合同归档入库，支持电子文件管理与检索')) throw new Error('auth required');
 
 const P = new URLSearchParams(location.search);
 let contractId = P.get('contractId');
 let versionId = P.get('versionId');
+let isElectronicSign = false;   // 是否为电子签章合同
+let signedFileUploaded = false;  // 是否已上传已签章文件
 
 (async function init() {
     if (!contractId) {
@@ -94,6 +96,19 @@ async function loadData() {
             : sealRecords.map(r => `<div class="list-row"><span><strong>${escapeHtml(r.fileName || '签章文件')}</strong> · ${escapeHtml(SEAL_STATUS_TEXT[r.sealStatus] || r.sealStatus || '-')} · ${fmtTime(r.sealTime)}</span></div>`).join('');
         $('#recordsCard').style.display = 'block';
 
+        // 检测是否为电子签章 → 需要上传已签章文件
+        // ELECTRONIC: 发起但未完成 / SIGNED: 法大大回调后完成 / fadada provider: 电子签章
+        isElectronicSign = sealRecords.some(r => r.sealStatus === 'ELECTRONIC' || r.sealStatus === 'SIGNED' || r.signatureProvider === 'fadada');
+        signedFileUploaded = false;
+        if (isElectronicSign) {
+            $('#esignUploadCard').style.display = 'block';
+            $('#uploadedSignedFiles').innerHTML = '';
+            $('#signedFileName').textContent = '未选择文件';
+            $('#uploadSignedFileBtn').disabled = true;
+        } else {
+            $('#esignUploadCard').style.display = 'none';
+        }
+
         const ver = versions.find(v => v.versionId === Number(versionId));
         const vNo = ver ? ver.versionNo : (versionId || 'unknown');
         const now = new Date();
@@ -166,6 +181,10 @@ function showErr(msg, showPickerToo) {
 
 $('#confirmBtn').addEventListener('click', async () => {
     if (!contractId || !versionId) { toast('缺少参数'); return; }
+    if (isElectronicSign && !signedFileUploaded) {
+        toast('该合同为电子签章，请先上传已签章文件再归档');
+        return;
+    }
     try {
         $('#confirmBtn').disabled = true;
         $('#confirmBtn').textContent = '归档中...';
@@ -179,6 +198,43 @@ $('#confirmBtn').addEventListener('click', async () => {
         toast(e.message);
         $('#confirmBtn').disabled = false;
         $('#confirmBtn').textContent = '确认归档';
+    }
+});
+
+// ==================== 电子签章：已签章文件上传 ====================
+$('#pickSignedFileBtn').addEventListener('click', () => {
+    $('#signedFileInput').click();
+});
+
+$('#signedFileInput').addEventListener('change', function () {
+    var f = this.files[0];
+    if (f) {
+        $('#signedFileName').textContent = f.name;
+        $('#uploadSignedFileBtn').disabled = false;
+    }
+});
+
+$('#uploadSignedFileBtn').addEventListener('click', async function () {
+    var file = $('#signedFileInput').files[0];
+    if (!file) { toast('请先选择文件'); return; }
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = '上传中...';
+    try {
+        var fd = new FormData();
+        fd.append('file', file);
+        fd.append('contractId', contractId);
+        fd.append('attachType', 'SIGNED_FILE');
+        var att = await api('/api/attachments/upload', { method: 'POST', body: fd });
+        signedFileUploaded = true;
+        $('#uploadedSignedFiles').innerHTML = '<div class="list-row" style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 14px"><span style="color:#166534;font-size:13px">已上传：<strong>' + escapeHtml(att.fileName || file.name) + '</strong></span></div>';
+        $('#signedFileName').textContent = '上传完成';
+        btn.textContent = '已上传';
+        toast('已签章文件上传成功');
+    } catch (e) {
+        toast('上传失败：' + e.message);
+        btn.disabled = false;
+        btn.textContent = '上传已签章文件';
     }
 });
 
