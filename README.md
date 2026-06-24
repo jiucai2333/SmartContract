@@ -51,37 +51,37 @@
   </thead>
   <tbody>
     <tr>
-      <td><img src="docs/icons/ai.svg" width="22" alt=""></td>
+      <td><img src=".github/assets/icons/ai.svg" width="22" alt=""></td>
       <td><strong>AI 合同助手</strong></td>
       <td>使用通义千问完成合同起草、字段识别、风险审查与合规分析</td>
     </tr>
     <tr>
-      <td><img src="docs/icons/document.svg" width="22" alt=""></td>
+      <td><img src=".github/assets/icons/document.svg" width="22" alt=""></td>
       <td><strong>OCR 文档导入</strong></td>
       <td>识别 PDF、DOCX 等附件，支持版式还原、方向校正与表格识别</td>
     </tr>
     <tr>
-      <td><img src="docs/icons/approval.svg" width="22" alt=""></td>
+      <td><img src=".github/assets/icons/approval.svg" width="22" alt=""></td>
       <td><strong>分级审批</strong></td>
       <td>根据合同金额与角色配置普通、重大和超阈值审批路径</td>
     </tr>
     <tr>
-      <td><img src="docs/icons/signature.svg" width="22" alt=""></td>
+      <td><img src=".github/assets/icons/signature.svg" width="22" alt=""></td>
       <td><strong>电子签章</strong></td>
       <td>对接法大大 FASC v5 API，并提供本地降级实现</td>
     </tr>
     <tr>
-      <td><img src="docs/icons/archive.svg" width="22" alt=""></td>
+      <td><img src=".github/assets/icons/archive.svg" width="22" alt=""></td>
       <td><strong>归档与存证</strong></td>
       <td>保存合同版本、生成归档编号并记录区块链存证信息</td>
     </tr>
     <tr>
-      <td><img src="docs/icons/progress.svg" width="22" alt=""></td>
+      <td><img src=".github/assets/icons/progress.svg" width="22" alt=""></td>
       <td><strong>履约追踪</strong></td>
       <td>管理履约计划、交付物、付款记录、进度和逾期预警</td>
     </tr>
     <tr>
-      <td><img src="docs/icons/security.svg" width="22" alt=""></td>
+      <td><img src=".github/assets/icons/security.svg" width="22" alt=""></td>
       <td><strong>权限与审计</strong></td>
       <td>JWT 认证、角色权限、数据范围、操作审计与敏感信息脱敏</td>
     </tr>
