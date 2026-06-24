@@ -1,0 +1,690 @@
+[2m16:36:39[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to load url /src/assets/styles/ledger.css (resolved id: C:/Users/75155/Desktop/SmartContract/frontend/src/assets/styles/ledger.css) in C:/Users/75155/Desktop/SmartContract/frontend/src/main.js. Does the file exist?
+[2m17:17:47[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts?status=DRAFT[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:49[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:49[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/risk-reports[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dashboard[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/approvals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/fulfillment/plans[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:55[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts?status=DRAFT[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:56[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates/types[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:57[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:59[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dashboard[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:59[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:59[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/fulfillment/plans[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:17:59[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/approvals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:18:18[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates/types[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:18:19[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts?status=DRAFT[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dashboard[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/approvals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/fulfillment/plans[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dashboard[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/approvals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/fulfillment/plans[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:42[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts?status=DRAFT[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:19:43[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates/types[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:20:47[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates/types[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:29[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates/types[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dashboard[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/fulfillment/plans[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/approvals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:33[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts?status=DRAFT[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:34[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates/types[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:36[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:51[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:55[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:56[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:56[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:56[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:57[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:57[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:22:57[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:23:11[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:23:12[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:23:14[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:23:14[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/risk-reports[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:23:16[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates/types[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:23:17[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:23:58[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:24:00[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dashboard[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:24:00[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:24:00[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/fulfillment/plans[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:24:00[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/approvals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:25:29[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts?status=DRAFT[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:25:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dashboard[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:25:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:25:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/approvals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:25:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/fulfillment/plans[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:25:33[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:25:34[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:25:37[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:25:37[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/risk-reports[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:43:15[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dashboard[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:43:15[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:43:16[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/approvals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:43:16[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/fulfillment/plans[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:43:18[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dashboard[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:43:18[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:43:18[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/approvals[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m17:43:18[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/fulfillment/plans[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m18:12:30[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:30[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:33[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:37[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:40[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:40[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:43[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:43[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:46[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:46[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:51[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:56[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:56[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:12:56[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:03[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:03[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42658:41)
+      at TransformPluginContext.error (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42655:16)
+      at normalizeUrl (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:40634:23)
+      at async file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:40753:37
+      at async Promise.all (index 2)
+      at async TransformPluginContext.transform (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:40680:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42453:18)
+      at async loadAndTransform (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:35845:27)
+      at async viteTransformMiddleware (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:37369:24)
+[2m18:13:30[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:30[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:31[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:38[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:40[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:40[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:44[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:48[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:48[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:50[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:53[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:53[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:55[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:58[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:13:58[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+[2m18:14:02[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "./pages/audit.js?raw" from "src/legacy/pageLoader.js". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/75155/Desktop/SmartContract/frontend/src/legacy/pageLoader.js[39m:4:23
+[33m  2  |    approval: () => import('./pages/approval.js?raw'),
+  3  |    archive: () => import('./pages/archive.js?raw'),
+  4  |    audit: () => import('./pages/audit.js?raw'),
+     |                        ^
+  5  |    auth: () => import('./pages/auth.js?raw'),
+  6  |    blockchain: () => import('./pages/blockchain.js?raw'),[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42658:41)
+      at TransformPluginContext.error (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42655:16)
+      at normalizeUrl (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:40634:23)
+      at async file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:40753:37
+      at async Promise.all (index 2)
+      at async TransformPluginContext.transform (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:40680:7)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42453:18)
+      at async loadAndTransform (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:35845:27)
+      at async viteTransformMiddleware (file:///C:/Users/75155/Desktop/SmartContract/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:37369:24)
+[2m20:56:11[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m20:56:11[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m20:56:11[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/8/versions/latest[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m20:56:11[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m20:56:11[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m20:56:11[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/8/versions/latest[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m20:56:12[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m20:56:12[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m20:56:12[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/8/versions/latest[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m20:57:44[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/login[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:07:20[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/field-analysis[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m21:07:26[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/field-analysis[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:07:26[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/risk-reports?contractId=8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:07:28[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:07:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts?status=DRAFT[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:07:36[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates/types[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:07:37[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:07:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts?status=DRAFT[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:32:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:32:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/templates[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:32:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:32:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/6[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:32:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/8/versions/latest[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+[2m21:32:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/contracts/6/versions/latest[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
