@@ -5,9 +5,7 @@ import cupk.smartcontract.security.SecurityContext;
 import cupk.smartcontract.entity.*;
 import cupk.smartcontract.dto.ArchiveCreateRequest;
 import cupk.smartcontract.dto.SealCreateRequest;
-import cupk.smartcontract.event.ContractArchivedEvent;
 import cupk.smartcontract.mapper.*;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,20 +36,17 @@ public class StatusTransitionService {
     private final ArchiveRecordMapper archiveRecordMapper;
     private final ContractVersionMapper versionMapper;
     private final OperationLogMapper operationLogMapper;
-    private final ApplicationEventPublisher eventPublisher;
 
     public StatusTransitionService(ContractMainMapper contractMapper,
                                    SealRecordMapper sealRecordMapper,
                                    ArchiveRecordMapper archiveRecordMapper,
                                    ContractVersionMapper versionMapper,
-                                   OperationLogMapper operationLogMapper,
-                                   ApplicationEventPublisher eventPublisher) {
+                                   OperationLogMapper operationLogMapper) {
         this.contractMapper = contractMapper;
         this.sealRecordMapper = sealRecordMapper;
         this.archiveRecordMapper = archiveRecordMapper;
         this.versionMapper = versionMapper;
         this.operationLogMapper = operationLogMapper;
-        this.eventPublisher = eventPublisher;
     }
 
     public void transition(ContractMain contract, String targetStatus) {
@@ -64,6 +59,18 @@ public class StatusTransitionService {
         contract.setStatus(targetStatus);
         contract.setUpdatedAt(LocalDateTime.now());
         contractMapper.updateById(contract);
+    }
+
+    public void transitionToApproving(ContractMain contract) {
+        transition(contract, "APPROVING");
+    }
+
+    public void transitionToApproved(ContractMain contract) {
+        transition(contract, "APPROVED");
+    }
+
+    public void transitionToDraft(ContractMain contract) {
+        transition(contract, "DRAFT");
     }
 
     @Transactional
@@ -93,7 +100,6 @@ public class StatusTransitionService {
         sealRecordMapper.insert(record);
 
         transition(contract, "SIGNING");
-        writeLog(SecurityContext.userId(), "SEAL_REGISTER", "CONTRACT", request.contractId(), "SUCCESS");
         return record;
     }
 
@@ -127,8 +133,6 @@ public class StatusTransitionService {
         versionMapper.updateById(version);
 
         transition(contract, "ARCHIVED");
-        writeLog(SecurityContext.userId(), "ARCHIVE_CONFIRM", "CONTRACT", request.contractId(), "SUCCESS");
-        eventPublisher.publishEvent(new ContractArchivedEvent(request.contractId(), request.versionId(), record.getArchiveTime()));
         return record;
     }
 

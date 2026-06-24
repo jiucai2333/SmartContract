@@ -41,13 +41,16 @@ public class TemplateService {
     private final ContractTemplateMapper templateMapper;
     private final FileInfoMapper fileInfoMapper;
     private final FileStorageService fileStorageService;
+    private final DocumentParseService documentParseService;
 
     public TemplateService(ContractTemplateMapper templateMapper,
                            FileInfoMapper fileInfoMapper,
-                           FileStorageService fileStorageService) {
+                           FileStorageService fileStorageService,
+                           DocumentParseService documentParseService) {
         this.templateMapper = templateMapper;
         this.fileInfoMapper = fileInfoMapper;
         this.fileStorageService = fileStorageService;
+        this.documentParseService = documentParseService;
     }
 
     public List<ContractTemplate> list(String type, String keyword) {
@@ -149,6 +152,19 @@ public class TemplateService {
                 .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(displayFileName(template, file)))
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(new FileSystemResource(path));
+    }
+
+    public DocumentParseService.ParseResult parse(Long id, boolean preserveFormat) throws Exception {
+        ContractTemplate template = get(id);
+        if (template == null || template.getFileId() == null) {
+            throw new IllegalArgumentException("模板文件不存在");
+        }
+        FileInfo file = fileInfoMapper.selectById(template.getFileId());
+        if (file == null) {
+            throw new IllegalArgumentException("模板文件不存在");
+        }
+        return documentParseService.parse(fileStorageService.resolve(file.getObjectKey()),
+                file.getFileType(), preserveFormat);
     }
 
     private Long storeTemplateFile(MultipartFile file) throws Exception {

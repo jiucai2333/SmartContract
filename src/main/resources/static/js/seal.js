@@ -1,4 +1,4 @@
-if (!initAppShell('seal', '签章登记', 'Seal Registration')) throw new Error('auth required');
+if (!initAppShell('seal', '签章登记', '登记合同签章信息，管理盖章流程与印章记录')) throw new Error('auth required');
 
 const P = new URLSearchParams(location.search);
 let contractId = P.get('contractId');

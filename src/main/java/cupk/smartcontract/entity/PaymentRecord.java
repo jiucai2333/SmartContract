@@ -7,22 +7,18 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("payment_record")
 public class PaymentRecord extends BaseAuditEntity {
     @TableId(value = "record_id", type = IdType.AUTO)
-    private Long paymentRecordId;
+    private Long recordId;
     private Long paymentPlanId;
     private Long contractId;
     private BigDecimal paidAmount;
-    private LocalDate paidDate;
-    private String bankSerialNo;
-    private String handlerName;
-    private Long voucherFileId;
-    private String payer;
-    private String receiver;
-    private String remark;
+    private LocalDateTime paidAt;
+    private String receiptNo;
+    private String notes;
 }

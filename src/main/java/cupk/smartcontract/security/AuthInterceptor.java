@@ -28,6 +28,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
         String token = resolveToken(request);
         if (token == null) {
+            SecurityContext.clear();
             unauthorized(response);
             return false;
         }
@@ -58,6 +59,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                             .map(r -> r.trim().toUpperCase())
                             .toList();
                     if (!required.contains(roleCode)) {
+                        SecurityContext.clear();
                         forbidden(response);
                         return false;
                     }
@@ -66,6 +68,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
             return true;
         } catch (Exception ex) {
+            SecurityContext.clear();
             unauthorized(response);
             return false;
         }

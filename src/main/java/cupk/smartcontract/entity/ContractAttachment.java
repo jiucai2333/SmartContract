@@ -1,7 +1,6 @@
 package cupk.smartcontract.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.Version;
@@ -17,12 +16,8 @@ public class ContractAttachment extends BaseAuditEntity {
     private Long contractId;
     private Long fileId;
     private String attachType;
-    private String ocrStatus;
-    private String ocrText;
-    @TableField(exist = false)
-    private String ocrResult;
-    private String ocrError;
-    private Integer pageCount;
+    private Integer sortOrder;
+    private String remark;
     private String createdBy;
     private String updatedBy;
     @Version

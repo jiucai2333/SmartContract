@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(error -> error.getField() + " " + error.getDefaultMessage())
-                .orElse("请求参数不合规");
+                .orElse("璇锋眰鍙傛暟涓嶅悎娉?");
         return Result.error(400, message);
     }
 }

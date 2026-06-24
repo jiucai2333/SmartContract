@@ -1,31 +1,29 @@
 package cupk.smartcontract.dto;
 
+import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
-public record PaymentPlanVO(
-        Long paymentPlanId,
-        Long contractId,
-        Long fulfillmentPlanId,
-        String contractTitle,
-        String fulfillmentNodeName,
-        String phaseName,
-        BigDecimal percentage,
-        BigDecimal plannedAmount,
-        BigDecimal paidAmount,
-        BigDecimal unpaidAmount,
-        LocalDate dueDate,
-        String payee,
-        String paymentCondition,
-        String conditionType,
-        String conditionStatus,
-        String prerequisiteDelivery,
-        Boolean prerequisiteCompleted,
-        BigDecimal penaltyRate,
-        long overdueDays,
-        BigDecimal penaltyAmount,
-        String status,
-        String responsibilityHint,
-        String remark
-) {
+@Data
+public class PaymentPlanVO {
+    private Long paymentPlanId;
+    private Long planId;
+    private Long contractId;
+    private Integer installmentNo;
+    private BigDecimal ratio;
+    private BigDecimal amount;
+    private LocalDate dueDate;
+    private String status;
+    private Long prerequisiteDeliverableId;
+    private String prerequisiteDeliverableName;
+    private Boolean prerequisiteConfirmed;
+    private BigDecimal totalPaid;
+    private Long overdueDays;
+    private BigDecimal penaltyAmount;
+    private String responsibilityHint;
+    private List<PaymentRecordVO> records;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

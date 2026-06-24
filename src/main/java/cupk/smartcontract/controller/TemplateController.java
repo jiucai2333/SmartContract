@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/templates")
@@ -82,5 +83,12 @@ public class TemplateController {
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> download(@PathVariable Long id) {
         return templateService.download(id);
+    }
+
+    @GetMapping("/{id}/parse")
+    public Map<String, Object> parse(@PathVariable Long id,
+                                     @RequestParam(defaultValue = "true") boolean preserveFormat) throws Exception {
+        var result = templateService.parse(id, preserveFormat);
+        return Map.of("html", result.html(), "pageCount", result.pageCount(), "parser", result.parser());
     }
 }

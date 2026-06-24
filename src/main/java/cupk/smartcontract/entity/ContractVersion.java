@@ -31,6 +31,6 @@ public class ContractVersion {
     private Integer version;
     @TableField("is_locked")
     private Boolean isLocked;
-    @TableField(exist = false)
+    @TableField("content")
     private String content;
 }

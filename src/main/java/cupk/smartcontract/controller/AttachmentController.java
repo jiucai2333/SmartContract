@@ -1,12 +1,9 @@
 package cupk.smartcontract.controller;
 
-import cupk.smartcontract.entity.ContractMain;
 import cupk.smartcontract.security.RequireRole;
 import cupk.smartcontract.dto.AttachmentVO;
-import cupk.smartcontract.dto.CreateContractFromOcrRequest;
 import cupk.smartcontract.dto.LinkAttachmentRequest;
 import cupk.smartcontract.service.ContractAttachmentService;
-import cupk.smartcontract.service.DraftTemplateService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
@@ -23,27 +20,36 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 附件 Controller。
+ * 仅负责附件的上传、查询、下载、关联合同。
+ * OCR/导入接口已全部迁移至 {@link ContractImportController}。
+ */
 @RestController
 @RequestMapping("/api")
 public class AttachmentController {
     private final ContractAttachmentService attachmentService;
-    private final DraftTemplateService draftTemplateService;
 
-    public AttachmentController(ContractAttachmentService attachmentService,
-                                DraftTemplateService draftTemplateService) {
+    public AttachmentController(ContractAttachmentService attachmentService) {
         this.attachmentService = attachmentService;
-        this.draftTemplateService = draftTemplateService;
     }
 
+    // ==================== 附件 CRUD ====================
+
+    /**
+     * 上传附件（仅存储文件，不触发 OCR）。
+     * 如需 OCR 识别，请先上传附件，再调用 POST /api/attachments/{id}/ocr。
+     */
     @PostMapping("/attachments/upload")
     @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
     public AttachmentVO uploadAttachment(@RequestParam("file") MultipartFile file,
                                @RequestParam(required = false) Long contractId,
-                               @RequestParam(defaultValue = "true") boolean runOcr,
                                @RequestParam(defaultValue = "CONTRACT_FILE") String attachType,
                                HttpServletRequest request) throws Exception {
-        return attachmentService.upload(file, contractId, runOcr, attachType,
-                ContractAttachmentService.currentCreatedBy(request));
+        ContractAttachmentService.AttachmentCreatedResult created =
+                attachmentService.createAttachment(file, contractId, attachType,
+                        ContractAttachmentService.currentCreatedBy(request));
+        return attachmentService.toAttachmentVo(created.attachment(), created.fileInfo());
     }
 
     @GetMapping("/attachments")
@@ -57,26 +63,9 @@ public class AttachmentController {
         return attachmentService.get(attachmentId);
     }
 
-    @PostMapping("/attachments/{attachmentId}/ocr")
-    @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
-    public AttachmentVO ocrAttachment(@PathVariable Long attachmentId) throws Exception {
-        return attachmentService.runOcr(attachmentId);
-    }
-
-    @GetMapping("/attachments/{attachmentId}/draft-analysis")
-    public Object analyzeDraftTemplate(@PathVariable Long attachmentId) {
-        return draftTemplateService.analyze(attachmentService.resolveOcrReferenceText(attachmentId));
-    }
-
-    @PostMapping("/attachments/{attachmentId}/draft-analysis")
-    @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
-    public Object analyzeEditedDraftTemplate(@PathVariable Long attachmentId,
-                                             @RequestBody Map<String, String> body) {
-        String markdown = body.get("markdown");
-        if (markdown == null || markdown.isBlank()) {
-            markdown = attachmentService.resolveOcrReferenceText(attachmentId);
-        }
-        return draftTemplateService.analyze(markdown);
+    @GetMapping("/attachments/{attachmentId}/download")
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long attachmentId) {
+        return attachmentService.download(attachmentId);
     }
 
     @PostMapping("/attachments/{attachmentId}/link")
@@ -85,16 +74,7 @@ public class AttachmentController {
         return attachmentService.link(attachmentId, request.contractId());
     }
 
-    @PostMapping("/contracts/from-ocr")
-    @RequireRole({"USER", "DEPT_LEADER", "LEGAL", "ADMIN"})
-    public ContractMain createFromOcr(@Valid @RequestBody CreateContractFromOcrRequest request) throws Exception {
-        return attachmentService.createContractFromOcr(request);
-    }
-
-    @GetMapping("/attachments/{attachmentId}/download")
-    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long attachmentId) {
-        return attachmentService.download(attachmentId);
-    }
+    // ==================== 合同维度附件查询 ====================
 
     @GetMapping("/contracts/{contractId}/attachments")
     public List<AttachmentVO> contractAttachments(@PathVariable Long contractId) {

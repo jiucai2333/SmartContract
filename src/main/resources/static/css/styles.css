@@ -299,6 +299,12 @@ nav a.nav-child {
     padding: 28px 32px;
     min-height: 100vh;
     max-width: 1440px;
+    animation: pageIn .3s ease both;
+}
+
+@keyframes pageIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .topbar {
@@ -310,6 +316,18 @@ nav a.nav-child {
     position: relative;
     border-bottom: 2px solid var(--line-light);
     padding-bottom: 12px;
+}
+
+.topbar-heading {
+    min-width: 0;
+}
+
+.topbar-title {
+    color: var(--ink);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -.02em;
 }
 
 .topbar-right {
@@ -330,9 +348,10 @@ nav a.nav-child {
 
 .topbar-subtitle {
     margin-top: 6px;
-    color: var(--muted);
+    color: var(--accent);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
+    line-height: 1.5;
     letter-spacing: 0;
     text-transform: none;
 }
@@ -401,16 +420,6 @@ nav a.nav-child {
 
 .panel-head h2 { color: var(--ink); }
 .panel-head .eyebrow { margin-bottom: 4px; }
-
-/* ============================================================
-   Quick Links (dashboard)
-   ============================================================ */
-.quick-links {
-    margin-top: 20px;
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
 
 /* ============================================================
    Buttons
@@ -1089,6 +1098,8 @@ span.muted-text {
     .panel { padding: 16px; border-radius: var(--radius); }
     .section { margin-bottom: 18px; }
     .topbar { margin-bottom: 14px; }
+    .topbar-title { font-size: 24px; }
+    .topbar-subtitle { margin-top: 4px; font-size: 12px; }
     .filters { flex-direction: column; align-items: stretch; }
     .filters select, .filters input { width: 100%; min-width: 0; }
     .button-row { flex-direction: column; align-items: stretch; }

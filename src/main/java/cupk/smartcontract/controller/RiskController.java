@@ -1,6 +1,7 @@
 package cupk.smartcontract.controller;
 
 import cupk.smartcontract.security.RequireRole;
+import cupk.smartcontract.security.AuditOperation;
 import cupk.smartcontract.dto.AiRiskReviewResult;
 import cupk.smartcontract.dto.AiRiskReviewRequest;
 import cupk.smartcontract.service.ContractManagementService;
@@ -37,6 +38,7 @@ public class RiskController {
 
     @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
     @PostMapping("/ai/risk-review")
+    @AuditOperation(operation = "RISK_REVIEW", targetType = "CONTRACT")
     public ResponseEntity<?> riskReview(@Valid @RequestBody AiRiskReviewRequest request) {
         try {
             AiRiskReviewResult result = contractService.aiRiskReview(request);
@@ -46,20 +48,25 @@ public class RiskController {
         }
     }
 
-    @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
+    @RequireRole({"DEPT_LEADER", "LEGAL", "EXECUTIVE", "ADMIN"})
     @GetMapping("/risk-reports")
+    @AuditOperation(operation = "RISK_REPORT_LIST", targetType = "RISK_REPORT")
     public Object listRiskReports(@RequestParam(required = false) Long contractId) {
         return contractService.listRiskReports(contractId);
     }
 
-    @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
+    @RequireRole({"DEPT_LEADER", "LEGAL", "EXECUTIVE", "ADMIN"})
     @GetMapping("/risk-reports/{reportId}")
+    @AuditOperation(operation = "RISK_REPORT_VIEW", targetType = "RISK_REPORT",
+            targetIdParameter = "reportId")
     public Object getRiskReport(@PathVariable Long reportId) {
         return contractService.getRiskReport(reportId);
     }
 
     @RequireRole({"LEGAL", "EXECUTIVE", "ADMIN"})
     @GetMapping("/risk-reports/{reportId}/export")
+    @AuditOperation(operation = "RISK_REPORT_EXPORT", targetType = "RISK_REPORT",
+            targetIdParameter = "reportId")
     public ResponseEntity<byte[]> exportRiskReport(@PathVariable Long reportId) {
         RiskReportExportService.ExportFile export = riskReportExportService.exportDocx(reportId);
         return ResponseEntity.ok()
