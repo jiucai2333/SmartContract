@@ -3,11 +3,14 @@ package cupk.smartcontract.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("file_info")
-public class FileInfo {
+public class FileInfo extends BaseAuditEntity {
     @TableId(value = "file_id", type = IdType.AUTO)
     private Long fileId;
     private String objectKey;
@@ -15,8 +18,8 @@ public class FileInfo {
     private String fileType;
     private Long size;
     private String sha256;
-    private java.time.LocalDateTime createdAt;
-    private java.time.LocalDateTime updatedAt;
-    @com.baomidou.mybatisplus.annotation.TableField("is_deleted")
-    private Integer deleted;
+    private String createdBy;
+    private String updatedBy;
+    @Version
+    private Integer version;
 }

@@ -12,5 +12,6 @@ public record VersionVO(
         String createdBy,
         LocalDateTime createdAt,
         Long fileId,
+        Boolean isLocked,
         String downloadUrl
 ) {}

@@ -48,10 +48,10 @@ public class FileStorageService {
     public Path resolve(String objectKey) {
         Path resolved = baseDir.resolve(objectKey.replace('/', java.io.File.separatorChar)).normalize();
         if (!resolved.startsWith(baseDir)) {
-            throw new IllegalArgumentException("非法文件路径");
+            throw new IllegalArgumentException("闈炴硶鏂囦欢璺緞");
         }
         if (!Files.exists(resolved)) {
-            throw new IllegalArgumentException("文件不存在");
+            throw new IllegalArgumentException("鏂囦欢涓嶅瓨鍦?");
         }
         return resolved;
     }

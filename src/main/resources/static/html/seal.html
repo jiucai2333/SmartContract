@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>签章登记 - 智能合同管理</title>
     <link rel="stylesheet" href="../css/styles.css">
@@ -40,7 +40,7 @@
         </div>
         <div class="form-card">
             <h3>签章信息</h3>
-            <div class="form-row"><label>盖章状态</label><select id="sealStatus" required><option value="">请选择</option><option value="SEALED">已盖章</option><option value="ELECTRONIC">电子签章</option></select></div>
+            <div class="form-row"><label>签章状态</label><select id="sealStatus" required><option value="ELECTRONIC" selected>电子签章</option><option value="SEALED">已签章</option></select></div>
             <div class="form-row"><label>盖章时间</label><input type="datetime-local" id="sealTime"></div>
             <div class="form-row"><label>经办人</label><input type="text" id="operatorName" placeholder="请输入经办人姓名"></div>
             <div class="form-row"><label>备注</label><textarea id="remark" rows="2" placeholder="签章备注（选填）"></textarea></div>
