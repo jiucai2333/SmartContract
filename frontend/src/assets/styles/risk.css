@@ -1,0 +1,341 @@
+/* ============================================================
+   风险审查页面样式
+   ============================================================ */
+
+/* ---- Review Layout ---- */
+.report-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, .85fr) minmax(0, 1.15fr);
+    gap: 22px;
+    align-items: stretch;
+}
+
+.report-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 88px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--success);
+    border-radius: var(--radius-sm);
+    background: var(--success-bg);
+}
+
+.report-summary.empty {
+    display: block;
+    color: var(--muted);
+    border-left-color: var(--line);
+    background: var(--line-light);
+}
+
+.report-summary.HIGH { border-left-color: var(--danger); background: var(--danger-bg); }
+.report-summary.MEDIUM { border-left-color: var(--warn); background: var(--warn-bg); }
+.report-summary.LOW { border-left-color: var(--success); background: var(--success-bg); }
+.report-summary strong, .report-summary span { display: block; }
+.report-summary strong { margin-bottom: 6px; color: var(--ink); font-size: 15px; }
+.report-summary span { color: var(--ink-secondary); font-size: 13px; }
+
+.report-list {
+    display: grid;
+    gap: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.report-item {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px 10px;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink);
+    text-align: left;
+}
+
+.report-item:hover, .report-item.active {
+    border-color: var(--primary);
+    background: var(--surface-hover);
+    box-shadow: var(--shadow-sm);
+    transform: none;
+}
+
+.report-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-item small { grid-column: 2 / 4; color: var(--muted); line-height: 1.45; }
+.report-item em { color: var(--muted); font-size: 12px; font-style: normal; white-space: nowrap; }
+.compact { min-height: 34px; padding: 0 12px; }
+
+.review-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(380px, .85fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.review-layout > .panel,
+#riskList {
+    min-width: 0;
+}
+
+/* ---- Contract Preview Panel ---- */
+.contract-preview {
+    position: sticky;
+    top: 20px;
+}
+
+.contract-preview article {
+    line-height: 1.9;
+    font-size: 14px;
+    color: var(--ink-secondary);
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.contract-preview article p {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition);
+}
+
+.contract-preview article p:hover {
+    background: var(--line-light);
+}
+
+.contract-preview article p.highlight {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn);
+}
+
+/* ---- Risk Cards ---- */
+.risk-card {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    border-left: 4px solid transparent;
+    transition: box-shadow var(--transition), transform var(--transition);
+    cursor: pointer;
+    color: var(--ink);
+    text-align: left;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.risk-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateX(4px);
+}
+
+.risk-card.HIGH {
+    border-left-color: var(--danger);
+    background: var(--danger-bg);
+}
+
+.risk-card.MEDIUM {
+    border-left-color: var(--warn);
+    background: var(--warn-bg);
+}
+
+.risk-card.LOW {
+    border-left-color: var(--success);
+    background: var(--success-bg);
+}
+
+.risk-card-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.55;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.risk-card .risk-clause {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.risk-card .risk-reason,
+.risk-card .risk-suggestion {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.risk-card small {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.risk-card .suggestion {
+    color: var(--ink-secondary);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+/* ---- Review Badge ---- */
+.review-required {
+    color: var(--danger);
+    font-weight: 800;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+/* ---- Review Input Panel ---- */
+#reviewInputPanel {
+    margin-bottom: 22px;
+}
+
+#reviewInputPanel textarea {
+    min-height: 120px;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.hidden-text-input {
+    display: none !important;
+}
+
+#contractPdf {
+    padding: 14px;
+    background: var(--surface);
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--ink-secondary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.contract-picker-block {
+    min-width: 0;
+}
+
+.contract-picker-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.contract-picker-list {
+    display: grid;
+    gap: 8px;
+    max-height: 220px;
+    margin-top: 10px;
+    overflow-y: auto;
+}
+
+.contract-choice {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink);
+    text-align: left;
+    white-space: normal;
+}
+
+.contract-choice:hover,
+.contract-choice.active {
+    border-color: var(--primary);
+    background: var(--surface-hover);
+    transform: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.contract-choice strong,
+.contract-choice span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contract-choice strong {
+    display: block;
+    margin-bottom: 4px;
+    white-space: nowrap;
+}
+
+.contract-choice span {
+    display: block;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.contract-choice small {
+    display: block;
+    margin-top: 4px;
+    color: var(--ink-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.contract-choice.disabled-choice {
+    background: var(--line-light);
+}
+
+.contract-choice.disabled-choice em,
+.contract-choice.disabled-choice small {
+    color: var(--warn);
+}
+
+.contract-choice em {
+    color: var(--primary);
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.upload-hint {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+@media (max-width: 1024px) {
+    .report-layout, .review-layout { grid-template-columns: 1fr; }
+    .contract-preview { position: static; }
+    .contract-picker-toolbar,
+    .contract-choice {
+        grid-template-columns: 1fr;
+    }
+}

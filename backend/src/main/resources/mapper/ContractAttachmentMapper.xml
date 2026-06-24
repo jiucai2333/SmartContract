@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cupk.smartcontract.mapper.ContractAttachmentMapper">
+    <resultMap id="attachmentOcrRowMap" type="cupk.smartcontract.dto.ContractAttachmentOcrRow">
+        <association property="attachment" javaType="cupk.smartcontract.entity.ContractAttachment">
+            <id property="attachmentId" column="attachment_id"/>
+            <result property="contractId" column="contract_id"/>
+            <result property="fileId" column="file_id"/>
+            <result property="attachType" column="attach_type"/>
+            <result property="sortOrder" column="sort_order"/>
+            <result property="remark" column="remark"/>
+            <result property="createdBy" column="attachment_created_by"/>
+            <result property="createdAt" column="attachment_created_at"/>
+            <result property="updatedBy" column="attachment_updated_by"/>
+            <result property="updatedAt" column="attachment_updated_at"/>
+            <result property="deleted" column="attachment_is_deleted"/>
+            <result property="version" column="attachment_version"/>
+        </association>
+        <association property="ocr" javaType="cupk.smartcontract.entity.ContractAttachmentOcr"
+                     notNullColumn="ocr_id">
+            <id property="ocrId" column="ocr_id"/>
+            <result property="attachmentId" column="ocr_attachment_id"/>
+            <result property="ocrStatus" column="ocr_status"/>
+            <result property="previewHtml" column="preview_html"/>
+            <result property="editorHtml" column="editor_html"/>
+            <result property="plainText" column="plain_text"/>
+            <result property="ocrBlocksJson" column="ocr_blocks_json"/>
+            <result property="ocrRawJson" column="ocr_raw_json"/>
+            <result property="qwenLayoutJson" column="qwen_layout_json"/>
+            <result property="parseSource" column="parse_source"/>
+            <result property="approximate" column="approximate"/>
+            <result property="parseWarnings" column="parse_warnings"/>
+            <result property="pageCount" column="page_count"/>
+            <result property="ocrModel" column="ocr_model"/>
+            <result property="qwenModel" column="qwen_model"/>
+            <result property="ocrDurationMs" column="ocr_duration_ms"/>
+            <result property="qwenDurationMs" column="qwen_duration_ms"/>
+            <result property="ocrError" column="ocr_error"/>
+            <result property="createdBy" column="ocr_created_by"/>
+            <result property="createdAt" column="ocr_created_at"/>
+            <result property="updatedBy" column="ocr_updated_by"/>
+            <result property="updatedAt" column="ocr_updated_at"/>
+            <result property="deleted" column="ocr_is_deleted"/>
+            <result property="version" column="ocr_version"/>
+        </association>
+    </resultMap>
+
+    <select id="selectWithOcr" resultMap="attachmentOcrRowMap">
+        SELECT
+            a.attachment_id,
+            a.contract_id,
+            a.file_id,
+            a.attach_type,
+            a.sort_order,
+            a.remark,
+            a.created_by AS attachment_created_by,
+            a.created_at AS attachment_created_at,
+            a.updated_by AS attachment_updated_by,
+            a.updated_at AS attachment_updated_at,
+            a.is_deleted AS attachment_is_deleted,
+            a.version AS attachment_version,
+            o.ocr_id,
+            o.attachment_id AS ocr_attachment_id,
+            o.ocr_status,
+            o.preview_html,
+            o.editor_html,
+            o.plain_text,
+            o.ocr_blocks_json,
+            o.ocr_raw_json,
+            o.qwen_layout_json,
+            o.parse_source,
+            o.approximate,
+            o.parse_warnings,
+            o.page_count,
+            o.ocr_model,
+            o.qwen_model,
+            o.ocr_duration_ms,
+            o.qwen_duration_ms,
+            o.ocr_error,
+            o.created_by AS ocr_created_by,
+            o.created_at AS ocr_created_at,
+            o.updated_by AS ocr_updated_by,
+            o.updated_at AS ocr_updated_at,
+            o.is_deleted AS ocr_is_deleted,
+            o.version AS ocr_version
+        FROM contract_attachment a
+        LEFT JOIN contract_attachment_ocr o
+            ON a.attachment_id = o.attachment_id
+            AND o.is_deleted = 0
+        WHERE a.is_deleted = 0
+        <if test="contractId != null">
+            AND a.contract_id = #{contractId}
+        </if>
+        <if test="ocrStatus != null and ocrStatus != ''">
+            AND o.ocr_status = #{ocrStatus}
+        </if>
+        ORDER BY a.created_at DESC
+    </select>
+</mapper>
