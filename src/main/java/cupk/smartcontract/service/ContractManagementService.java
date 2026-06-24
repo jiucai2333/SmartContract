@@ -1,413 +1,580 @@
 package cupk.smartcontract.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import cupk.smartcontract.security.SecurityContext;
-import cupk.smartcontract.entity.ContractAttachment;
+import cupk.smartcontract.entity.Approval;
+import cupk.smartcontract.entity.ApprovalRecord;
+import cupk.smartcontract.entity.ArchiveRecord;
 import cupk.smartcontract.entity.ContractMain;
-import cupk.smartcontract.entity.FileInfo;
-import cupk.smartcontract.dto.AttachmentVO;
+import cupk.smartcontract.entity.FulfillmentPlan;
+import cupk.smartcontract.entity.RiskItem;
+import cupk.smartcontract.entity.RiskReport;
+import cupk.smartcontract.entity.SealRecord;
+import cupk.smartcontract.dto.ArchiveCreateRequest;
+import cupk.smartcontract.dto.AiDraftRequest;
+import cupk.smartcontract.dto.AiDraftVO;
+import cupk.smartcontract.dto.AiRiskReviewRequest;
+import cupk.smartcontract.dto.AiRiskReviewResult;
+import cupk.smartcontract.dto.AiRiskVO;
 import cupk.smartcontract.dto.ContractCreateRequest;
-import cupk.smartcontract.dto.CreateContractFromOcrRequest;
-import cupk.smartcontract.dto.OcrExtractVO;
-import cupk.smartcontract.mapper.ContractAttachmentMapper;
+import cupk.smartcontract.dto.DashboardVO;
+import cupk.smartcontract.dto.RiskReportVO;
+import cupk.smartcontract.dto.SealCreateRequest;
+import cupk.smartcontract.mapper.ApprovalInstanceMapper;
+import cupk.smartcontract.mapper.ApprovalRecordMapper;
 import cupk.smartcontract.mapper.ContractMainMapper;
-import cupk.smartcontract.mapper.FileInfoMapper;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import cupk.smartcontract.mapper.FulfillmentPlanMapper;
+import cupk.smartcontract.mapper.RiskItemMapper;
+import cupk.smartcontract.mapper.RiskReportMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
-public class ContractAttachmentService {
-    private final FileInfoMapper fileInfoMapper;
-    private final ContractAttachmentMapper attachmentMapper;
-    private final ContractMainMapper contractMainMapper;
-    private final FileStorageService fileStorageService;
-    private final DocumentParseService documentParseService;
-    private final ContractManagementService contractManagementService;
-    private final ObjectMapper objectMapper;
+public class ContractManagementService {
 
-    public ContractAttachmentService(FileInfoMapper fileInfoMapper,
-                                     ContractAttachmentMapper attachmentMapper,
-                                     ContractMainMapper contractMainMapper,
-                                     FileStorageService fileStorageService,
-                                     DocumentParseService documentParseService,
-                                     @Lazy ContractManagementService contractManagementService,
-                                     ObjectMapper objectMapper) {
-        this.fileInfoMapper = fileInfoMapper;
-        this.attachmentMapper = attachmentMapper;
-        this.contractMainMapper = contractMainMapper;
-        this.fileStorageService = fileStorageService;
-        this.documentParseService = documentParseService;
-        this.contractManagementService = contractManagementService;
-        this.objectMapper = objectMapper;
+    @Value("${contract.threshold.major:100000}")
+    private BigDecimal majorThreshold;
+
+    @Value("${contract.threshold.super:500000}")
+    private BigDecimal superThreshold;
+
+    private final ContractMainMapper contractMapper;
+    private final ContractNumberService contractNumberService;
+    private final RiskItemMapper riskMapper;
+    private final RiskReportMapper riskReportMapper;
+    private final ApprovalInstanceMapper approvalMapper;
+    private final ApprovalRecordMapper approvalRecordMapper;
+    private final FulfillmentPlanMapper planMapper;
+    private final AiDraftService aiDraftService;
+    private final StatusTransitionService statusTransitionService;
+    private final BlockchainService blockchainService;
+
+    public ContractManagementService(ContractMainMapper contractMapper,
+                                     ContractNumberService contractNumberService,
+                                     RiskItemMapper riskMapper,
+                                     RiskReportMapper riskReportMapper,
+                                     ApprovalInstanceMapper approvalMapper,
+                                     ApprovalRecordMapper approvalRecordMapper,
+                                     FulfillmentPlanMapper planMapper,
+                                     AiDraftService aiDraftService,
+                                     StatusTransitionService statusTransitionService,
+                                     BlockchainService blockchainService) {
+        this.contractMapper = contractMapper;
+        this.contractNumberService = contractNumberService;
+        this.riskMapper = riskMapper;
+        this.riskReportMapper = riskReportMapper;
+        this.approvalMapper = approvalMapper;
+        this.approvalRecordMapper = approvalRecordMapper;
+        this.planMapper = planMapper;
+        this.aiDraftService = aiDraftService;
+        this.statusTransitionService = statusTransitionService;
+        this.blockchainService = blockchainService;
     }
 
-    public AttachmentVO upload(MultipartFile file, Long contractId, boolean runOcr, String attachType, String createdBy) throws Exception {
-        String safeAttachType = normalizeAttachType(attachType);
-        boolean signedFile = "SIGNED_FILE".equals(safeAttachType);
-        boolean shouldRunOcr = signedFile ? false : runOcr;
-        validateUpload(file, signedFile);
-        if (contractId != null) {
-            contractManagementService.assertCanAccess(contractId);
+    // ==================== 数据权限 ====================
+
+    private void applyDataScope(LambdaQueryWrapper<ContractMain> wrapper) {
+        String scope = SecurityContext.dataScope();
+        Long currentUserId = SecurityContext.userId();
+        Long currentDeptId = SecurityContext.deptId();
+        if ("SELF".equals(scope) && currentUserId != null) {
+            wrapper.eq(ContractMain::getOwnerId, currentUserId);
+        } else if ("DEPT".equals(scope) && currentDeptId != null) {
+            wrapper.eq(ContractMain::getDeptId, currentDeptId);
         }
-        FileStorageService.StoredFile stored = fileStorageService.store(file);
-        FileInfo fileInfo = findOrCreateFile(stored, file.getOriginalFilename());
-        ContractAttachment attachment = new ContractAttachment();
-        attachment.setContractId(contractId);
-        attachment.setFileId(fileInfo.getFileId());
-        attachment.setAttachType(safeAttachType);
-        attachment.setOcrStatus(shouldRunOcr ? "PROCESSING" : "PENDING");
-        attachment.setCreatedBy(createdBy);
-        attachment.setCreatedAt(LocalDateTime.now());
-        attachment.setUpdatedAt(LocalDateTime.now());
-        attachment.setDeleted(0);
-        attachment.setVersion(1);
-        attachmentMapper.insert(attachment);
-        if (shouldRunOcr) {
-            runOcrInternal(attachment, fileInfo);
+    }
+
+    private void applyPlanDataScope(LambdaQueryWrapper<FulfillmentPlan> wrapper) {
+        String scope = SecurityContext.dataScope();
+        Long currentUserId = SecurityContext.userId();
+        Long currentDeptId = SecurityContext.deptId();
+        if ("SELF".equals(scope) && currentUserId != null) {
+            wrapper.inSql(FulfillmentPlan::getContractId,
+                    "SELECT contract_id FROM contract_main WHERE owner_id = " + currentUserId);
+        } else if ("DEPT".equals(scope) && currentDeptId != null) {
+            wrapper.inSql(FulfillmentPlan::getContractId,
+                    "SELECT contract_id FROM contract_main WHERE dept_id = " + currentDeptId);
         }
-        return toVo(attachment, fileInfo, contractId != null ? findContract(contractId) : null);
     }
 
-    public AttachmentVO runOcr(Long attachmentId) throws Exception {
-        ContractAttachment attachment = requireAccessibleAttachment(attachmentId);
-        FileInfo fileInfo = requireFile(attachment.getFileId());
-        attachment.setOcrStatus("PROCESSING");
-        attachment.setOcrError(null);
-        attachment.setUpdatedAt(LocalDateTime.now());
-        attachmentMapper.updateById(attachment);
-        runOcrInternal(attachment, fileInfo);
-        return get(attachmentId);
-    }
-
-    public AttachmentVO get(Long attachmentId) {
-        ContractAttachment attachment = requireAccessibleAttachment(attachmentId);
-        FileInfo fileInfo = requireFile(attachment.getFileId());
-        ContractMain contract = attachment.getContractId() != null ? findContract(attachment.getContractId()) : null;
-        return toVo(attachment, fileInfo, contract);
-    }
-
-    public List<AttachmentVO> list(Long contractId, String ocrStatus) {
-        if (contractId != null) {
-            contractManagementService.assertCanAccess(contractId);
+    private void applyRiskDataScope(LambdaQueryWrapper<RiskItem> wrapper) {
+        String scope = SecurityContext.dataScope();
+        Long currentUserId = SecurityContext.userId();
+        Long currentDeptId = SecurityContext.deptId();
+        if ("SELF".equals(scope) && currentUserId != null) {
+            wrapper.inSql(RiskItem::getContractId,
+                    "SELECT contract_id FROM contract_main WHERE owner_id = " + currentUserId);
+        } else if ("DEPT".equals(scope) && currentDeptId != null) {
+            wrapper.inSql(RiskItem::getContractId,
+                    "SELECT contract_id FROM contract_main WHERE dept_id = " + currentDeptId);
         }
-        LambdaQueryWrapper<ContractAttachment> wrapper = new LambdaQueryWrapper<ContractAttachment>()
-                .eq(contractId != null, ContractAttachment::getContractId, contractId)
-                .eq(StringUtils.hasText(ocrStatus), ContractAttachment::getOcrStatus, ocrStatus)
-                .orderByDesc(ContractAttachment::getCreatedAt);
-        return attachmentMapper.selectList(wrapper).stream()
-                .filter(this::canAccessAttachment)
-                .map(att -> toVo(att, requireFile(att.getFileId()),
-                        att.getContractId() != null ? findContract(att.getContractId()) : null))
-                .toList();
     }
 
-    public AttachmentVO link(Long attachmentId, Long contractId) {
-        ContractAttachment attachment = requireAccessibleAttachment(attachmentId);
-        findContract(contractId);
-        contractManagementService.assertCanAccess(contractId);
-        attachment.setContractId(contractId);
-        attachment.setUpdatedAt(LocalDateTime.now());
-        attachmentMapper.updateById(attachment);
-        return get(attachmentId);
-    }
-
-    public ContractMain createContractFromOcr(CreateContractFromOcrRequest request) throws Exception {
-        AttachmentVO attachment = get(request.attachmentId());
-        OcrExtractVO ocr = attachment.ocrExtract();
-        if (ocr == null) {
-            throw new IllegalStateException("附件尚未完成 OCR 识别");
+    private void applyRiskReportDataScope(LambdaQueryWrapper<RiskReport> wrapper) {
+        String scope = SecurityContext.dataScope();
+        Long currentUserId = SecurityContext.userId();
+        Long currentDeptId = SecurityContext.deptId();
+        if ("SELF".equals(scope) && currentUserId != null) {
+            wrapper.and(w -> w.isNull(RiskReport::getContractId)
+                    .or().inSql(RiskReport::getContractId,
+                            "SELECT contract_id FROM contract_main WHERE owner_id = " + currentUserId));
+        } else if ("DEPT".equals(scope) && currentDeptId != null) {
+            wrapper.and(w -> w.isNull(RiskReport::getContractId)
+                    .or().inSql(RiskReport::getContractId,
+                            "SELECT contract_id FROM contract_main WHERE dept_id = " + currentDeptId));
         }
-        String title = StringUtils.hasText(request.title()) ? request.title() : defaultText(ocr.title(), "OCR识别合同");
-        String counterparty = StringUtils.hasText(request.counterparty()) ? request.counterparty() : defaultText(ocr.counterparty(), ocr.partyB());
-        String type = mapContractType(StringUtils.hasText(request.type()) ? request.type() : ocr.contractType());
-        Long ownerId = SecurityContext.userId() != null ? SecurityContext.userId() : 1L;
-        Long deptId = SecurityContext.deptId() != null ? SecurityContext.deptId() : 1L;
-        ContractMain contract = contractManagementService.createContract(new ContractCreateRequest(
-                title,
-                type,
-                ocr.amount() == null || ocr.amount().signum() <= 0 ? java.math.BigDecimal.valueOf(10000) : ocr.amount(),
-                counterparty,
-                deptId,
-                ownerId,
-                null,
-                LocalDate.now().plusDays(90)
-        ));
-        link(request.attachmentId(), contract.getContractId());
+    }
+
+    // ==================== 仪表盘 ====================
+
+    public DashboardVO dashboard() {
+        List<ContractMain> contracts = listContracts(null, null, null, null, null, null, null, null);
+        List<FulfillmentPlan> plans = listPlans();
+        long approving = countPendingApprovals();
+        long highRisk = contracts.stream().filter(c -> "HIGH".equals(c.getRiskLevel())).count();
+        long dueSoon = plans.stream()
+                .filter(p -> !"FULFILLED".equals(p.getStatus()))
+                .filter(p -> !p.getDueDate().isAfter(LocalDate.now().plusDays(30)))
+                .count();
+        BigDecimal totalAmount = contracts.stream()
+                .map(ContractMain::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new DashboardVO(
+                contracts.size(), approving, highRisk, dueSoon, totalAmount,
+                distribution(contracts, ContractMain::getStatus),
+                distribution(contracts, ContractMain::getRiskLevel));
+    }
+
+    public DashboardVO dashboardSummary() {
+        return dashboard();
+    }
+
+    private long countPendingApprovals() {
+        return approvalMapper.selectList(new LambdaQueryWrapper<Approval>()
+                        .eq(Approval::getStatus, "RUNNING"))
+                .stream()
+                .filter(approval -> {
+                    ContractMain contract = contractMapper.selectById(approval.getContractId());
+                    return canAccess(contract);
+                })
+                .count();
+    }
+
+    // ==================== 合同 CRUD ====================
+
+    public List<ContractMain> listContracts(String keyword, String status, String riskLevel, String type,
+                                            java.time.LocalDate signDateFrom, java.time.LocalDate signDateTo,
+                                            java.math.BigDecimal amountMin, java.math.BigDecimal amountMax) {
+        LambdaQueryWrapper<ContractMain> wrapper = new LambdaQueryWrapper<ContractMain>()
+                .and(StringUtils.hasText(keyword), w -> w.like(ContractMain::getTitle, keyword)
+                        .or().like(ContractMain::getCounterparty, keyword)
+                        .or().like(ContractMain::getContractNo, keyword))
+                .eq(StringUtils.hasText(status), ContractMain::getStatus, status)
+                .eq(StringUtils.hasText(riskLevel), ContractMain::getRiskLevel, riskLevel)
+                .eq(StringUtils.hasText(type), ContractMain::getType, type)
+                .ge(amountMin != null, ContractMain::getAmount, amountMin)
+                .le(amountMax != null, ContractMain::getAmount, amountMax)
+                .orderByDesc(ContractMain::getContractId);
+        applyDataScope(wrapper);
+        List<ContractMain> contracts = contractMapper.selectList(wrapper);
+        // 日期筛选在内存中完成（signDate 可能为空，创建日期用 contractId 近似排序）
+        if (signDateFrom != null || signDateTo != null) {
+            contracts = contracts.stream()
+                    .filter(c -> {
+                        java.time.LocalDateTime createdAt = c.getCreatedAt();
+                        if (createdAt == null) return true; // 无创建时间的不过滤
+                        boolean after = signDateFrom == null || !createdAt.toLocalDate().isBefore(signDateFrom);
+                        boolean before = signDateTo == null || !createdAt.toLocalDate().isAfter(signDateTo);
+                        return after && before;
+                    })
+                    .toList();
+        }
+        return contracts;
+    }
+
+    public ContractMain createContract(ContractCreateRequest request) {
+        return contractNumberService.withNextNumber(contractNo -> {
+            ContractMain contract = new ContractMain();
+            contract.setContractNo(contractNo);
+            contract.setTitle(request.title());
+            contract.setType(request.type());
+            contract.setAmount(request.amount());
+            contract.setCounterparty(request.counterparty());
+            contract.setDeptId(request.deptId());
+            contract.setOwnerId(request.ownerId());
+            contract.setStatus("DRAFT");
+            contract.setRiskLevel(autoRiskLevel(request.amount()));
+            contract.setSignDate(request.signDate());
+            contract.setDueDate(request.dueDate());
+            contract.setCreatedBy(SecurityContext.username());
+            contract.setCreatedAt(LocalDateTime.now());
+            contract.setUpdatedAt(LocalDateTime.now());
+            contract.setDeleted(0);
+            contractMapper.insert(contract);
+            return contract;
+        });
+    }
+
+    public ContractMain updateContract(Long contractId, ContractCreateRequest request) {
+        assertCanAccess(contractId);
+        ContractMain contract = findContract(contractId);
+        if ("ARCHIVED".equals(contract.getStatus())) {
+            throw new IllegalStateException("合同已归档锁定，不可编辑");
+        }
+        contract.setTitle(request.title());
+        contract.setType(request.type());
+        contract.setAmount(request.amount());
+        contract.setCounterparty(request.counterparty());
+        contract.setDeptId(request.deptId());
+        contract.setOwnerId(request.ownerId());
+        contract.setSignDate(request.signDate());
+        contract.setDueDate(request.dueDate());
+        contract.setRiskLevel(autoRiskLevel(request.amount()));
+        contract.setUpdatedBy(SecurityContext.username());
+        contract.setUpdatedAt(LocalDateTime.now());
+        contractMapper.updateById(contract);
         return contract;
     }
 
-    public ResponseEntity<Resource> download(Long attachmentId) {
-        ContractAttachment attachment = requireAccessibleAttachment(attachmentId);
-        FileInfo fileInfo = requireFile(attachment.getFileId());
-        Path path = fileStorageService.resolve(fileInfo.getObjectKey());
-        Resource resource = new FileSystemResource(path);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(fileInfo.getFileName()))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
-    }
-
-    public String resolveOcrReferenceText(Long attachmentId) {
-        if (attachmentId == null) {
-            return null;
+    public void deleteContract(Long contractId) {
+        ContractMain contract = findContract(contractId);
+        assertCanAccess(contractId);
+        if (!"DRAFT".equals(contract.getStatus())) {
+            throw new IllegalStateException("仅草稿状态的合同可以删除");
         }
-        try {
-            AttachmentVO vo = get(attachmentId);
-            if (vo.ocrExtract() != null && StringUtils.hasText(vo.ocrExtract().rawText())) {
-                return vo.ocrExtract().rawText();
-            }
-            return vo.ocrTextPreview();
-        } catch (Exception ex) {
-            return null;
+        if (contractMapper.deleteById(contractId) != 1) {
+            throw new IllegalStateException("草稿删除失败，请刷新后重试");
         }
     }
 
-    public int countByContract(Long contractId) {
-        contractManagementService.assertCanAccess(contractId);
-        Long count = attachmentMapper.selectCount(
-                new LambdaQueryWrapper<ContractAttachment>().eq(ContractAttachment::getContractId, contractId));
-        return count == null ? 0 : count.intValue();
-    }
-
-    private void runOcrInternal(ContractAttachment attachment, FileInfo fileInfo) throws Exception {
-        try {
-            Path path = fileStorageService.resolve(fileInfo.getObjectKey());
-            DocumentParseService.ParseResult result = documentParseService.parse(path, fileInfo.getFileType());
-            attachment.setOcrStatus("SUCCESS");
-            attachment.setOcrText(result.html());
-            attachment.setOcrResult(null);
-            attachment.setPageCount(result.pageCount());
-            attachment.setOcrError(null);
-        } catch (Exception ex) {
-            attachment.setOcrStatus("FAILED");
-            attachment.setOcrError(trimError(ex.getMessage()));
-        }
-        attachment.setUpdatedAt(LocalDateTime.now());
-        attachmentMapper.updateById(attachment);
-        if ("FAILED".equals(attachment.getOcrStatus())) {
-            throw new IllegalStateException(attachment.getOcrError());
-        }
-    }
-
-    private FileInfo findOrCreateFile(FileStorageService.StoredFile stored, String originalName) {
-        FileInfo existing = fileInfoMapper.selectOne(new LambdaQueryWrapper<FileInfo>()
-                .eq(FileInfo::getSha256, stored.sha256()).last("LIMIT 1"));
-        if (existing != null) {
-            if (!existing.getObjectKey().equals(stored.objectKey())) {
-                existing.setObjectKey(stored.objectKey());
-                existing.setUpdatedAt(LocalDateTime.now());
-                fileInfoMapper.updateById(existing);
-            }
-            return existing;
-        }
-        FileInfo fileInfo = new FileInfo();
-        fileInfo.setObjectKey(stored.objectKey());
-        fileInfo.setFileName(originalName == null ? "upload." + stored.fileType() : originalName);
-        fileInfo.setFileType(stored.fileType());
-        fileInfo.setSize(stored.size());
-        fileInfo.setSha256(stored.sha256());
-        fileInfo.setCreatedBy(currentCreatedBy());
-        fileInfo.setCreatedAt(LocalDateTime.now());
-        fileInfo.setUpdatedAt(LocalDateTime.now());
-        fileInfo.setDeleted(0);
-        fileInfo.setVersion(1);
-        fileInfoMapper.insert(fileInfo);
-        return fileInfo;
-    }
-
-    private AttachmentVO toVo(ContractAttachment attachment, FileInfo fileInfo, ContractMain contract) {
-        OcrExtractVO extract = parseOcrResult(attachment.getOcrResult());
-        String fullText = attachment.getOcrText();
-        String preview = fullText;
-        if (preview != null && preview.length() > 200) {
-            preview = preview.substring(0, 200) + "...";
-        }
-        return new AttachmentVO(
-                attachment.getAttachmentId(),
-                attachment.getContractId(),
-                contract != null ? contract.getContractNo() : null,
-                contract != null ? contract.getTitle() : null,
-                fileInfo.getFileId(),
-                fileInfo.getFileName(),
-                fileInfo.getFileType(),
-                fileInfo.getSize(),
-                attachment.getAttachType(),
-                attachment.getOcrStatus(),
-                attachment.getOcrError(),
-                extract,
-                preview,
-                fullText,
-                attachment.getPageCount(),
-                attachment.getCreatedBy(),
-                attachment.getCreatedAt(),
-                "/api/attachments/" + attachment.getAttachmentId() + "/download"
-        );
-    }
-
-    private OcrExtractVO parseOcrResult(String json) {
-        if (!StringUtils.hasText(json)) {
-            return null;
-        }
-        try {
-            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(json);
-            if (root.has("extract")) return root.path("extract").isNull()
-                    ? null : objectMapper.treeToValue(root.path("extract"), OcrExtractVO.class);
-            return objectMapper.treeToValue(root, OcrExtractVO.class);
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
-    private ContractAttachment requireAttachment(Long id) {
-        ContractAttachment attachment = attachmentMapper.selectById(id);
-        if (attachment == null) {
-            throw new IllegalArgumentException("附件不存在");
-        }
-        return attachment;
-    }
-
-    private ContractAttachment requireAccessibleAttachment(Long id) {
-        ContractAttachment attachment = requireAttachment(id);
-        if (!canAccessAttachment(attachment)) {
-            throw new SecurityException("无权访问该附件");
-        }
-        return attachment;
-    }
-
-    private boolean canAccessAttachment(ContractAttachment attachment) {
-        if (attachment.getContractId() != null) {
-            return contractManagementService.canAccess(findContract(attachment.getContractId()));
-        }
-        if ("ALL".equals(SecurityContext.dataScope())) {
-            return true;
-        }
-        String createdBy = currentCreatedBy();
-        return createdBy != null && createdBy.equals(attachment.getCreatedBy());
-    }
-
-    private FileInfo requireFile(Long fileId) {
-        FileInfo fileInfo = fileInfoMapper.selectById(fileId);
-        if (fileInfo == null) {
-            throw new IllegalArgumentException("文件不存在");
-        }
-        return fileInfo;
-    }
-
-    private ContractMain findContract(Long contractId) {
-        ContractMain contract = contractMainMapper.selectById(contractId);
+    public ContractMain findContract(Long contractId) {
+        ContractMain contract = contractMapper.selectById(contractId);
         if (contract == null) {
             throw new IllegalArgumentException("合同不存在");
         }
         return contract;
     }
 
-    private void validateUpload(MultipartFile file, boolean signedFile) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("请选择文件");
-        }
-        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
-        boolean pdf = name.endsWith(".pdf");
-        boolean image = name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
-        long maxSize = signedFile && image ? 10L * 1024 * 1024 : 200L * 1024 * 1024;
-        if (file.getSize() > maxSize) {
-            throw new IllegalArgumentException(signedFile && image
-                    ? "签章图片不能超过 10MB"
-                    : "文件不能超过 200MB");
-        }
-        if (signedFile) {
-            if (!pdf && !image) {
-                throw new IllegalArgumentException("签章文件仅支持 PDF、JPG、JPEG、PNG");
-            }
-            return;
-        }
-        if (!pdf && !name.endsWith(".doc") && !name.endsWith(".docx")) {
-            throw new IllegalArgumentException("仅支持 PDF、DOC 或 DOCX 文件");
+    public void assertCanAccess(Long contractId) {
+        if (!canAccess(findContract(contractId))) {
+            throw new SecurityException("无权访问该合同");
         }
     }
 
-    private String mapContractType(String contractType) {
-        if (!StringUtils.hasText(contractType)) {
-            return "TECH";
+    public boolean canAccess(ContractMain contract) {
+        if (contract == null) {
+            return false;
         }
-        if (contractType.contains("采购")) return "PURCHASE";
-        if (contractType.contains("销售")) return "SALES";
-        if (contractType.contains("劳务")) return "LABOR";
-        if (contractType.contains("技术")) return "TECH";
-        return "TECH";
-    }
-
-    private String defaultText(String primary, String fallback) {
-        return StringUtils.hasText(primary) ? primary : fallback;
-    }
-
-    private String normalizeAttachType(String attachType) {
-        if (!StringUtils.hasText(attachType)) {
-            return "CONTRACT_FILE";
+        String scope = SecurityContext.dataScope();
+        Long currentUserId = SecurityContext.userId();
+        Long currentDeptId = SecurityContext.deptId();
+        if ("SELF".equals(scope)) {
+            return currentUserId != null && currentUserId.equals(contract.getOwnerId());
         }
-        String value = attachType.trim().toUpperCase(Locale.ROOT);
-        if ("SIGNED".equals(value)) {
-            return "SIGNED_FILE";
+        if ("DEPT".equals(scope)) {
+            return currentDeptId != null && currentDeptId.equals(contract.getDeptId());
         }
-        if ("SIGNED_FILE".equals(value) || "ARCHIVE_FILE".equals(value) || "CONTRACT_FILE".equals(value)) {
-            return value;
+        return true;
+    }
+
+    // ==================== 审批 ====================
+
+    @Transactional
+    public ContractMain submitApproval(Long contractId) {
+        ContractMain contract = findContract(contractId);
+        if (!"DRAFT".equals(contract.getStatus())) {
+            throw new IllegalStateException("仅草稿状态的合同可以提交审批");
         }
-        return "CONTRACT_FILE";
-    }
-
-    private String trimError(String message) {
-        if (message == null) {
-            return "OCR 识别失败";
+        if ("HIGH".equals(contract.getRiskLevel())) {
+            throw new IllegalStateException("存在未复核的高风险问题，已阻断提交审批");
         }
-        return message.length() > 480 ? message.substring(0, 480) : message;
+        statusTransitionService.transitionToApproving(contract);
+
+        String flowType = determineFlowType(contract.getAmount(), contract.getRiskLevel());
+        Approval instance = new Approval();
+        instance.setContractId(contractId);
+        instance.setFlowType(flowType);
+        instance.setCurrentNode("部门主管审批");
+        instance.setStatus("RUNNING");
+        instance.setStartedAt(LocalDateTime.now());
+        instance.setCreatedBy(SecurityContext.username());
+        instance.setCreatedAt(LocalDateTime.now());
+        instance.setDeleted(0);
+        instance.setVersion(1);
+        approvalMapper.insert(instance);
+
+        ApprovalRecord submitRecord = new ApprovalRecord();
+        submitRecord.setInstanceId(instance.getInstanceId());
+        submitRecord.setNodeName("提交审批");
+        submitRecord.setApproverId(SecurityContext.userId());
+        submitRecord.setAction("SUBMIT");
+        submitRecord.setComment("提交审批");
+        submitRecord.setActionTime(LocalDateTime.now());
+        approvalRecordMapper.insert(submitRecord);
+        return contract;
     }
 
-    private String contentDisposition(String filename) {
-        String safeName = filename == null ? "file" : filename.replace("\"", "'");
-        String encodedName = URLEncoder.encode(safeName, StandardCharsets.UTF_8).replace("+", "%20");
-        return "attachment; filename=\"" + safeName + "\"; filename*=UTF-8''" + encodedName;
+    private String determineFlowType(BigDecimal amount, String riskLevel) {
+        if (amount != null && amount.compareTo(superThreshold) >= 0) return "SUPER";
+        if (amount != null && amount.compareTo(majorThreshold) >= 0) return "MAJOR";
+        if ("MEDIUM".equals(riskLevel)) return "MAJOR";
+        return "NORMAL";
     }
 
-    public static String currentUsername(HttpServletRequest request) {
-        Object user = request.getAttribute("jwtUser");
-        if (user instanceof cupk.smartcontract.dto.AuthUserVO authUser && StringUtils.hasText(authUser.username())) {
-            return authUser.username();
+    // ==================== 风险 / 审批 / 履约 ====================
+
+    public List<RiskItem> listRisks(Long contractId) {
+        LambdaQueryWrapper<RiskItem> wrapper = new LambdaQueryWrapper<RiskItem>()
+                .eq(contractId != null, RiskItem::getContractId, contractId)
+                .orderByDesc(RiskItem::getCreatedAt);
+        applyRiskDataScope(wrapper);
+        return riskMapper.selectList(wrapper);
+    }
+
+    @Transactional
+    public AiRiskReviewResult aiRiskReview(AiRiskReviewRequest request) {
+        if (request.contractId() != null) {
+            assertCanAccess(request.contractId());
         }
-        return "anonymous";
+        List<AiRiskVO> risks = aiDraftService.analyzeRisks(request);
+        RiskReport report = persistRiskReport(request, risks);
+        return new AiRiskReviewResult(
+                report.getReportId(), report.getContractId(), report.getVersionId(),
+                report.getReportNo(), report.getHighestRiskLevel(), report.getRiskCount(), risks);
     }
 
-    public static Long currentUserId(HttpServletRequest request) {
-        Object user = request.getAttribute("jwtUser");
-        if (user instanceof cupk.smartcontract.dto.AuthUserVO authUser) {
-            return authUser.userId();
+    private RiskReport persistRiskReport(AiRiskReviewRequest request, List<AiRiskVO> risks) {
+        LocalDateTime now = LocalDateTime.now();
+        RiskReport report = new RiskReport();
+        report.setContractId(request.contractId());
+        report.setVersionId(request.versionId());
+        report.setReportNo("RISK-" + now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + "-" + Math.floorMod(System.nanoTime(), 10000));
+        report.setContractType(clipNullable(request.contractType(), 80));
+        report.setPartyA(clipNullable(request.partyA(), 200));
+        report.setPartyB(clipNullable(request.partyB(), 200));
+        report.setBusinessScope(clipNullable(request.businessScope(), 255));
+        report.setHighestRiskLevel(highestRiskLevel(risks));
+        report.setRiskCount(risks.size());
+        report.setHighCount(countRiskLevel(risks, "HIGH"));
+        report.setMediumCount(countRiskLevel(risks, "MEDIUM"));
+        report.setLowCount(countRiskLevel(risks, "LOW"));
+        report.setContractText(request.contractText());
+        report.setSummary(buildReportSummary(report));
+        report.setModelName("Qwen");
+        report.setReviewStatus("COMPLETED");
+        report.setCreatedBy(SecurityContext.username());
+        report.setCreatedAt(now);
+        report.setUpdatedAt(now);
+        riskReportMapper.insert(report);
+        persistAiRiskItems(report, risks, now);
+
+        if (request.contractId() != null) {
+            ContractMain contract = findContract(request.contractId());
+            contract.setRiskLevel(report.getHighestRiskLevel());
+            contract.setUpdatedBy(SecurityContext.username());
+            contract.setUpdatedAt(now);
+            contractMapper.updateById(contract);
         }
-        return SecurityContext.userId();
+        return report;
     }
 
-    public static String currentCreatedBy(HttpServletRequest request) {
-        Long userId = currentUserId(request);
-        return userId == null ? currentUsername(request) : String.valueOf(userId);
+    private void persistAiRiskItems(RiskReport report, List<AiRiskVO> risks, LocalDateTime now) {
+        for (AiRiskVO risk : risks) {
+            RiskItem item = new RiskItem();
+            item.setReportId(report.getReportId());
+            item.setContractId(report.getContractId());
+            item.setVersionId(report.getVersionId());
+            item.setClauseRef(clip(risk.clause(), 255));
+            item.setRiskType("AI_REVIEW");
+            item.setRiskLevel(normalizeRiskLevel(risk.level()));
+            item.setSuggestion(buildRiskSuggestion(risk));
+            item.setReviewStatus("AI_PENDING");
+            item.setCreatedAt(now);
+            item.setUpdatedAt(now);
+            riskMapper.insert(item);
+        }
     }
 
-    private String currentCreatedBy() {
-        Long userId = SecurityContext.userId();
-        return userId == null ? SecurityContext.username() : String.valueOf(userId);
+    public List<RiskReportVO> listRiskReports(Long contractId) {
+        if (contractId != null) {
+            assertCanAccess(contractId);
+        }
+        LambdaQueryWrapper<RiskReport> wrapper = new LambdaQueryWrapper<RiskReport>()
+                .eq(contractId != null, RiskReport::getContractId, contractId)
+                .orderByDesc(RiskReport::getCreatedAt);
+        applyRiskReportDataScope(wrapper);
+        return riskReportMapper.selectList(wrapper).stream()
+                .map(report -> toRiskReportVo(report, false))
+                .toList();
+    }
+
+    public RiskReportVO getRiskReport(Long reportId) {
+        RiskReport report = riskReportMapper.selectById(reportId);
+        if (report == null) {
+            throw new IllegalArgumentException("风险报告不存在");
+        }
+        if (report.getContractId() != null) {
+            assertCanAccess(report.getContractId());
+        }
+        return toRiskReportVo(report, true);
+    }
+
+    private RiskReportVO toRiskReportVo(RiskReport report, boolean includeDetails) {
+        List<AiRiskVO> risks = includeDetails
+                ? riskMapper.selectList(new LambdaQueryWrapper<RiskItem>()
+                    .eq(RiskItem::getReportId, report.getReportId())
+                    .orderByAsc(RiskItem::getRiskId))
+                    .stream()
+                    .map(this::toAiRiskVo)
+                    .toList()
+                : List.of();
+        return new RiskReportVO(
+                report.getReportId(), report.getContractId(), report.getVersionId(),
+                report.getReportNo(), report.getContractType(), report.getPartyA(), report.getPartyB(),
+                report.getBusinessScope(), report.getHighestRiskLevel(), report.getRiskCount(),
+                report.getHighCount(), report.getMediumCount(), report.getLowCount(),
+                includeDetails ? report.getContractText() : null, report.getSummary(), report.getModelName(),
+                report.getReviewStatus(), report.getCreatedBy(), report.getCreatedAt(), risks);
+    }
+
+    private AiRiskVO toAiRiskVo(RiskItem item) {
+        String stored = Objects.toString(item.getSuggestion(), "");
+        String reason = "";
+        String suggestion = stored;
+        int separator = stored.indexOf('\n');
+        if (separator >= 0) {
+            reason = stored.substring(0, separator).replaceFirst("^风险原因：", "").trim();
+            suggestion = stored.substring(separator + 1).replaceFirst("^修改建议：", "").trim();
+        }
+        return new AiRiskVO(item.getRiskLevel(), item.getClauseRef(), reason, suggestion);
+    }
+
+    public List<Approval> listApprovals() {
+        return approvalMapper.selectList(
+                new LambdaQueryWrapper<Approval>().orderByDesc(Approval::getStartedAt));
+    }
+
+    public List<FulfillmentPlan> listPlans() {
+        LambdaQueryWrapper<FulfillmentPlan> wrapper =
+                new LambdaQueryWrapper<FulfillmentPlan>().orderByAsc(FulfillmentPlan::getDueDate);
+        applyPlanDataScope(wrapper);
+        return planMapper.selectList(wrapper);
+    }
+
+    // ==================== AI 起草 ====================
+
+    public AiDraftVO generateDraft(AiDraftRequest request) {
+        return aiDraftService.generateDraft(request);
+    }
+
+    // ==================== 签章与归档 ====================
+
+    public SealRecord seal(SealCreateRequest request) {
+        SealRecord record = statusTransitionService.seal(request);
+        try {
+            blockchainService.anchorToChain(request.contractId(), request.versionId(), "SEAL", "签章登记锚定");
+        } catch (Exception e) {
+            // 区块链锚定失败不阻断签章流程
+            org.slf4j.LoggerFactory.getLogger(ContractManagementService.class)
+                    .warn("签章后区块链锚定失败: contractId={}", request.contractId(), e);
+        }
+        return record;
+    }
+
+    public ArchiveRecord archive(ArchiveCreateRequest request) {
+        ArchiveRecord record = statusTransitionService.archive(request);
+        try {
+            blockchainService.anchorToChain(request.contractId(), request.versionId(), "ARCHIVE", "归档确认锚定");
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(ContractManagementService.class)
+                    .warn("归档后区块链锚定失败: contractId={}", request.contractId(), e);
+        }
+        return record;
+    }
+    public List<SealRecord> listSealRecords(Long contractId) { return statusTransitionService.listSealRecords(contractId); }
+    public List<ArchiveRecord> listArchiveRecords(Long contractId) { return statusTransitionService.listArchiveRecords(contractId); }
+    public boolean isVersionLocked(Long versionId) { return statusTransitionService.isVersionLocked(versionId); }
+    public Set<Long> getLockedVersionIds(Long contractId) { return statusTransitionService.getLockedVersionIds(contractId); }
+    public StatusTransitionService getStatusTransitionService() { return statusTransitionService; }
+    public ContractMainMapper getContractMapper() { return contractMapper; }
+
+    // ==================== 工具方法 ====================
+
+    private String autoRiskLevel(BigDecimal amount) {
+        if (amount == null) return "LOW";
+        if (amount.compareTo(new BigDecimal("500000")) > 0) return "HIGH";
+        if (amount.compareTo(new BigDecimal("50000")) > 0) return "MEDIUM";
+        return "LOW";
+    }
+
+    private String highestRiskLevel(List<AiRiskVO> risks) {
+        if (risks.stream().anyMatch(risk -> "HIGH".equals(normalizeRiskLevel(risk.level())))) return "HIGH";
+        if (risks.stream().anyMatch(risk -> "MEDIUM".equals(normalizeRiskLevel(risk.level())))) return "MEDIUM";
+        return "LOW";
+    }
+
+    private int countRiskLevel(List<AiRiskVO> risks, String level) {
+        return (int) risks.stream()
+                .filter(risk -> level.equals(normalizeRiskLevel(risk.level())))
+                .count();
+    }
+
+    private String normalizeRiskLevel(String level) {
+        String normalized = Objects.toString(level, "LOW").trim().toUpperCase();
+        return Set.of("HIGH", "MEDIUM", "LOW").contains(normalized) ? normalized : "LOW";
+    }
+
+    private String buildReportSummary(RiskReport report) {
+        if (report.getRiskCount() == null || report.getRiskCount() == 0) {
+            return "风险审查完成，未发现明显风险。";
+        }
+        return "风险审查完成，共发现 " + report.getRiskCount() + " 项风险，其中高风险 "
+                + report.getHighCount() + " 项、中风险 " + report.getMediumCount()
+                + " 项、低风险 " + report.getLowCount() + " 项。";
+    }
+
+    private String buildRiskSuggestion(AiRiskVO risk) {
+        String reason = StringUtils.hasText(risk.reason()) ? risk.reason().trim() : "AI 未返回详细原因";
+        String suggestion = StringUtils.hasText(risk.suggestion()) ? risk.suggestion().trim() : "请法务复核该风险项";
+        return "风险原因：" + reason + "\n修改建议：" + suggestion;
+    }
+
+    private String clip(String value, int max) {
+        if (!StringUtils.hasText(value)) return "AI";
+        String trimmed = value.trim();
+        return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
+    }
+
+    private String clipNullable(String value, int max) {
+        if (!StringUtils.hasText(value)) return null;
+        String trimmed = value.trim();
+        return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
+    }
+
+    private List<Map<String, Object>> distribution(
+            List<ContractMain> contracts,
+            java.util.function.Function<ContractMain, String> classifier) {
+        return contracts.stream()
+                .collect(Collectors.groupingBy(
+                        c -> Objects.toString(classifier.apply(c), "UNKNOWN"),
+                        LinkedHashMap::new, Collectors.counting()))
+                .entrySet()
+                .stream()
+                .map(e -> Map.<String, Object>of("name", e.getKey(), "value", e.getValue()))
+                .toList();
     }
 }

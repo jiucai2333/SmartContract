@@ -1,0 +1,348 @@
+/* ============================================================
+   风险审查页面样式
+   ============================================================ */
+
+/* ---- Review Layout ---- */
+.review-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(380px, .85fr);
+    gap: 22px;
+    align-items: start;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.review-layout > .panel {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.report-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, .85fr) minmax(0, 1.15fr);
+    gap: 22px;
+    align-items: stretch;
+}
+
+.report-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 88px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--success);
+    border-radius: var(--radius);
+    background: var(--success-bg);
+}
+
+.report-summary.empty {
+    display: block;
+    color: var(--muted);
+    border-left-color: var(--line);
+    background: var(--line-light);
+}
+
+.report-summary.HIGH {
+    border-left-color: var(--danger);
+    background: var(--danger-bg);
+}
+
+.report-summary.MEDIUM {
+    border-left-color: var(--warn);
+    background: var(--warn-bg);
+}
+
+.report-summary.LOW {
+    border-left-color: var(--success);
+    background: var(--success-bg);
+}
+
+.report-summary strong,
+.report-summary span {
+    display: block;
+}
+
+.report-summary strong {
+    margin-bottom: 6px;
+    color: var(--ink);
+    font-size: 15px;
+}
+
+.report-summary span {
+    color: var(--ink-secondary);
+    font-size: 13px;
+}
+
+.report-list {
+    display: grid;
+    gap: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.report-item {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px 10px;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink-secondary);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    white-space: normal;
+    box-shadow: none;
+    transform: none;
+}
+
+.report-item:hover,
+.report-item.active {
+    border-color: var(--primary);
+    background: var(--surface-hover);
+    box-shadow: var(--shadow-sm);
+    transform: none;
+    filter: none;
+}
+
+.report-item strong,
+.report-item small {
+    min-width: 0;
+}
+
+.report-item strong {
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.report-item small {
+    grid-column: 2 / 4;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.report-item em {
+    color: var(--muted);
+    font-size: 12px;
+    font-style: normal;
+    white-space: nowrap;
+}
+
+.compact {
+    min-height: 34px;
+    padding: 0 12px;
+}
+
+/* ---- Contract Preview Panel ---- */
+.contract-preview {
+    position: sticky;
+    top: 20px;
+}
+
+.contract-preview article {
+    line-height: 1.9;
+    font-size: 14px;
+    color: var(--ink-secondary);
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.contract-preview article p {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition);
+}
+
+.contract-preview article p:hover {
+    background: var(--line-light);
+}
+
+.contract-preview article p.highlight {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn);
+}
+
+.contract-preview article p.active-clause {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn);
+}
+
+/* ---- Risk Cards ---- */
+.review-layout .list {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    contain: inline-size;
+}
+
+.risk-card {
+    appearance: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    display: grid;
+    gap: 10px;
+    justify-items: stretch;
+    justify-content: stretch;
+    align-items: start;
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    border-left: 4px solid transparent;
+    transition: box-shadow var(--transition), transform var(--transition);
+    cursor: pointer;
+    white-space: normal;
+    text-align: left;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.65;
+    box-shadow: none;
+    filter: none;
+    transform: none;
+    overflow: hidden;
+}
+
+.risk-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateX(2px);
+}
+
+.risk-card.HIGH {
+    border-left-color: var(--danger);
+    background: var(--danger-bg);
+}
+
+.risk-card.MEDIUM {
+    border-left-color: var(--warn);
+    background: var(--warn-bg);
+}
+
+.risk-card.LOW {
+    border-left-color: var(--success);
+    background: var(--success-bg);
+}
+
+.risk-card strong {
+    min-width: 0;
+    max-width: 100%;
+    color: var(--ink);
+    font-size: 14px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.risk-card span {
+    min-width: 0;
+    max-width: 100%;
+    color: var(--ink-secondary);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.risk-card small {
+    min-width: 0;
+    max-width: 100%;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.risk-card .suggestion {
+    color: var(--ink-secondary);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.review-progress {
+    display: flex;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--surface-hover);
+    color: var(--ink-secondary);
+    overflow: hidden;
+}
+
+.progress-orbit {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--accent-bg);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: riskSpin 1s linear infinite;
+    flex: 0 0 28px;
+}
+
+.progress-copy {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.progress-copy strong {
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.progress-copy span {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+@keyframes riskSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---- Review Badge ---- */
+.review-required {
+    color: var(--danger);
+    font-weight: 800;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+/* ---- Review Input Panel ---- */
+#reviewInputPanel {
+    margin-bottom: 22px;
+}
+
+#reviewInputPanel textarea {
+    min-height: 120px;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+@media (max-width: 1024px) {
+    .report-layout,
+    .review-layout { grid-template-columns: 1fr; }
+    .contract-preview { position: static; }
+}
