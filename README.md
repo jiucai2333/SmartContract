@@ -76,7 +76,7 @@
       <td>保存合同版本、生成归档编号并记录区块链存证信息</td>
     </tr>
     <tr>
-      <td><img src=".github/assets/icons/progress.svg" width="22" alt=""></td>
+        <td><img src=".github/assets/icons/fulfillment.svg" width="22" alt=""></td>
       <td><strong>履约追踪</strong></td>
       <td>管理履约计划、交付物、付款记录、进度和逾期预警</td>
     </tr>
