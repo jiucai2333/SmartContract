@@ -905,8 +905,22 @@ function currentMissingRequiredFields() {
         .map(field => field.fieldName);
 }
 function showSavedVersion(version) {
-    versionBox.hidden = true;
-    versionBox.innerHTML = '';
+    if (!version) {
+        versionBox.hidden = true;
+        versionBox.innerHTML = '';
+        return;
+    }
+    const versionNo = version.versionNo || `#${version.versionId || ''}`.trim() || '最新版本';
+    const fileName = `contract-${draftState.contractId || version.contractId || 'draft'}-${versionNo}.docx`;
+    const downloadUrl = version.downloadUrl || (
+        version.contractId && version.versionId
+            ? `/api/contracts/${version.contractId}/versions/${version.versionId}/download`
+            : ''
+    );
+    versionBox.hidden = false;
+    versionBox.innerHTML = downloadUrl
+        ? `已保存 ${escapeHtml(versionNo)} · <a href="${escapeHtml(downloadUrl)}" data-download-url="${escapeHtml(downloadUrl)}" data-file-name="${escapeHtml(fileName)}">下载 Word</a>`
+        : `已保存 ${escapeHtml(versionNo)} · Word 下载链接生成中`;
 }
 function readContractMetaPayload(existing = {}) {
     const title = $('#contractTitle').value.trim();
@@ -1025,6 +1039,7 @@ async function saveDraft() {
     showSavedVersion(version);
     updateStatus(`草稿已生成 Word 留档 · ${new Date().toLocaleString('zh-CN')}`);
     toast(`草稿 ${version.versionNo} 已保存`);
+    return version;
     } finally {
         saveButton.disabled = false;
         saveButton.textContent = originalText;
@@ -1279,9 +1294,14 @@ $('#downloadDraftBtn').addEventListener('click', async () => {
             await downloadFile(link.dataset.downloadUrl, link.dataset.fileName);
             return;
         }
-        await saveDraft();
+        const version = await saveDraft();
+        if (version?.downloadUrl) {
+            const versionNo = version.versionNo || `#${version.versionId || ''}`.trim() || 'latest';
+            await downloadFile(version.downloadUrl, `contract-${draftState.contractId}-${versionNo}.docx`);
+            return;
+        }
         const newLink = $('#savedVersion a');
-        if (newLink) await downloadFile(newLink.dataset.downloadUrl, newLink.dataset.fileName);
+        if (newLink?.dataset?.downloadUrl) await downloadFile(newLink.dataset.downloadUrl, newLink.dataset.fileName);
         else toast('保存成功但下载链接未生成，请重试');
     } catch (error) {
         toast(error.message);

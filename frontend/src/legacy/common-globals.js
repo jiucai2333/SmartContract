@@ -269,9 +269,7 @@ async function request(url, options = {}) {
 
 async function readJson(response, fallback) {
     try {
-        const text = await response.text();
-        if (!text.trim()) return null;
-        const res = JSON.parse(text);
+        const res = await response.json();
         return typeof res === 'string' ? JSON.parse(res) : res;
     } catch {
         throw new Error(`${fallback}：${response.status}`);

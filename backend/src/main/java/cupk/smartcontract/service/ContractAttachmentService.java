@@ -128,9 +128,7 @@ public class ContractAttachmentService {
     public int countByContract(Long contractId) {
         contractManagementService.assertCanAccess(contractId);
         Long count = attachmentMapper.selectCount(
-                new LambdaQueryWrapper<ContractAttachment>()
-                        .eq(ContractAttachment::getContractId, contractId)
-                        .eq(ContractAttachment::getDeleted, 0));
+                new LambdaQueryWrapper<ContractAttachment>().eq(ContractAttachment::getContractId, contractId));
         return count == null ? 0 : count.intValue();
     }
 

@@ -125,8 +125,7 @@ public class TemplateService {
     public void delete(Long id) {
         ContractTemplate template = get(id);
         if (template != null) {
-            template.setDeleted(1);
-            templateMapper.updateById(template);
+            templateMapper.deleteById(id);
         }
     }
 
